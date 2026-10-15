@@ -62,6 +62,17 @@ static int roundtrip(const char *type, const char *body) {
 
 int main(void) {
   int ok = 1;
+  ok &= domain("def bad : I := hcomp (fun j => [ i1 |-> j ]) i0", "TYPE_PRETYPE");
+  ok &= domain("def bad : I := hcomp (fun j => []) i0", "TYPE_PRETYPE");
+  ok &= domain("def bad : I -> Nat := hcomp (fun j => []) (fun i => 3)", "TYPE_PRETYPE");
+  ok &= domain("def bad : Nat -> I := hcomp (fun j => []) (fun x => i0)", "TYPE_PRETYPE");
+  ok &= domain("def bad : Partial i1 Nat := hcomp (fun j => []) [ i1 |-> 3 ]", "TYPE_PRETYPE");
+  ok &= domain("def s : Partial i1 Nat := [ i1 |-> 3 ]\ndef bad : Nat := fromPartial (hcomp (fun j => []) s)", "TYPE_PRETYPE");
+  ok &= domain("def good : (i : I) -> Nat := fun i => hcomp (fun i => [ i |-> 3 ]) 3", NULL);
+  ok &= domain("def bad : (i : I) -> Nat := fun i => hcomp (fun i => [ i |-> 3 ]) 4", "TYPE_SYSTEM");
+  ok &= domain("def good : (i : I) -> Path Nat 3 4 -> Nat := fun i p => hcomp (fun i => [ i |-> p @ i ]) 3", NULL);
+  ok &= domain("def bad : (i : I) -> Path Nat 3 4 -> Nat := fun i p => hcomp (fun i => [ i |-> p @ i , i1 |-> 3 ]) 3", "TYPE_SYSTEM");
+  ok &= roundtrip("(i : I) -> Nat", "fun i => hcomp (fun i => [ i |-> 3 ]) 3");
   ok &= domain("family F := makeF (field : Nat) (field : Flag)", "REFUSE_NAME");
   ok &= domain("family F := makeF (makeF : Nat)", "REFUSE_NAME");
   ok &= domain("family F := makeF (firstField : Nat) (secondField : Flag)", NULL);
@@ -122,6 +133,9 @@ int main(void) {
                   "fun A a b p => transp (fun i => Eq A a (p @ i)) i0 refl");
   ok &= roundtrip("(A : Type 0) -> (P : A -> Type 0) -> (a : A) -> (b : A) -> (p : Path A a b) -> P a -> P b",
                   "fun A P a b p u => transport P (transp (fun i => Eq A a (p @ i)) i0 refl) u");
+  ok &= roundtrip("(A : Type 0) -> (a : A) -> (b : A) -> Path A a b -> Path A a b",
+                  "fun A a b p => <i> hcomp (fun j => [ ~ i |-> a , i |-> b ]) (p @ i)");
+  ok &= roundtrip("(f : Nat -> Nat) -> Path (Nat -> Nat) f f", "fun f => <i> hcomp (fun j => [ ~ i |-> f , i |-> f ]) f");
   ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> x ]\n"
                "def law : (x : Nat) -> Eq Nat (fromPartial (wrap x)) x := fun x => refl", NULL);
   ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> natAdd x 1 ]\n"
