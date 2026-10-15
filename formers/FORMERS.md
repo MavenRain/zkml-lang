@@ -259,10 +259,29 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   a neutral interval term (such as an application), or its negation.
   The normal form holds at most 16 meets of at most 8
   literals. A larger term stays unreduced.
-- Faces, partial elements and systems: PLANNED for slice Z1b.
-- Names: `I`, `i0`, `i1`, `PathP`, `Path` and `funExt` are core names. A
-  declaration with one of these names fails with `REFUSE_NAME` (rule R4).
-  `~`, `/\`, `\/`, `@` and `<i> t` are syntax.
+- Faces: a face is an interval term in the face position of a system.
+  `(r = 0)` is `~ r` and `(r = 1)` is `r`. The checker compares two faces
+  by the normal form of the interval, with one more law: a meet that
+  holds a literal and its negation is empty. Thus `(i = 0) /\ (i = 1)`
+  is the empty face, but `i /\ ~ i` is not `i0` as an interval term. A
+  face holds when its normal form is `i1`.
+- Partial elements: `Partial phi A : SSet` when `phi : I` and `A` is a
+  type. `Partial phi A` is a pretype, as `I` is. Conversion of two
+  `Partial` types compares their face indices as faces.
+- Systems: `[ f1 |-> u1 , ... , fn |-> un ]` is in `Partial phi A` when
+  each face `fk` is in `I`, each branch `uk` is in `A`, the join
+  `f1 \/ ... \/ fn` equals `phi` as a face, and two branches are equal
+  on each meet of their two faces. `[]` is in `Partial i0 A`. A system
+  holds at most 16 cells. Else the checker fails with `TYPE_SYSTEM`.
+- Elimination: `fromPartial p : A` when `p : Partial phi A` and `phi`
+  holds. Else the checker fails with `TYPE_SYSTEM`. `fromPartial` of a
+  system gives the branch of the first face that holds. A total system
+  keeps a cell around its branch until elimination, including when the
+  branch is neutral. Its printed normal form remains a system.
+- Names: `I`, `i0`, `i1`, `PathP`, `Path`, `funExt`, `Partial` and
+  `fromPartial` are core names. A declaration with one of these names
+  fails with `REFUSE_NAME` (rule R4). `~`, `/\`, `\/`, `@`, `<i> t`,
+  `(r = 0)`, `(r = 1)` and `[ f |-> u , ... ]` are syntax.
 
 ### C2 PathP and Path
 

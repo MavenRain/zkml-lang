@@ -72,7 +72,10 @@ typedef enum {
   RULE_PATHP,    /* former C2 */
   RULE_PAPP,
   RULE_PLAM,
-  RULE_FUNEXT
+  RULE_FUNEXT,
+  RULE_PARTIAL,
+  RULE_SYSTEM,
+  RULE_FROM_PARTIAL
 } Rule;
 
 typedef struct {
@@ -139,7 +142,13 @@ static const Builtin BUILTINS[] = {
   {"Path", 3, RULE_PATHP, OP_PATHP, OP_NAT, 1},
   {"@", 2, RULE_PAPP, OP_PAPP, OP_NAT, 0},
   {"<>", 1, RULE_PLAM, OP_PLAM, OP_NAT, 0},
-  {"funExt", 1, RULE_FUNEXT, OP_PLAM, OP_NAT, 0}
+  {"funExt", 1, RULE_FUNEXT, OP_PLAM, OP_NAT, 0},
+  /* Faces and systems (former C1). The parser makes the heads of
+     [ f |-> u , ... ]; no identifier can spell them. */
+  {"Partial", 2, RULE_PARTIAL, OP_PARTIAL, OP_SSET, 0},
+  {"|->", 3, RULE_SYSTEM, OP_SYSTEM, OP_NAT, 0},
+  {"[]", 0, RULE_SYSTEM, OP_SYSNIL, OP_NAT, 0},
+  {"fromPartial", 1, RULE_FROM_PARTIAL, OP_FROMPARTIAL, OP_NAT, 0}
 };
 
 #define BUILTIN_COUNT ((uint32_t)(sizeof BUILTINS / sizeof BUILTINS[0]))
@@ -1114,6 +1123,136 @@ static const Core *rule_funext(Call *k) {
              NULL, NULL);
 }
 
+/* Partial phi A (former C1): phi is in I and A is a type. A pretype, as I. */
+static const Core *rule_partial(Call *k) {
+  Checker *c = k->c;
+  uint64_t level = 0;
+  const Core *phi = check(c, k->args[0], op0(c, OP_I));
+  const Core *a = phi == NULL ? NULL : check_type(c, k->args[1], &level);
+  k->type = op0(c, OP_SSET);
+  return op3(c, OP_PARTIAL, 0, 2, phi, a, NULL);
+}
+
+#define CELLS_MAX FACE_MEETS_MAX
+
+/* 1 when T is a cell `f |-> u` applied to the other cells. */
+static int is_cell(const Term *t) {
+  return t->kind == TERM_APP && t->left->kind == TERM_APP && t->left->left->kind == TERM_APP
+         && t->left->left->left->kind == TERM_VAR && strcmp(t->left->left->left->name, "|->") == 0;
+}
+
+/* The checker environment with the variable of each literal set to i1
+   (level * 2) or i0 (level * 2 + 1). */
+static const Env *face_env(Checker *c, const uint32_t *lits, uint32_t n) {
+  const Env *env = NULL;
+  const Value *v;
+  uint32_t level;
+  uint32_t i;
+  for (level = 0; level < c->level; level++) {
+    v = val_var(c->m, level);
+    for (i = 0; i < n; i++)
+      if (lits[i] / 2u == level)
+        v = op0(c, lits[i] % 2u == 0 ? OP_I1 : OP_I0);
+    env = env_push(c->m, env, v);
+    if (env == NULL)
+      return NULL;
+  }
+  return env;
+}
+
+/* The branches UA and UB agree on each meet of the faces FA /\ FB. A
+   neutral atom in a meet stays, so the test is stricter, and sound. */
+static int cells_agree(Checker *c, const Core *fa, const Core *ua, const Core *fb, const Core *ub) {
+  FaceMeets fm;
+  const Value *meet = here(c, op3(c, OP_IMIN, 0, 2, fa, fb, NULL));
+  const Env *env;
+  const Value *x;
+  const Value *y;
+  uint32_t q;
+  if (meet == NULL)
+    return 0;
+  if (!face_meets(c->m, c->level, meet, &fm))
+    return FAIL(c, "TYPE_SYSTEM", "the overlap %s of two faces is not in the face bounds", show(c, meet));
+  for (q = 0; q < fm.count; q++) {
+    env = face_env(c, fm.lit[q], fm.len[q]);
+    x = env == NULL && c->level > 0 ? NULL : eval_core(c->m, env, ua);
+    y = x == NULL ? NULL : eval_core(c->m, env, ub);
+    if (x == NULL || y == NULL)
+      return c->m->diag->set ? 0 : FAIL(c, "OOM", "out of memory");
+    if (!conv_values(c->m, c->level, x, y))
+      return FAIL(c, "TYPE_SYSTEM", "two branches disagree where the faces meet at %s: %s against %s", show(c, meet), show(c, x), show(c, y));
+  }
+  return 1;
+}
+
+/* [ f1 |-> u1 , ... ] against Partial psi A (former C1): each face is in I,
+   each branch is in A, the faces join to psi, and two branches agree where
+   their faces meet. */
+static const Core *rule_system(Call *k) {
+  Checker *c = k->c;
+  const Value *e = k->hint;
+  const Term *face[CELLS_MAX];
+  const Term *branch[CELLS_MAX];
+  const Core *fk[CELLS_MAX];
+  const Core *uk[CELLS_MAX];
+  const Term *rest = k->b->arity == 3u ? k->args[2] : NULL;
+  const Value *join;
+  const Value *fv;
+  const Core *acc;
+  uint32_t n = 0;
+  uint32_t i;
+  uint32_t j;
+  if (!val_is(e, OP_PARTIAL))
+    return need_type(k, "Partial phi A");
+  if (rest != NULL) {
+    face[0] = k->args[0];
+    branch[0] = k->args[1];
+    n = 1;
+  }
+  for (; rest != NULL && is_cell(rest) && n < CELLS_MAX; rest = rest->right) {
+    face[n] = rest->left->left->right;
+    branch[n] = rest->left->right;
+    n++;
+  }
+  if (rest != NULL && (rest->kind != TERM_VAR || strcmp(rest->name, "[]") != 0))
+    return nul(FAIL(c, "TYPE_SYSTEM", "a system needs at most %u cells", (unsigned)CELLS_MAX));
+  join = op0(c, OP_I0);
+  for (i = 0; i < n; i++) {
+    fk[i] = check(c, face[i], op0(c, OP_I));
+    uk[i] = fk[i] == NULL ? NULL : check(c, branch[i], e->args[1]);
+    fv = uk[i] == NULL ? NULL : here(c, fk[i]);
+    if (fv == NULL)
+      return NULL;
+    join = i == 0 ? fv : tyop(c, OP_IMAX, 2, join, fv, NULL);
+  }
+  if (!face_equal(c->m, c->level, join, e->args[0]))
+    return nul(FAIL(c, "TYPE_SYSTEM", "the system covers %s, the type needs %s", show(c, join), show(c, e->args[0])));
+  for (i = 0; i < n; i++)
+    for (j = i + 1u; j < n; j++)
+      if (!cells_agree(c, fk[i], uk[i], fk[j], uk[j]))
+        return NULL;
+  acc = op3(c, OP_SYSNIL, 0, 0, NULL, NULL, NULL);
+  for (i = n; i > 0; i--)
+    acc = op3(c, OP_SYSTEM, 0, 3, fk[i - 1u], uk[i - 1u], acc);
+  k->type = e;
+  return acc;
+}
+
+/* fromPartial p (former C1): p : Partial phi A and phi holds. */
+static const Core *rule_from_partial(Call *k) {
+  Checker *c = k->c;
+  const Value *pt = NULL;
+  const Core *p = infer(c, k->args[0], &pt);
+  if (p == NULL)
+    return NULL;
+  if (!val_is(pt, OP_PARTIAL))
+    return nul(FAIL(c, "TYPE_MISMATCH", "fromPartial needs a partial element of type Partial phi A, found a term of type %s", show(c, pt)));
+  if (!face_holds(c->m, c->level, pt->args[0]))
+    return nul(FAIL(c, "TYPE_SYSTEM", "fromPartial needs the face %s to hold", show(c, pt->args[0])));
+  k->type = pt->args[1];
+  return op3(c, OP_FROMPARTIAL, 0, 1, p, NULL, NULL);
+}
+
 static const Core *rule(Call *k) {
   switch (k->b->rule) {
   case RULE_TYPE0:
@@ -1182,6 +1321,12 @@ static const Core *rule(Call *k) {
     return rule_papp(k);
   case RULE_PLAM:
     return rule_plam(k);
+  case RULE_PARTIAL:
+    return rule_partial(k);
+  case RULE_SYSTEM:
+    return rule_system(k);
+  case RULE_FROM_PARTIAL:
+    return rule_from_partial(k);
   case RULE_FUNEXT:
     return rule_funext(k);
   }

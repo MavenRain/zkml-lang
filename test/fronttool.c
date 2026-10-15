@@ -109,6 +109,28 @@ int main(void) {
   ok &= domain("def f : Nat -> Nat := fun x => x\n"
                "def g : Nat -> Nat := fun x => natAdd x 1\n"
                "def bad : Path (Nat -> Nat) f g := funExt (fun x => refl)", "TYPE_ENDPOINT");
-  if (ok) puts("domain and path regressions: passed");
+  ok &= roundtrip("Partial i1 Nat", "[ i1 |-> 7 ]");
+  ok &= roundtrip("Nat -> Partial i1 Nat", "fun x => [ i1 |-> x ]");
+  ok &= roundtrip("(i : I) -> Partial (i \\/ ~ i) Nat",
+                  "fun i => [ i |-> 0 , ~ i |-> 1 ]");
+  ok &= roundtrip("(p : Partial i1 Nat) -> Nat", "fun p => fromPartial p");
+  ok &= roundtrip("(i : I) -> Partial (i /\\ ~ i) Nat", "fun i => []");
+  ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> x ]\n"
+               "def law : (x : Nat) -> Eq Nat (fromPartial (wrap x)) x := fun x => refl", NULL);
+  ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> natAdd x 1 ]\n"
+               "def law : (x : Nat) -> Eq Nat (fromPartial (wrap x)) (natAdd x 1) := fun x => refl", NULL);
+  ok &= domain("def wrap : (Nat -> Nat) -> Partial i1 (Nat -> Nat) := fun f => [ i1 |-> f ]\n"
+               "def law : (f : Nat -> Nat) -> Eq (Nat -> Nat) (fromPartial (wrap f)) f := fun f => refl", NULL);
+  ok &= domain("def wrap : (i : I) -> Nat -> Partial i1 Nat := fun i x => [ i |-> x , i1 |-> x ]\n"
+               "def law : (i : I) -> (x : Nat) -> Eq Nat (fromPartial (wrap i x)) x := fun i x => refl", NULL);
+  ok &= domain("def empty : (i : I) -> Partial (i /\\ ~ i) Nat -> Partial i0 Nat := fun i p => p", NULL);
+  ok &= domain("def empty : (g : I -> I) -> (i : I) -> Partial (g i /\\ ~ (g i)) Nat -> "
+               "Partial i0 Nat := fun g i p => p", NULL);
+  ok &= domain("def bad : (i : I) -> Partial (i \\/ ~ i) Nat -> Partial i1 Nat := fun i p => p", "TYPE_MISMATCH");
+  ok &= domain("def same : (a : I) -> (b : I) -> (c : I) -> (d : I) -> (e : I) -> "
+               "(f : I) -> (g : I) -> (h : I) -> (i : I) -> "
+               "Partial (a /\\ b /\\ c /\\ d /\\ e /\\ f /\\ g /\\ h /\\ i) Nat -> "
+               "Partial (a /\\ b /\\ c /\\ d /\\ e /\\ f /\\ g /\\ h /\\ i) Nat := fun a b c d e f g h i p => p", NULL);
+  if (ok) puts("domain, path and system regressions: passed");
   return ok ? 0 : 1;
 }
