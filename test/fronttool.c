@@ -115,6 +115,13 @@ int main(void) {
                   "fun i => [ i |-> 0 , ~ i |-> 1 ]");
   ok &= roundtrip("(p : Partial i1 Nat) -> Nat", "fun p => fromPartial p");
   ok &= roundtrip("(i : I) -> Partial (i /\\ ~ i) Nat", "fun i => []");
+  ok &= roundtrip("(A : Type 0) -> (u : A) -> A", "fun A => fun u => transp (fun _ => A) i0 u");
+  ok &= roundtrip("(A : Type 0) -> (B : Type 0) -> (q : Path (Type 0) A B) -> (f : A -> Nat) -> B -> Nat",
+                  "fun A => fun B => fun q => fun f => transp (fun i => q @ i -> Nat) i0 f");
+  ok &= roundtrip("(A : Type 0) -> (a : A) -> (b : A) -> Path A a b -> Eq A a b",
+                  "fun A a b p => transp (fun i => Eq A a (p @ i)) i0 refl");
+  ok &= roundtrip("(A : Type 0) -> (P : A -> Type 0) -> (a : A) -> (b : A) -> (p : Path A a b) -> P a -> P b",
+                  "fun A P a b p u => transport P (transp (fun i => Eq A a (p @ i)) i0 refl) u");
   ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> x ]\n"
                "def law : (x : Nat) -> Eq Nat (fromPartial (wrap x)) x := fun x => refl", NULL);
   ok &= domain("def wrap : Nat -> Partial i1 Nat := fun x => [ i1 |-> natAdd x 1 ]\n"

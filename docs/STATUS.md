@@ -2,8 +2,9 @@
 
 The build implements slice Z0 (the tcc-wasm kit with the formers F1 to
 F15) and slice Z1 of `docs/PLAN.md`: the interval C1 with faces, partial
-elements and systems, and PathP and Path (C2). Slices Z2 to Z11 are not
-started.
+elements and systems, and PathP and Path (C2). It also implements part
+Z2a of slice Z2: `transp` and transport over a path (C3). Slices Z2b to
+Z11 are not started.
 
 ## Implemented
 
@@ -19,12 +20,16 @@ started.
   `examples/systems.lang` gives the accept cases.
 - Path forms of `refl`, `symm` and `cong`, and `funExt`. The laws in
   `examples/paths.lang` hold by `refl`.
+- C3 part Z2a: `transp A r u` (the line, its constancy where `r` holds,
+  and the reductions along Pi, Sigma, Prod and the kit data types), and
+  `transport P p u` over a path. `examples/transp.lang` derives `J` and
+  its computation rule.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
 
-1. Slice Z2: `transp` and `hcomp` (C3). Then `trans` and `transport` take
-   a path. It needs the Z1b commit first.
+1. Slice Z2b: `hcomp`, `comp` and `fill` (C3), and `transp` along a line
+   of `PathP` types. Then `trans` takes a path.
 2. Slices Z3 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
    on item O5 (attention shapes) first.
 3. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
@@ -38,16 +43,28 @@ started.
   `src/front/eval.c`.
 - `<i> t` and `funExt h` do not infer a type. They need a declared
   `PathP` type. Cause: the checker cannot find the line from the body.
-- `refl` and `cong` on a path need a constant line. Cause: a dependent
-  line needs `transp` (slice Z2).
-- `trans` and `transport` take an `Eq` proof only. Cause: path
-  composition needs `hcomp` (slice Z2).
+- `refl` and `cong` on a path need a constant line. Cause: `<i> a` over
+  a line that varies is ill typed, because a fixed `a` is not in `A i`.
+  A dependent `cong` needs the checker to infer the line (a later item).
+- `trans` takes an `Eq` proof only. Cause: path composition needs
+  `hcomp` (slice Z2b).
+- `transp` along a line of `PathP` types stays unreduced. Cause: the
+  rule needs `hcomp` (slice Z2b).
+- `transp` stays unreduced along a family whose parameters vary on the
+  line, and along a constant line of a neutral type. Cause: the core has
+  no regularity at a neutral type, and no rule for a family constructor
+  with varying parameters.
+- `transp` of `refl` along a varying `Eq` line stays unreduced. Cause:
+  the endpoint indices need not remain definitionally equal at `i1`.
 - A system holds at most 16 cells. Cause: fixed-size arrays in
   `src/front/check.c`.
 - An interval, path or system value cannot exist at run time
   (`REFUSE_RUNTIME_PATH`). Cause: the IR has no interval, no path and no
   system. `fromPartial` of a total system reduces before the lowering.
   Elimination of a neutral partial element stays unreduced.
+- A `transp` that stays unreduced lowers to its payload `u`. Cause: the
+  core has no Glue and no univalence, so `transp` cannot change the data.
+  Revisit this lowering when Glue or `ua` lands.
 - The kit limits stay. `docs/host/CAPABILITY.md` gives them.
 
 ## Internal boundaries
@@ -59,22 +76,25 @@ identifier can spell, so the parser adds no new term kind. A system
 and `(r = 0)` and `(r = 1)` become `~ r` and `r`.
 `test/parse/expect.txt` gives the parse refusals.
 
-`src/front/check.c` holds the builtin rows for C1 and C2, the pretype
+`src/front/check.c` holds the builtin rows for C1, C2 and C3, the pretype
 mode, the endpoint checks, the path forms of `refl`, `symm`, `cong`
-and `funExt`, and the cover and overlap checks of a system.
+and `funExt`, the cover and overlap checks of a system, and the line and
+constancy checks of `transp`.
 `test/check/expect.txt` gives the refusal code of each reject case
-(`TYPE_ENDPOINT`, `TYPE_PRETYPE`, `TYPE_MISMATCH`, `TYPE_SYSTEM`).
+(`TYPE_ENDPOINT`, `TYPE_PRETYPE`, `TYPE_MISMATCH`, `TYPE_SYSTEM`,
+`TYPE_LINE`).
 
 `src/front/eval.c` holds the interval normal form, the face normal form,
 the reduction of systems and `fromPartial`, the reduction of
 `p @ r` (the value keeps the ends of the type) and path eta in the
-conversion check. Neutral interval terms participate in the same algebra
+conversion check, and the reductions of `transp`. Neutral interval terms participate in the same algebra
 as interval variables. The printer emits source syntax for interval and
 path normal forms. `test/fronttool.c` checks these round trips, neutral
 interval laws and type-directed checking of the argument to `funExt`.
 It also checks system normal forms, elimination with neutral branches,
 and conversion of the face indices of `Partial` types.
 
-`src/front/lower.c` refuses interval, path and system values at run time. A
+`src/front/lower.c` refuses interval, path and system values at run time.
+A `transp` that stays unreduced lowers to its payload. A
 program cannot use `I`, `PathP` or `Path` values in an entry. The gate
 checks `test/ir/path.lang`.
