@@ -101,8 +101,14 @@ type does not check as written, and the default for each.
   through the field inverse with a range check. The error against real
   softmax is not in scope.
 - N7 Weights: `matmul m n k` maps an m×k tensor to an m×n tensor, but no
-  argument gives the k×n weights (O4). The shapes of `attention` are not
-  given (O5).
+  argument gives the k×n weights. Ruling O4: the weights are part of the
+  witness. The denotation of the design has no witness argument, so the
+  weights must reach it through the witness. Default: each instance gives
+  `Weights` and `weightsOf : Witness → Weights`. A layer gets
+  `denotation : Weights → Tensor inS → Tensor outS`, and soundness gets
+  `denotation (weightsOf w) x ≡ eval circuit w`. Completeness quantifies
+  over the weights too. Z5 records this change of the Layer type in
+  `SPEC.md` section 9. The shapes of `attention` are not given (O5).
 
 ## 5. Slices and gates
 
@@ -122,7 +128,7 @@ type does not check as written, and the default for each.
   induction principle. If not, add one.
 - Z6: The BabyBear and BN254 instances (N3), `cost` (N5) and the operators
   `matmul`, `softmax`, `attention`, `layerNorm`, `quantize`, `lookup`,
-  `residual`, `residual-loop` (N6). Needs O4 and O5 first.
+  `residual`, `residual-loop` (N6). Needs O5 first.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.
@@ -148,13 +154,13 @@ type does not check as written, and the default for each.
 - O2: Fields. Default: BabyBear and BN254. Goldilocks and Mersenne31 later.
 - O3: Glue types and univalence. Default: out, because the design does not
   list them.
-- O4: matmul weights (N7). Options: (a) an extra argument
-  `Tensor (shape (k ∷ n ∷ []))`; (b) weights in the witness, with the
-  denotation taking them as input. A USER ruling is needed before Z6.
+- O4: matmul weights (N7). RULED 2026-10-15 (USER): (b), the weights are
+  part of the witness. The Layer type change is the N7 default.
 - O5: attention shapes (N7). Default: `shape (h ∷ d ∷ [])` to the same
   shape, with the weights of O4. A USER ruling is needed before Z6.
-- O6: LLZK tools. `llzk-opt` needs an LLVM and MLIR build. Ask before the
-  install. The build stays under 4 GB, or uses a release binary.
+- O6: LLZK tools. `llzk-opt` needs an LLVM and MLIR build. Install
+  APPROVED 2026-10-15 (USER). The build stays under 4 GB, or uses a release
+  binary.
 - O7: Circuit as a QIIT (N2). The other option: `seq` pattern matches on
   `id`, so one unit law is `refl` and the others are proofs.
 - O8: QIIT schema. Default: finitary QIITs (sorts indexed by earlier sorts,
