@@ -7,7 +7,9 @@ slice Z2 (C3): `transp`, `hcomp`, `comp` and `fill`, and transport and
 `trans` over a path, slice Z3 (C4): higher inductive types in the
 domain, path constructor values, the formal `hcomp` and the `fold`
 eliminator, and slice Z4 (C5): indexed sorts with the motive fold (part
-Z4a) and mutual blocks (part Z4b). Slices Z5 to Z11 are not started.
+Z4a) and mutual blocks (part Z4b). It implements part Z5a of slice Z5:
+`Nat` induction, the `natAdd` neutral rules, `natMax`, `natIsSet` and
+record eta. Parts Z5b and Z5c and slices Z6 to Z11 are not started.
 
 ## Implemented
 
@@ -55,6 +57,11 @@ Z4a) and mutual blocks (part Z4b). Slices Z5 to Z11 are not started.
   each sort. `examples/rose.lang` gives the accept cases and the laws of
   `roseMap`, `kidsMap` and `kidsMap2` by `refl`. A fold over a block at
   run time fails with `REFUSE_RUNTIME_TREE`. Z4 is done.
+- Z5 part Z5a: the motive form of the `Nat` fold (induction), the
+  `natAdd` neutral rules R1 to R3, `natMax`, `natIsSet` and record eta
+  (FORMERS F6 and C6). `examples/nat.lang` proves `natAddAssoc` by
+  induction and gives a `Nat`-valued fold out of `Circuit`
+  (`circCount`).
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
@@ -110,6 +117,11 @@ Z4a) and mutual blocks (part Z4b). Slices Z5 to Z11 are not started.
 - `PathP` constructors, a dimension of 3 or more and `transp` at a
   higher inductive type whose parameters vary are later slices. A `fold`
   over a higher inductive type has no motive (no dependent elimination).
+- `natMax n 0` does not convert with `n`, so `natMaxAssoc` cannot be
+  proved. Cause: `natMax` has no neutral rule (Z5 flag 12).
+- The succ iota of the `Nat` motive fold applies only to `natAdd x 1`.
+  `natAdd x L` with a number `L` greater than 1 does not unfold. Cause:
+  the iota matches only the form `natAdd x 1`.
 - The kit limits stay. `docs/host/CAPABILITY.md` gives them.
 
 ## Internal boundaries
