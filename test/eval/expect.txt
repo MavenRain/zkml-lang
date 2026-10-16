@@ -27,3 +27,4 @@ transp n => 7
 hcomp h => 5
 kan k => 6
 kan sg => pack 3 5
+hit base => circleBase

@@ -19,3 +19,10 @@ def redTotal : (items : List Item) -> Nat :=
   fun (items : List Item) => total (filter (fun (item : Item) => isRed (itemColor item)) items)
 def depth : (s : Stack) -> Nat :=
   fun (s : Stack) => fold 0 (fun (top : Nat) (rest : Nat) => natAdd rest 1) s
+-- Higher inductive types (former C4): a constructor with a Path type is a path.
+family Circle := circleBase | circleLoop : Path Circle circleBase circleBase
+family Trunc (A : Type 0) := truncIn (truncVal : A)
+  | truncSquash (truncX truncY : Trunc A) : Path (Trunc A) truncX truncY
+family Quot (A : Type 0) (R : A -> A -> Type 0) := quotIn (quotRep : A)
+  | quotGlue (quotA quotB : A) (quotR : R quotA quotB) : Path (Quot A R) (quotIn A R quotA) (quotIn A R quotB)
+  | quotSquash (quotX quotY : Quot A R) (quotP quotQ : Path (Quot A R) quotX quotY) : Path (Path (Quot A R) quotX quotY) quotP quotQ

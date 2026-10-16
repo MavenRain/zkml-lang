@@ -36,3 +36,5 @@ comp-name.lang REFUSE_NAME
 fill-name.lang REFUSE_NAME
 trans-ends.lang TYPE_MISMATCH
 trans-line.lang TYPE_MISMATCH
+hit-program.lang REFUSE_DATA
+hit-fold.lang TYPE_FOLD_HIT
