@@ -6,8 +6,8 @@ elements and systems, and PathP and Path (C2). It also implements
 slice Z2 (C3): `transp`, `hcomp`, `comp` and `fill`, and transport and
 `trans` over a path, slice Z3 (C4): higher inductive types in the
 domain, path constructor values, the formal `hcomp` and the `fold`
-eliminator, and part Z4a of Z4 (C5): indexed sorts with the motive
-fold. Part Z4b (mutual blocks) and slices Z5 to Z11 are not started.
+eliminator, and slice Z4 (C5): indexed sorts with the motive fold (part
+Z4a) and mutual blocks (part Z4b). Slices Z5 to Z11 are not started.
 
 ## Implemented
 
@@ -49,8 +49,12 @@ fold. Part Z4b (mutual blocks) and slices Z5 to Z11 are not started.
   constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`), the
   `fold` eliminator with a motive over the indices, and cases over the
   fields only. `examples/qiit.lang` gives the accept cases and the laws
-  of `circMap` and `circFlip` by `refl`. Part Z4b (mutual blocks) is not
-  started.
+  of `circMap` and `circFlip` by `refl`.
+- C5 part Z4b: mutual blocks (`family Rose := ... and Kids := ...` in
+  `domain/domain.lang`) and the fold over a block, with one motive for
+  each sort. `examples/rose.lang` gives the accept cases and the laws of
+  `roseMap`, `kidsMap` and `kidsMap2` by `refl`. A fold over a block at
+  run time fails with `REFUSE_RUNTIME_TREE`. Z4 is done.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work

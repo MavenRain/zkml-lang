@@ -41,3 +41,8 @@ family Circuit (a b : Shape) :=
       : Path (Circuit asA asD) (circSeq asA asC asD (circSeq asA asB asC asF asG) asH) (circSeq asA asB asD asF (circSeq asB asC asD asG asH))
   | circSquash (sqA sqB : Shape) (sqF sqG : Circuit sqA sqB) (sqP sqQ : Path (Circuit sqA sqB) sqF sqG)
       : Path (Path (Circuit sqA sqB) sqF sqG) sqP sqQ
+
+family Rose := rose (roseKids : Kids)
+  and Kids := kidsNil | kidsCons (kidsHead : Rose) (kidsTail : Kids)
+  | kidsSwap (swapX swapY : Rose) (swapK : Kids) : Path Kids (kidsCons swapX (kidsCons swapY swapK)) (kidsCons swapY (kidsCons swapX swapK))
+  | kidsSquash (ksqK ksqL : Kids) (ksqP ksqQ : Path Kids ksqK ksqL) : Path (Path Kids ksqK ksqL) ksqP ksqQ
