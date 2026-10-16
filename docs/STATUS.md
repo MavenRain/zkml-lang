@@ -4,9 +4,10 @@ The build implements slice Z0 (the tcc-wasm kit with the formers F1 to
 F15) and slice Z1 of `docs/PLAN.md`: the interval C1 with faces, partial
 elements and systems, and PathP and Path (C2). It also implements
 slice Z2 (C3): `transp`, `hcomp`, `comp` and `fill`, and transport and
-`trans` over a path, and slice Z3a of Z3 (C4): higher inductive types
-in the domain, path constructor values and the formal `hcomp`. The
-eliminator (slice Z3b) and slices Z4 to Z11 are not started.
+`trans` over a path, slice Z3 (C4): higher inductive types in the
+domain, path constructor values, the formal `hcomp` and the `fold`
+eliminator, and part Z4a of Z4 (C5): indexed sorts with the motive
+fold. Part Z4b (mutual blocks) and slices Z5 to Z11 are not started.
 
 ## Implemented
 
@@ -43,6 +44,13 @@ eliminator (slice Z3b) and slices Z4 to Z11 are not started.
   (`REFUSE_DATA`). Part Z3b adds the `fold` eliminator, with one case
   for each constructor and its laws by `refl`; Z3 is done.
   `examples/hit.lang` gives the accept cases.
+- C5 part Z4a: indexed sorts in `domain/domain.lang` (`Circuit (a b : Shape)`
+  with the point constructors `circId` and `circSeq` and the path
+  constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`), the
+  `fold` eliminator with a motive over the indices, and cases over the
+  fields only. `examples/qiit.lang` gives the accept cases and the laws
+  of `circMap` and `circFlip` by `refl`. Part Z4b (mutual blocks) is not
+  started.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
