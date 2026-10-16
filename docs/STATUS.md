@@ -2,9 +2,9 @@
 
 The build implements slice Z0 (the tcc-wasm kit with the formers F1 to
 F15) and slice Z1 of `docs/PLAN.md`: the interval C1 with faces, partial
-elements and systems, and PathP and Path (C2). It also implements parts
-Z2a and Z2b-1 of slice Z2: `transp`, transport over a path and `hcomp`
-(C3). Part Z2b-2 and slices Z3 to Z11 are not started.
+elements and systems, and PathP and Path (C2). It also implements
+slice Z2 (C3): `transp`, `hcomp`, `comp` and `fill`, and transport and
+`trans` over a path. Slices Z3 to Z11 are not started.
 
 ## Implemented
 
@@ -28,15 +28,18 @@ Z2a and Z2b-1 of slice Z2: `transp`, transport over a path and `hcomp`
   outer context, the base condition, and the reductions where `phi` holds
   and at Pi, Prod, PathP and the constants of the kit data types).
   `examples/hcomp.lang` gives the accept cases.
+- C3 part Z2b-2: `comp A side u0` and `fill A side u0 r` (the `hcomp`
+  forms over a constant line, the CCHM forms over a varying line),
+  `hcomp` at a Sigma type, `transp` along a line of `PathP` types, and
+  `trans` over a path. `examples/kan.lang` gives the accept cases and the
+  laws `rUnit`, `lUnit` and `assoc`.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
 
-1. Part Z2b-2: `comp` and `fill` (C3), `hcomp` at a Sigma type, and
-   `transp` along a line of `PathP` types. Then `trans` takes a path.
-2. Slices Z3 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
+1. Slices Z3 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
    on item O5 (attention shapes) first.
-3. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
+2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
 ## Known limits
@@ -50,10 +53,12 @@ Z2a and Z2b-1 of slice Z2: `transp`, transport over a path and `hcomp`
 - `refl` and `cong` on a path need a constant line. Cause: `<i> a` over
   a line that varies is ill typed, because a fixed `a` is not in `A i`.
   A dependent `cong` needs the checker to infer the line (a later item).
-- `trans` takes an `Eq` proof only. Cause: the path form of `trans`
-  is part Z2b-2.
-- `transp` along a line of `PathP` types stays unreduced. Cause: the
-  rule needs `comp` (part Z2b-2).
+- `trans` over a path needs a constant line. A path over a varying line
+  fails with `TYPE_MISMATCH`. Cause: the path form of `trans` is an
+  `hcomp`, and `hcomp` composes in one type.
+- `trans p refl` fails with `TYPE_INFER`. Cause: `trans` infers its
+  second argument, and `refl` does not infer a type. Use `<i> b` with a
+  declared type (`rfl` in `examples/kan.lang`).
 - `transp` stays unreduced along a family whose parameters vary on the
   line, and along a constant line of a neutral type. Cause: the core has
   no regularity at a neutral type, and no rule for a family constructor
@@ -73,13 +78,12 @@ Z2a and Z2b-1 of slice Z2: `transp`, transport over a path and `hcomp`
   fails with `TYPE_SYSTEM`. Cause: the checker reads `phi` from the faces
   of the system.
 - `hcomp` at a constructor with fields (`cons`, `some`, `inl`, `inr` and
-  a family constructor) stays unreduced. Cause: no rule moves `hcomp`
-  into the fields yet.
+  a family constructor) or at `refl` stays unreduced. So at a Sigma type
+  with an `Eq` second part, only the first part moves. Cause: no rule
+  moves `hcomp` into the fields or along the `Eq` indices yet.
 - `hcomp` at a universe stays unreduced. Cause: the core has no Glue.
-- `hcomp` at a Sigma type stays unreduced. Cause: the rule needs `comp`
-  (part Z2b-2).
 - An empty `hcomp` at a neutral base stays unreduced, as in CCHM.
-- An `hcomp` that stays unreduced at run time gives
+- An `hcomp`, `comp` or `fill` that stays unreduced at run time gives
   `REFUSE_RUNTIME_PATH`. Cause: the IR has no system.
 - The kit limits stay. `docs/host/CAPABILITY.md` gives them.
 

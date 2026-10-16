@@ -31,3 +31,8 @@ hcomp-face.lang NAME_UNKNOWN
 hcomp-base.lang TYPE_SYSTEM
 hcomp-side.lang TYPE_SYSTEM
 hcomp-name.lang REFUSE_NAME
+comp-base.lang TYPE_SYSTEM
+comp-name.lang REFUSE_NAME
+fill-name.lang REFUSE_NAME
+trans-ends.lang TYPE_MISMATCH
+trans-line.lang TYPE_MISMATCH

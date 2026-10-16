@@ -32,6 +32,7 @@ typedef struct {
   size_t decl_index;
   const Scope *scope; /* the innermost binder first */
   const Env *env;     /* a variable for each binder */
+  const Value *face;  /* the faces assumed by enclosing system branches */
   uint32_t level;     /* the number of binders */
   unsigned depth;
   uint32_t eta_count;
@@ -77,7 +78,9 @@ typedef enum {
   RULE_SYSTEM,
   RULE_FROM_PARTIAL,
   RULE_TRANSP,
-  RULE_HCOMP
+  RULE_HCOMP,
+  RULE_COMP,
+  RULE_FILL
 } Rule;
 
 typedef struct {
@@ -153,7 +156,9 @@ static const Builtin BUILTINS[] = {
   {"fromPartial", 1, RULE_FROM_PARTIAL, OP_FROMPARTIAL, OP_NAT, 0},
   /* Kan operations (former C3). */
   {"transp", 3, RULE_TRANSP, OP_TRANSP, OP_NAT, 0},
-  {"hcomp", 2, RULE_HCOMP, OP_HCOMP, OP_NAT, 0}
+  {"hcomp", 2, RULE_HCOMP, OP_HCOMP, OP_NAT, 0},
+  {"comp", 3, RULE_COMP, OP_HCOMP, OP_NAT, 0},
+  {"fill", 4, RULE_FILL, OP_HCOMP, OP_NAT, 0}
 };
 
 #define BUILTIN_COUNT ((uint32_t)(sizeof BUILTINS / sizeof BUILTINS[0]))
@@ -338,10 +343,12 @@ static void pop(Checker *c) {
 /* 1 when a term of type FOUND can stand where WANT is expected.
    Universes are not cumulative (former F14). A pretype (sort SSet) is in no
    universe (former C1). */
+static int conv_on(Checker *c, uint32_t level, const Value *a, const Value *b);
+
 static int expect(Checker *c, const Value *found, const Value *want) {
   if (found == NULL || want == NULL)
     return 0;
-  if (conv_values(c->m, c->level, found, want))
+  if (conv_on(c, c->level, found, want))
     return 1;
   if (val_is(found, OP_SSET))
     return FAIL(c, "TYPE_PRETYPE", "expected a term of type %s, found a pretype (its sort is SSet)", show(c, want));
@@ -472,7 +479,7 @@ static const Core *fn_into(Checker *c, const Term *t, const Value *dom, const Va
   *result = closure_apply(c->m, ft, val_var(c->m, c->level));
   /* Compare at two fresh arguments before the result leaves the binder.
      Reusing its level in expect would capture a dependent result. */
-  if (!conv_values(c->m, c->level + 2u, *result,
+  if (!conv_on(c, c->level + 2u, *result,
                    closure_apply(c->m, ft, val_var(c->m, c->level + 1u))))
     return nul(FAIL(c, "TYPE_MISMATCH", "this operation needs a function with a non-dependent result type"));
   return expect(c, ft, val_arrow(c->m, dom, *result)) ? f : NULL;
@@ -524,7 +531,7 @@ static const Value *path_type(Checker *c, const Value *b, const Value *x, const 
 
 /* 1 when the line of a PathP type does not use its interval variable. */
 static int line_const(Checker *c, const Value *line) {
-  return conv_values(c->m, c->level + 1u, apply_value(c->m, line, val_var(c->m, c->level)), apply_value(c->m, line, op0(c, OP_I0)));
+  return conv_on(c, c->level + 1u, apply_value(c->m, line, val_var(c->m, c->level)), apply_value(c->m, line, op0(c, OP_I0)));
 }
 
 static const Core *not_carrier(Call *k, const Value *type) {
@@ -626,7 +633,7 @@ static const Core *refl_path(Call *k) {
   const Value *e = k->hint;
   if (!line_const(c, e->args[0]))
     return nul(FAIL(c, "TYPE_MISMATCH", "refl needs a path type over a constant line, found %s", show(c, e)));
-  if (!conv_values(c->m, c->level, e->args[1], e->args[2]))
+  if (!conv_on(c, c->level, e->args[1], e->args[2]))
     return nul(FAIL(c, "TYPE_ENDPOINT", "refl cannot prove the path: the left end normalizes to %s, the right end normalizes to %s", show(c, e->args[1]), show(c, e->args[2])));
   k->type = e;
   return op3(c, OP_PLAM, 0, 1, core_bind(c, CORE_LAM, "%i", NULL, quote_value(c->m, c->level + 1u, e->args[1])), NULL, NULL);
@@ -639,7 +646,7 @@ static const Core *rule_refl(Call *k) {
     return refl_path(k);
   if (!val_is(e, OP_EQ))
     return need_type(k, "Eq A a b");
-  if (!conv_values(c->m, c->level, e->args[1], e->args[2]))
+  if (!conv_on(c, c->level, e->args[1], e->args[2]))
     return nul(FAIL(c, "TYPE_REFL", "refl cannot prove the equality: the left side normalizes to %s, the right side normalizes to %s", show(c, e->args[1]), show(c, e->args[2])));
   k->type = e;
   return op3(c, OP_REFL, 0, 0, NULL, NULL, NULL);
@@ -756,7 +763,7 @@ static const Core *rule_bind(Call *k) {
     return NULL;
   if (!carrier_of(res, &result_carrier, &b) || result_carrier != carrier)
     return nul(FAIL(c, "TYPE_MISMATCH", "bind needs a function into the carrier of %s, found one into %s", show(c, mt), show(c, res)));
-  if (carrier == CARRIER_SUM && !conv_values(c->m, c->level, res->args[0], mt->args[0]))
+  if (carrier == CARRIER_SUM && !conv_on(c, c->level, res->args[0], mt->args[0]))
     return nul(FAIL(c, "TYPE_MISMATCH", "bind must preserve the Sum error type %s, found %s", show(c, mt->args[0]), show(c, res->args[0])));
   k->type = res;
   return op3(c, OP_BIND, carrier, 2, x, f, NULL);
@@ -905,15 +912,60 @@ static const Core *rule_symm(Call *k) {
   return op3(k->c, OP_SYMM, 0, 1, e, NULL, NULL);
 }
 
+/* trans p q for p : Path A a b and q : Path A b c is (D9, C7)
+   `<%i> hcomp A (~ %i \/ %i) (fun %j => [ ~ %i |-> a , %i |-> q @ %j ]) (p @ %i)
+   : Path A a c`, built as Core in the shape of symm_path. */
+static const Core *trans_path(Call *k, const Core *p, const Value *pt) {
+  Checker *c = k->c;
+  uint32_t l = c->level + 1u;
+  const Value *qt = NULL;
+  const Value *a;
+  const Core *q;
+  const Core *qa[4];
+  const Core *pa[4];
+  const Core *cells;
+  const Core *side;
+  const Core *phi;
+  if (!line_const(c, pt->args[0]))
+    return nul(FAIL(c, "TYPE_MISMATCH", "trans needs a path over a constant line, found a term of type %s", show(c, pt)));
+  q = infer(c, k->args[1], &qt);
+  if (q == NULL)
+    return NULL;
+  if (!val_is(qt, OP_PATHP) || !conv_on(c, c->level, pt->args[0], qt->args[0]))
+    return nul(FAIL(c, "TYPE_MISMATCH", "trans needs a second path over the line of the first, %s, found a term of type %s", show(c, pt), show(c, qt)));
+  if (!conv_on(c, c->level, pt->args[2], qt->args[1]))
+    return nul(FAIL(c, "TYPE_MISMATCH", "trans needs the right side of the first proof, %s, to equal the left side of the second, %s", show(c, pt->args[2]), show(c, qt->args[1])));
+  a = apply_value(c->m, pt->args[0], op0(c, OP_I0));
+  /* Under %i and %j: %j 0, %i 1. */
+  qa[0] = quote_value(c->m, l + 1u, here(c, q));
+  qa[1] = core_index(c, CORE_VAR, 0);
+  qa[2] = quote_value(c->m, l + 1u, qt->args[1]);
+  qa[3] = quote_value(c->m, l + 1u, qt->args[2]);
+  cells = op3(c, OP_SYSTEM, 0, 3, core_index(c, CORE_VAR, 1), core_op(c, OP_PAPP, 0, 0, qa, 4), op3(c, OP_SYSNIL, 0, 0, NULL, NULL, NULL));
+  side = core_bind(c, CORE_LAM, "%j", NULL, op3(c, OP_SYSTEM, 0, 3, op3(c, OP_INEG, 0, 1, core_index(c, CORE_VAR, 1), NULL, NULL), quote_value(c->m, l + 1u, pt->args[1]), cells));
+  /* Under %i: %i 0. */
+  pa[0] = quote_value(c->m, l, here(c, p));
+  pa[1] = core_index(c, CORE_VAR, 0);
+  pa[2] = quote_value(c->m, l, pt->args[1]);
+  pa[3] = quote_value(c->m, l, pt->args[2]);
+  phi = op3(c, OP_IMAX, 0, 2, op3(c, OP_INEG, 0, 1, core_index(c, CORE_VAR, 0), NULL, NULL), core_index(c, CORE_VAR, 0), NULL);
+  k->type = path_type(c, a, pt->args[1], qt->args[2]);
+  return op3(c, OP_PLAM, 0, 1, core_bind(c, CORE_LAM, "%i", NULL, op4(c, OP_HCOMP, quote_value(c->m, l, a), phi, side, core_op(c, OP_PAPP, 0, 0, pa, 4))), NULL, NULL);
+}
+
 static const Core *rule_trans(Call *k) {
   Checker *c = k->c;
   const Value *t1 = NULL;
   const Value *t2 = NULL;
-  const Core *e1 = infer_eq(k, 0, &t1);
-  const Core *e2 = e1 == NULL ? NULL : infer_eq(k, 1, &t2);
+  const Core *e1 = try_infer(c, k->args[0], &t1);
+  const Core *e2;
+  if (e1 != NULL && val_is(t1, OP_PATHP))
+    return trans_path(k, e1, t1);
+  e1 = e1 != NULL && val_is(t1, OP_EQ) ? e1 : infer_eq(k, 0, &t1);
+  e2 = e1 == NULL ? NULL : infer_eq(k, 1, &t2);
   if (e2 == NULL)
     return NULL;
-  if (!conv_values(c->m, c->level, t1->args[0], t2->args[0]) || !conv_values(c->m, c->level, t1->args[2], t2->args[1]))
+  if (!conv_on(c, c->level, t1->args[0], t2->args[0]) || !conv_on(c, c->level, t1->args[2], t2->args[1]))
     return nul(FAIL(c, "TYPE_MISMATCH", "trans needs the right side of the first proof, %s, to equal the left side of the second, %s", show(c, t1->args[2]), show(c, t2->args[1])));
   k->type = tyop(c, OP_EQ, 3, t1->args[0], t1->args[1], t2->args[2]);
   return op3(c, OP_TRANS, 0, 2, e1, e2, NULL);
@@ -982,7 +1034,7 @@ static const Core *transport_path(Call *k, const Core *e, const Value *et) {
   if (p == NULL)
     return NULL;
   cod = pt != NULL && pt->kind == VAL_PI ? closure_apply(c->m, pt, val_var(c->m, c->level)) : NULL;
-  if (cod == NULL || cod->kind != VAL_UNIV || !conv_values(c->m, c->level, pt->dom, at))
+  if (cod == NULL || cod->kind != VAL_UNIV || !conv_on(c, c->level, pt->dom, at))
     return nul(FAIL(c, "TYPE_MISMATCH", "transport needs a family of types over %s, found a term of type %s", show(c, at), show(c, pt)));
   pv = here(c, p);
   u = check(c, k->args[2], apply_value(c->m, pv, et->args[1]));
@@ -1014,7 +1066,7 @@ static const Core *rule_transport(Call *k) {
   if (p == NULL)
     return NULL;
   cod = pt != NULL && pt->kind == VAL_PI ? closure_apply(c->m, pt, val_var(c->m, c->level)) : NULL;
-  if (cod == NULL || cod->kind != VAL_UNIV || !conv_values(c->m, c->level, pt->dom, et->args[0]))
+  if (cod == NULL || cod->kind != VAL_UNIV || !conv_on(c, c->level, pt->dom, et->args[0]))
     return nul(FAIL(c, "TYPE_MISMATCH", "transport needs a family of types over %s, found a term of type %s", show(c, et->args[0]), show(c, pt)));
   pv = here(c, p);
   u = check(c, k->args[2], apply_value(c->m, pv, et->args[1]));
@@ -1064,7 +1116,7 @@ static const Core *pathp_line(Checker *c, const Term *t, uint64_t *level) {
   const Value *cod = NULL;
   if (a == NULL)
     return NULL;
-  if (lt != NULL && lt->kind == VAL_PI && conv_values(c->m, c->level, lt->dom, op0(c, OP_I)))
+  if (lt != NULL && lt->kind == VAL_PI && conv_on(c, c->level, lt->dom, op0(c, OP_I)))
     cod = closure_apply(c->m, lt, val_var(c->m, c->level));
   if (cod == NULL || cod->kind != VAL_UNIV)
     return nul(FAIL(c, "TYPE_MISMATCH", "PathP needs a line of type I -> Type n, found a term of type %s", show(c, lt)));
@@ -1128,9 +1180,9 @@ static const Core *rule_plam(Call *k) {
     return NULL;
   at0 = apply_value(c->m, f, op0(c, OP_I0));
   at1 = apply_value(c->m, f, op0(c, OP_I1));
-  if (!conv_values(c->m, c->level, at0, e->args[1]))
+  if (!conv_on(c, c->level, at0, e->args[1]))
     return nul(FAIL(c, "TYPE_ENDPOINT", "the path at i0 normalizes to %s, the type needs %s", show(c, at0), show(c, e->args[1])));
-  if (!conv_values(c->m, c->level, at1, e->args[2]))
+  if (!conv_on(c, c->level, at1, e->args[2]))
     return nul(FAIL(c, "TYPE_ENDPOINT", "the path at i1 normalizes to %s, the type needs %s", show(c, at1), show(c, e->args[2])));
   k->type = e;
   return op3(c, OP_PLAM, 0, 1, lam, NULL, NULL);
@@ -1195,12 +1247,12 @@ static int is_cell(const Term *t) {
 
 /* The checker environment with the variable of each literal set to i1
    (level * 2) or i0 (level * 2 + 1). */
-static const Env *face_env(Checker *c, const uint32_t *lits, uint32_t n) {
+static const Env *face_env_at(Checker *c, uint32_t depth, const uint32_t *lits, uint32_t n) {
   const Env *env = NULL;
   const Value *v;
   uint32_t level;
   uint32_t i;
-  for (level = 0; level < c->level; level++) {
+  for (level = 0; level < depth; level++) {
     v = val_var(c->m, level);
     for (i = 0; i < n; i++)
       if (lits[i] / 2u == level)
@@ -1210,6 +1262,54 @@ static const Env *face_env(Checker *c, const uint32_t *lits, uint32_t n) {
       return NULL;
   }
   return env;
+}
+
+static const Env *face_env(Checker *c, const uint32_t *lits, uint32_t n) {
+  return face_env_at(c, c->level, lits, n);
+}
+
+/* Conversion in a branch is required on each meet of its enclosing faces.
+   Keep the original Core variables, restricting only the comparison. */
+static int conv_on(Checker *c, uint32_t level, const Value *a, const Value *b) {
+  FaceMeets fm;
+  const Core *ka;
+  const Core *kb;
+  const Env *env;
+  uint32_t q;
+  if (a == NULL || b == NULL)
+    return 0;
+  if (conv_values(c->m, level, a, b))
+    return 1;
+  if (c->face == NULL || !face_meets(c->m, level, c->face, &fm))
+    return 0;
+  ka = quote_value(c->m, level, a);
+  kb = quote_value(c->m, level, b);
+  if (ka == NULL || kb == NULL)
+    return 0;
+  for (q = 0; q < fm.count; q++) {
+    env = face_env_at(c, level, fm.lit[q], fm.len[q]);
+    if ((env == NULL && level > 0) || !conv_values(c->m, level, eval_core(c->m, env, ka), eval_core(c->m, env, kb)))
+      return 0;
+  }
+  return 1;
+}
+
+static const Core *check_on(Checker *c, const Term *t, const Value *want, const Core *face) {
+  FaceMeets fm;
+  const Value *saved = c->face;
+  const Value *fv = here(c, face);
+  const Core *out;
+  c->face = saved == NULL ? fv : tyop(c, OP_IMIN, 2, saved, fv, NULL);
+  if (c->face == NULL) {
+    c->face = saved;
+    return NULL;
+  }
+  /* Empty cells still undergo the ordinary branch checks. */
+  if (c->face != NULL && face_meets(c->m, c->level, c->face, &fm) && fm.count == 0)
+    c->face = saved;
+  out = check(c, t, want);
+  c->face = saved;
+  return out;
 }
 
 /* The branches UA and UB agree on each meet of the faces FA /\ FB. A
@@ -1223,6 +1323,8 @@ static int cells_agree(Checker *c, const Core *fa, const Core *ua, const Core *f
   uint32_t q;
   if (meet == NULL)
     return 0;
+  if (c->face != NULL)
+    meet = tyop(c, OP_IMIN, 2, meet, c->face, NULL);
   if (!face_meets(c->m, c->level, meet, &fm))
     return FAIL(c, "TYPE_SYSTEM", "the overlap %s of two faces is not in the face bounds", show(c, meet));
   for (q = 0; q < fm.count; q++) {
@@ -1271,7 +1373,7 @@ static const Core *rule_system(Call *k) {
   join = op0(c, OP_I0);
   for (i = 0; i < n; i++) {
     fk[i] = check(c, face[i], op0(c, OP_I));
-    uk[i] = fk[i] == NULL ? NULL : check(c, branch[i], e->args[1]);
+    uk[i] = fk[i] == NULL ? NULL : check_on(c, branch[i], e->args[1], fk[i]);
     fv = uk[i] == NULL ? NULL : here(c, fk[i]);
     if (fv == NULL)
       return NULL;
@@ -1325,6 +1427,8 @@ static int line_const_on(Checker *c, const Core *line, const Value *r) {
   const Env *env;
   const Value *lv;
   uint32_t q;
+  if (c->face != NULL)
+    r = tyop(c, OP_IMIN, 2, r, c->face, NULL);
   if (!face_meets(c->m, c->level, r, &fm)) {
     lv = here(c, line);
     return lv != NULL && line_const(c, lv) ? 1 : FAIL(c, "TYPE_LINE", "transp needs a line that is constant where r holds, found the line %s", show(c, lv));
@@ -1356,12 +1460,12 @@ static const Core *rule_transp(Call *k) {
   return op3(c, OP_TRANSP, 0, 3, line, r, u);
 }
 
-/* The side `fun j => [ f1 |-> u1 , ... ]` of hcomp (C2), against T with
-   j : I. Pass 1 checks each face at I in the outer context, so a face
+/* The side `fun j => [ f1 |-> u1 , ... ]` of hcomp, comp and fill (C2),
+   against T, or against LINE j when LINE is given, with j : I. Pass 1 checks each face at I in the outer context, so a face
    cannot name j: the faces go to FK and their join to *PHI. Pass 2 checks
    the branches and overlaps using these same faces under j. A
    neutral side is a known limit. */
-static const Core *side_of(Checker *c, const Term *t, const Value *ty, const Core **phi, const Core **fk, uint32_t *n) {
+static const Core *side_of(Checker *c, const Term *t, const Value *ty, const Value *line, const Core **phi, const Core **fk, uint32_t *n) {
   const Term *s = t->kind == TERM_LAM ? t->right : NULL;
   const Value *fv[CELLS_MAX];
   const Term *branch[CELLS_MAX];
@@ -1392,7 +1496,7 @@ static const Core *side_of(Checker *c, const Term *t, const Value *ty, const Cor
     return NULL;
   for (i = 0; i < *n; i++) {
     inner[i] = quote_value(c->m, c->level, fv[i]);
-    uk[i] = inner[i] == NULL ? NULL : check(c, branch[i], ty);
+    uk[i] = inner[i] == NULL ? NULL : check_on(c, branch[i], line == NULL ? ty : apply_value(c->m, line, val_var(c->m, c->level - 1u)), inner[i]);
     if (uk[i] == NULL) {
       pop(c);
       return NULL;
@@ -1409,6 +1513,19 @@ static const Core *side_of(Checker *c, const Term *t, const Value *ty, const Cor
     body = op3(c, OP_SYSTEM, 0, 3, inner[i - 1u], uk[i - 1u], body);
   pop(c);
   return core_bind(c, CORE_LAM, t->name, NULL, body);
+}
+
+/* The base condition of hcomp, comp and fill (D6, C2): where its face
+   holds, each branch of SIDE at j = i0 is U0. */
+static int side_base(Checker *c, const Core *side, const Core **fk, uint32_t n, const Core *u0) {
+  const Core *i0 = op3(c, OP_I0, 0, 0, NULL, NULL, NULL);
+  const Core *i1 = op3(c, OP_I1, 0, 0, NULL, NULL, NULL);
+  const Core *s = side->b;
+  uint32_t q;
+  for (q = 0; q < n && s != NULL && s->kind == CORE_OP && s->op == OP_SYSTEM; q++, s = s->args[2])
+    if (!cells_agree(c, fk[q], core_app(c, core_bind(c, CORE_LAM, "j", NULL, s->args[1]), i0), i1, u0))
+      return 0;
+  return 1;
 }
 
 /* Only types in a universe carry Kan composition. Pi pretypes propagate
@@ -1437,11 +1554,7 @@ static const Core *rule_hcomp(Call *k) {
   const Core *phi = NULL;
   const Core *side;
   const Core *u0 = NULL;
-  const Core *s;
-  const Core *i0 = op3(c, OP_I0, 0, 0, NULL, NULL, NULL);
-  const Core *i1 = op3(c, OP_I1, 0, 0, NULL, NULL, NULL);
   uint32_t n = 0;
-  uint32_t q;
   if (a == NULL) {
     u0 = try_infer(c, k->args[1], &a);
     if (u0 == NULL)
@@ -1449,19 +1562,78 @@ static const Core *rule_hcomp(Call *k) {
   }
   if (!hcomp_type(c, a))
     return NULL;
-  side = side_of(c, k->args[0], a, &phi, fk, &n);
+  side = side_of(c, k->args[0], a, NULL, &phi, fk, &n);
   if (side == NULL)
     return NULL;
   if (u0 == NULL)
     u0 = check(c, k->args[1], a);
-  if (u0 == NULL)
+  if (u0 == NULL || !side_base(c, side, fk, n, u0))
     return NULL;
-  s = side->b;
-  for (q = 0; q < n && s != NULL && s->kind == CORE_OP && s->op == OP_SYSTEM; q++, s = s->args[2])
-    if (!cells_agree(c, fk[q], core_app(c, core_bind(c, CORE_LAM, "j", NULL, s->args[1]), i0), i1, u0))
-      return NULL;
   k->type = a;
   return op4(c, OP_HCOMP, quote_value(c->m, c->level, a), phi, side, u0);
+}
+
+/* The Core of comp LINE side u0 (D8, C6) from the values of LINE and SIDE,
+   the face PHI and the Core U0. A constant line (HOMOG, checked once here)
+   gives hcomp (LINE i1) phi side u0. A varying line gives the CCHM form
+   hcomp (LINE i1) phi (fun j => SYSMAP (fun b => transp (fun i =>
+   LINE (i \/ j)) j b) (side j)) (transp LINE i0 u0). */
+static const Core *comp_core(Checker *c, int homog, const Value *line, const Core *phi, const Value *side, const Core *u0) {
+  uint32_t l = c->level;
+  const Core *a1;
+  const Core *at;
+  const Core *f;
+  const Core *s;
+  if (line == NULL || side == NULL)
+    return NULL;
+  a1 = quote_value(c->m, l, apply_value(c->m, line, op0(c, OP_I1)));
+  if (homog)
+    return op4(c, OP_HCOMP, a1, phi, quote_value(c->m, l, side), u0);
+  at = op3(c, OP_IMAX, 0, 2, core_index(c, CORE_VAR, 0), core_index(c, CORE_VAR, 2), NULL);
+  f = core_bind(c, CORE_LAM, "b", NULL, op3(c, OP_TRANSP, 0, 3, core_bind(c, CORE_LAM, "i", NULL, core_app(c, quote_value(c->m, l + 3u, line), at)), core_index(c, CORE_VAR, 1), core_index(c, CORE_VAR, 0)));
+  s = core_bind(c, CORE_LAM, "j", NULL, op3(c, OP_SYSMAP, 0, 2, f, core_app(c, quote_value(c->m, l + 1u, side), core_index(c, CORE_VAR, 0)), NULL));
+  return op4(c, OP_HCOMP, a1, phi, s, op3(c, OP_TRANSP, 0, 3, quote_value(c->m, l, line), op3(c, OP_I0, 0, 0, NULL, NULL, NULL), u0));
+}
+
+/* comp A side u0 and fill A side u0 r (D8, C6): A : I -> Type n, each
+   branch of side at j has type A j, and u0 : A i0 meets the base condition.
+   comp has type A i1. fill has type A r and is the comp
+   comp (fun j => A (r /\ j)) (fun j => [ ~ r |-> u0 , side (r /\ j) ]) u0
+   over the face phi \/ ~ r. */
+static const Core *rule_comp(Call *k, int fill) {
+  Checker *c = k->c;
+  uint64_t level = 0;
+  uint32_t l = c->level + 1u;
+  uint32_t n = 0;
+  const Core *fk[CELLS_MAX];
+  const Core *phi = NULL;
+  const Core *line = line_of(c, k->args[0], &level);
+  const Value *lv = here(c, line);
+  const Core *side = lv == NULL ? NULL : side_of(c, k->args[1], NULL, lv, &phi, fk, &n);
+  const Core *u0 = side == NULL ? NULL : check(c, k->args[2], apply_value(c->m, lv, op0(c, OP_I0)));
+  const Core *r;
+  const Core *rj;
+  const Value *rv;
+  const Value *sv;
+  int homog;
+  if (u0 == NULL || !side_base(c, side, fk, n, u0))
+    return NULL;
+  homog = line_const(c, lv);
+  sv = here(c, side);
+  if (!fill) {
+    k->type = apply_value(c->m, lv, op0(c, OP_I1));
+    return comp_core(c, homog, lv, phi, sv, u0);
+  }
+  r = check(c, k->args[3], op0(c, OP_I));
+  rv = here(c, r);
+  if (rv == NULL || sv == NULL)
+    return NULL;
+  rj = op3(c, OP_IMIN, 0, 2, quote_value(c->m, l, rv), core_index(c, CORE_VAR, 0), NULL);
+  k->type = apply_value(c->m, lv, rv);
+  return comp_core(c, homog, here(c, core_bind(c, CORE_LAM, "j", NULL, core_app(c, quote_value(c->m, l, lv), rj))),
+                   op3(c, OP_IMAX, 0, 2, phi, op3(c, OP_INEG, 0, 1, r, NULL, NULL), NULL),
+                   here(c, core_bind(c, CORE_LAM, "j", NULL, op3(c, OP_SYSTEM, 0, 3, op3(c, OP_INEG, 0, 1, quote_value(c->m, l, rv), NULL, NULL), quote_value(c->m, l, here(c, u0)), core_app(c, quote_value(c->m, l, sv), rj)))),
+                   u0);
 }
 
 static const Core *rule(Call *k) {
@@ -1542,6 +1714,10 @@ static const Core *rule(Call *k) {
     return rule_transp(k);
   case RULE_HCOMP:
     return rule_hcomp(k);
+  case RULE_COMP:
+    return rule_comp(k, 0);
+  case RULE_FILL:
+    return rule_comp(k, 1);
   case RULE_FUNEXT:
     return rule_funext(k);
   }
@@ -1825,7 +2001,7 @@ static int annotation_ok(Checker *c, const Term *ann, const Value *dom) {
   const Value *v = here(c, check_pretype(c, ann, &level));
   if (v == NULL)
     return 0;
-  return conv_values(c->m, c->level, v, dom) ? 1 : FAIL(c, "TYPE_MISMATCH", "the binder type %s differs from the expected type %s", show(c, v), show(c, dom));
+  return conv_on(c, c->level, v, dom) ? 1 : FAIL(c, "TYPE_MISMATCH", "the binder type %s differs from the expected type %s", show(c, v), show(c, dom));
 }
 
 static const Core *check_lam(Checker *c, const Term *t, const Value *hint, const Value **type) {
