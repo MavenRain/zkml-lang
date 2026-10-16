@@ -477,11 +477,30 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   `examples/hit.lang` carries a `Circle` point through a fold, and the
   gate checks `test/ir/hit-path.lang`, whose fold step is the formal
   `hcomp`.
+- Eliminator: `fold` takes one case for each constructor, the path
+  constructors included. The case of a path constructor has the type
+  `Path B a* b*` (dimension 1) or `Path (Path B a* b*) p* q*`
+  (dimension 2) over the fields of the constructor, where a recursive
+  field has the type `B` and a path field has the type `Path B u* v*`.
+  The star `t*` of a point term `t` keeps the fields as variables and
+  replaces each earlier point constructor by its case. The result type
+  `B` is needed (a hint or a declared type) and rides as a hidden
+  argument of the fold. Reductions: on a point constructor the fold is
+  a data fold; on a path constructor at `r` it is the case at the
+  folded fields, at `r`; on the formal `hcomp` it is an `hcomp` at `B`
+  whose side is the fold of the side. `isProp B` is the case type of
+  `truncSquash` and `isSet B` is the case type of `quotSquash`; the
+  checker does not check the h-level of `B`. At run time only the
+  point constructors have an arm: a path value gives
+  `REFUSE_RUNTIME_PATH`. `examples/hit.lang` gives `circleRec`,
+  `truncRec`, `quotRec` and their laws by `refl`. The rejects
+  `test/check/hit-fold-path.lang`, `test/check/hit-fold-prop.lang` and
+  `test/check/hit-fold-arity.lang` fail with `TYPE_MISMATCH`.
 - Limits: `PathP` constructors, a dimension of 3 or more, an end
   through a path constructor and `transp` along a line whose
-  parameters vary are not available. The eliminator is slice Z3b: a
-  `fold` over a higher inductive type fails with `TYPE_FOLD_HIT` until
-  then.
+  parameters vary are not available. There is no dependent
+  elimination: a `fold` has no motive, and its result type is a type,
+  not a family over the higher inductive type.
 
 ## 4. Status words
 

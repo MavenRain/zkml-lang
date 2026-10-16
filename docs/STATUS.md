@@ -40,8 +40,9 @@ eliminator (slice Z3b) and slices Z4 to Z11 are not started.
   point-term ends and uniform recursion), path constructor values with
   their end rules, the formal `hcomp` at a higher inductive type, and
   `transp` along a constant line. A program cannot declare one
-  (`REFUSE_DATA`), and `fold` over one fails with `TYPE_FOLD_HIT` until
-  slice Z3b. `examples/hit.lang` gives the accept cases.
+  (`REFUSE_DATA`). Part Z3b adds the `fold` eliminator, with one case
+  for each constructor and its laws by `refl`; Z3 is done.
+  `examples/hit.lang` gives the accept cases.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
@@ -94,10 +95,9 @@ eliminator (slice Z3b) and slices Z4 to Z11 are not started.
 - An empty `hcomp` at a neutral base stays unreduced, as in CCHM.
 - An `hcomp`, `comp` or `fill` that stays unreduced at run time gives
   `REFUSE_RUNTIME_PATH`. Cause: the IR has no system.
-- A `fold` over a higher inductive type fails with `TYPE_FOLD_HIT`.
-  Cause: the eliminator is slice Z3b. `PathP` constructors, a dimension
-  of 3 or more and `transp` at a higher inductive type whose parameters
-  vary are later slices too.
+- `PathP` constructors, a dimension of 3 or more and `transp` at a
+  higher inductive type whose parameters vary are later slices. A `fold`
+  over a higher inductive type has no motive (no dependent elimination).
 - The kit limits stay. `docs/host/CAPABILITY.md` gives them.
 
 ## Internal boundaries
@@ -118,7 +118,7 @@ shape `Path X a b` or `Path (Path X a b) p q`, the point-term ends,
 uniform recursion and the field telescope of a path constructor).
 `test/check/expect.txt` gives the refusal code of each reject case
 (`TYPE_ENDPOINT`, `TYPE_PRETYPE`, `TYPE_MISMATCH`, `TYPE_SYSTEM`,
-`TYPE_LINE`, `TYPE_FOLD_HIT`).
+`TYPE_LINE`).
 
 `src/front/eval.c` holds the interval normal form, the face normal form,
 the reduction of systems and `fromPartial`, the reduction of
