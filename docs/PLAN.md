@@ -125,7 +125,7 @@ type does not check as written, and the default for each.
 - Z5: Domain core: Shape, Tensor, Circuit, Resource with its monoid laws
   (N1), Layer, `∘`, `idL`, the category laws (N2), isSetHom (N4), LayerCat,
   `denote`, `resources-∘`, `soundness-∘`. Check that the kit Nat has an
-  induction principle. If not, add one.
+  induction principle. If not, add one. Status: DONE 2026-10-16.
 - Z6: The BabyBear and BN254 instances (N3), `cost` (N5) and the operators
   `matmul`, `softmax`, `attention`, `layerNorm`, `quantize`, `lookup`,
   `residual`, `residual-loop` (N6). Needs O5 first.

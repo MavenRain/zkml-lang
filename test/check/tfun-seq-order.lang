@@ -1,0 +1,1 @@
+def bad : (I : Inst) -> (ws : instWeights I) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (x : Tensor (instF I) a) -> Path (Tensor (instF I) c) (tfHom (denote I ws) a c (catSeq (LayerCat I) a b c L2 L1) x) (layerDen L1 ws (layerDen L2 ws x)) := fun I ws a b c L2 L1 x => refl

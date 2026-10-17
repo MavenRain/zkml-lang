@@ -179,3 +179,52 @@ def layerIdr : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Layer I
 -- layerAssoc: the design order (L3 o L2) o L1 to L3 o (L2 o L1); the circuit path is symm of circAssoc.
 def layerAssoc : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Layer I a d) (layerSeq I a b d (layerSeq I b c d L3 L2) L1) (layerSeq I a c d L3 (layerSeq I a b c L2 L1)) :=
   fun I a b c d L3 L2 L1 => layerExt I a d (layerSeq I a b d (layerSeq I b c d L3 L2) L1) (layerSeq I a c d L3 (layerSeq I a b c L2 L1)) (symm (circAssoc a b c d (layerCircuit L1) (layerCircuit L2) (layerCircuit L3))) refl (resAssoc (layerRes L3) (layerRes L2) (layerRes L1))
+-- The h-level library at the set level (slice Z5c, D11).
+-- isSetPi: a function into sets is a set. The square is pointwise.
+def isSetPi : (A : Type 0) -> (B : A -> Type 0) -> ((a : A) -> isSet (B a)) -> isSet ((a : A) -> B a) :=
+  fun A B h f g p q => <i> <j> fun (x : A) => h x (f x) (g x) (<k> (p @ k) x) (<k> (q @ k) x) @ i @ j
+-- isSetResource: natIsSet on each field, then record eta (D5).
+def isSetResource : isSet Resource :=
+  fun x y p q => <i> <j> res (natIsSet (resGates x) (resGates y) (<k> resGates (p @ k)) (<k> resGates (q @ k)) @ i @ j)
+    (natIsSet (resLookups x) (resLookups y) (<k> resLookups (p @ k)) (<k> resLookups (q @ k)) @ i @ j)
+    (natIsSet (resDegree x) (resDegree y) (<k> resDegree (p @ k)) (<k> resDegree (q @ k)) @ i @ j)
+-- isPropIsSet: a proposition is a set. The square is an hcomp of the paths h x _ from x.
+def isPropIsSet : (A : Type 0) -> isProp A -> isSet A :=
+  fun A h x y p q => <j> <i> hcomp (fun k => [ ~ i |-> h x x @ k , i |-> h x y @ k , ~ j |-> h x (p @ i) @ k , j |-> h x (q @ i) @ k ]) x
+-- isPropSquareP: a square of propositions has a filler for any four sides.
+-- The base is a transp of the corner b00. Each side is a path of the proposition from the base.
+def isPropSquareP : (B : I -> I -> Type 0) -> ((j : I) -> (i : I) -> isProp (B j i)) -> (b00 : B i0 i0) -> (b01 : B i0 i1) -> (b10 : B i1 i0) -> (b11 : B i1 i1) -> (t : PathP (fun (i : I) => B i0 i) b00 b01) -> (u : PathP (fun (i : I) => B i1 i) b10 b11) -> (r : PathP (fun (j : I) => B j i0) b00 b10) -> (s : PathP (fun (j : I) => B j i1) b01 b11) -> PathP (fun (j : I) => PathP (fun (i : I) => B j i) (r @ j) (s @ j)) t u :=
+  fun B h b00 b01 b10 b11 t u r s => <j> <i> hcomp (fun k => [ ~ j |-> h i0 i (transp (fun (m : I) => B (i0 /\ m) (i /\ m)) i0 b00) (t @ i) @ k , j |-> h i1 i (transp (fun (m : I) => B (i1 /\ m) (i /\ m)) i0 b00) (u @ i) @ k , ~ i |-> h j i0 (transp (fun (m : I) => B (j /\ m) (i0 /\ m)) i0 b00) (r @ j) @ k , i |-> h j i1 (transp (fun (m : I) => B (j /\ m) (i1 /\ m)) i0 b00) (s @ j) @ k ]) (transp (fun (m : I) => B (j /\ m) (i /\ m)) i0 b00)
+-- layerExt2: squares on the circuit, the denotation and the resources give a square in Layer (D11).
+-- The soundness and completeness squares come from isPropSquareP. The Inst is K, because the body names the interval type I.
+def layerExt2 : (K : Inst) -> (a b : Shape) -> (L1 L2 : Layer K a b) -> (p q : Path (Layer K a b) L1 L2) -> (sc : Path (Path (Circuit a b) (layerCircuit L1) (layerCircuit L2)) (<i> layerCircuit (p @ i)) (<i> layerCircuit (q @ i))) -> (sd : Path (Path (instWeights K -> Tensor (instF K) a -> Tensor (instF K) b) (layerDen L1) (layerDen L2)) (<i> layerDen (p @ i)) (<i> layerDen (q @ i))) -> (sr : Path (Path Resource (layerRes L1) (layerRes L2)) (<i> layerRes (p @ i)) (<i> layerRes (q @ i))) -> Path (Path (Layer K a b) L1 L2) p q :=
+  fun K a b L1 L2 p q sc sd sr => <j> <i> layer K a b (sc @ j @ i) (sd @ j @ i)
+    ((isPropSquareP (fun (j : I) (i : I) => layerSoundT K a b (sc @ j @ i) (sd @ j @ i)) (fun (j : I) (i : I) => layerSoundProp K a b (sc @ j @ i) (sd @ j @ i)) (layerSound L1) (layerSound L2) (layerSound L1) (layerSound L2) (<i> layerSound (p @ i)) (<i> layerSound (q @ i)) (<j> layerSound L1) (<j> layerSound L2)) @ j @ i)
+    ((isPropSquareP (fun (j : I) (i : I) => layerCompleteT K a b (sc @ j @ i) (sd @ j @ i)) (fun (j : I) (i : I) => layerCompleteProp K a b (sc @ j @ i) (sd @ j @ i)) (layerComplete L1) (layerComplete L2) (layerComplete L1) (layerComplete L2) (<i> layerComplete (p @ i)) (<i> layerComplete (q @ i)) (<j> layerComplete L1) (<j> layerComplete L2)) @ j @ i)
+    (sr @ j @ i)
+-- isSetHom (N4): the Layer hom-sets are sets. The circuit square is circSquash, the denotation square is isSetPi
+-- with instTensorSet and the resource square is isSetResource.
+def isSetHom : (I : Inst) -> (a b : Shape) -> isSet (Layer I a b) :=
+  fun I a b L1 L2 p q => layerExt2 I a b L1 L2 p q
+    (circSquash a b (layerCircuit L1) (layerCircuit L2) (<i> layerCircuit (p @ i)) (<i> layerCircuit (q @ i)))
+    (isSetPi (instWeights I) (fun ws => Tensor (instF I) a -> Tensor (instF I) b) (fun ws => isSetPi (Tensor (instF I) a) (fun x => Tensor (instF I) b) (fun x => instTensorSet I b)) (layerDen L1) (layerDen L2) (<i> layerDen (p @ i)) (<i> layerDen (q @ i)))
+    (isSetResource (layerRes L1) (layerRes L2) (<i> layerRes (p @ i)) (<i> layerRes (q @ i)))
+-- A category (D12). catSeq takes the order g after f, not the diagrammatic order (flag 7).
+family Category := mkCat (catOb : Type 0) (catHom : catOb -> catOb -> Type 0)
+  (catId : (a : catOb) -> catHom a a)
+  (catSeq : (a b c : catOb) -> catHom b c -> catHom a b -> catHom a c)
+  (catIdl : (a b : catOb) -> (f : catHom a b) -> Path (catHom a b) (catSeq a b b (catId b) f) f)
+  (catIdr : (a b : catOb) -> (f : catHom a b) -> Path (catHom a b) (catSeq a a b f (catId a)) f)
+  (catAssoc : (a b c d : catOb) -> (h : catHom c d) -> (g : catHom b c) -> (f : catHom a b) -> Path (catHom a d) (catSeq a b d (catSeq b c d h g) f) (catSeq a c d h (catSeq a b c g f)))
+  (catHomSet : (a b : catOb) -> isSet (catHom a b))
+-- The category of layers of an instance (D12): the laws are layerIdl, layerIdr and layerAssoc, the hom-sets isSetHom.
+def LayerCat : (I : Inst) -> Category := fun I => mkCat Shape (Layer I) (idL I) (layerSeq I) (layerIdl I) (layerIdr I) (layerAssoc I) (isSetHom I)
+-- A functor from a category into types (D13).
+family TypeFunctor (C : Category) := mkTFun (tfOb : catOb C -> Type 0)
+  (tfHom : (a b : catOb C) -> catHom C a b -> tfOb a -> tfOb b)
+  (tfId : (a : catOb C) -> Path (tfOb a -> tfOb a) (tfHom a a (catId C a)) (fun (x : tfOb a) => x))
+  (tfSeq : (a b c : catOb C) -> (g : catHom C b c) -> (f : catHom C a b) -> Path (tfOb a -> tfOb c) (tfHom a c (catSeq C a b c g f)) (fun (x : tfOb a) => tfHom b c g (tfHom a b f x)))
+-- The denotation functor at the weights ws (D13, SPEC O1): an object is a tensor type, a layer gives its
+-- denotation at ws. tfId and tfSeq hold by refl.
+def denote : (I : Inst) -> instWeights I -> TypeFunctor (LayerCat I) :=
+  fun I ws => mkTFun (LayerCat I) (fun (s : Shape) => Tensor (instF I) s) (fun (a b : Shape) (L : Layer I a b) => layerDen L ws) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)

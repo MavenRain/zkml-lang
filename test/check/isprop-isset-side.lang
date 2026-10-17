@@ -1,0 +1,2 @@
+def bad : (A : Type 0) -> isProp A -> isSet A :=
+  fun A h x y p q => <j> <i> hcomp (fun k => [ ~ i |-> h x x @ k , i |-> h x y @ k , ~ j |-> h x (q @ i) @ k , j |-> h x (q @ i) @ k ]) x

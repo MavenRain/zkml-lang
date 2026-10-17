@@ -1,0 +1,1 @@
+def bad : (I : Inst) -> Category := fun I => mkCat Shape (Layer I) (idL I) (fun (a b c : Shape) (f : Layer I a b) (g : Layer I b c) => layerSeq I a b c g f) (layerIdl I) (layerIdr I) (layerAssoc I) (isSetHom I)

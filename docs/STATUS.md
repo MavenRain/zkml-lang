@@ -11,8 +11,9 @@ Z4a) and mutual blocks (part Z4b). It implements part Z5a of slice Z5:
 `Nat` induction, the `natAdd` neutral rules, `natMax`, `natIsSet` and
 record eta. It implements part Z5b: the `natMax` neutral rules and, in
 the domain, `Resource`, `Inst`, `Layer`, the h-level library and the
-category laws of `Layer`. Part Z5c and slices Z6 to Z11 are not
-started.
+category laws of `Layer`. It implements part Z5c: `isSetHom`, the
+category `LayerCat` and the functor `denote`. Slice Z5 is DONE. Slices
+Z6 to Z11 are not started.
 
 ## Implemented
 
@@ -80,11 +81,25 @@ started.
   `layerIdl`, `layerIdr` and `layerAssoc` are `layerExt` proofs, not
   `refl` (flag 8). `examples/resource.lang` and `examples/layer.lang`
   give the accept cases.
+- Z5 part Z5c: in `domain/domain.lang`, the h-level lemmas `isSetPi`,
+  `isSetResource`, `isPropIsSet` and `isPropSquareP` (a square of
+  propositions has a filler for any four sides). `layerExt2` gives a
+  square in `Layer` from squares of the circuits, the denotations and
+  the resources. `isSetHom` (N4) shows that `Layer I a b` is a set. The
+  record `Category` and `LayerCat I` give the category of layers.
+  `catSeq` takes the order of `∘` (`g` after `f`), not the diagrammatic
+  order (flag 7, `SPEC.md` O2). The record `TypeFunctor C` and
+  `denote I ws` give the denotation functor: `Tensor (instF I)` on the
+  shapes and `layerDen L ws` on the layers. The identity and
+  composition laws hold by `refl`. `examples/category.lang` gives the
+  accept cases. Six check rows give the refusals: `cat-seq-order`,
+  `cat-idl-swap`, `tfun-seq-order`, `isset-hom-square`, `denote-hom`
+  and `isprop-isset-side`.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
 
-1. Slices Z3 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
+1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
    on item O5 (attention shapes) first.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
@@ -153,6 +168,16 @@ started.
   dependent `List` elimination, so no term gives a tensor at a neutral
   shape. A concrete instance (slice Z6) has the same block. A `List`
   motive fold or a tensor primitive can remove it.
+- `examples/category.lang` has no entry. Each definition in it takes an
+  abstract `Inst`, because the domain has no concrete `Inst` (flag 15).
+  The lowering gives an empty module.
+- The `Inst` record is different from the N3 design at two points. A
+  USER ruling is open for each. `Inst` carries the identity and
+  sequence witness laws (`instIdSound`, `instSeqSat` and the related
+  laws), because these laws do not check for an abstract instance
+  (flag 6). `instInputWit` takes the weights, and `instInputWeights`
+  gives them back (flag 14). The N3 design gives
+  `inputWitness : Tensor s -> Witness`.
 - In a signature that binds an `Inst` as `I`, the name `I` hides the
   interval type `I`, so the signature cannot write `(j : I)`. An
   interval lambda in a type needs `(i : I)`. Give the `Inst` another

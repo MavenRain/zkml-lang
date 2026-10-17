@@ -1,0 +1,7 @@
+-- The category of layers and the denotation functor over an abstract instance I (slice Z5c).
+-- No entry: each def takes an abstract Inst. Each def holds by refl.
+def layerCatOb : (I : Inst) -> Path (Type 0) (catOb (LayerCat I)) Shape := fun I => refl
+def layerCatSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Layer I a c) (catSeq (LayerCat I) a b c L2 L1) (layerSeq I a b c L2 L1) := fun I a b c L2 L1 => refl
+def denoteOb : (I : Inst) -> (ws : instWeights I) -> (s : Shape) -> Path (Type 0) (tfOb (denote I ws) s) (Tensor (instF I) s) := fun I ws s => refl
+def denoteId : (I : Inst) -> (ws : instWeights I) -> (s : Shape) -> (x : Tensor (instF I) s) -> Path (Tensor (instF I) s) (tfHom (denote I ws) s s (catId (LayerCat I) s) x) x := fun I ws s x => refl
+def denoteSeq : (I : Inst) -> (ws : instWeights I) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (x : Tensor (instF I) a) -> Path (Tensor (instF I) c) (tfHom (denote I ws) a c (catSeq (LayerCat I) a b c L2 L1) x) (layerDen L2 ws (layerDen L1 ws x)) := fun I ws a b c L2 L1 x => refl

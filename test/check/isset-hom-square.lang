@@ -1,0 +1,5 @@
+def bad : (I : Inst) -> (a b : Shape) -> isSet (Layer I a b) :=
+  fun I a b L1 L2 p q => layerExt2 I a b L1 L2 p q
+    (circSquash a b (layerCircuit L1) (layerCircuit L2) (<i> layerCircuit (q @ i)) (<i> layerCircuit (p @ i)))
+    (isSetPi (instWeights I) (fun ws => Tensor (instF I) a -> Tensor (instF I) b) (fun ws => isSetPi (Tensor (instF I) a) (fun x => Tensor (instF I) b) (fun x => instTensorSet I b)) (layerDen L1) (layerDen L2) (<i> layerDen (p @ i)) (<i> layerDen (q @ i)))
+    (isSetResource (layerRes L1) (layerRes L2) (<i> layerRes (p @ i)) (<i> layerRes (q @ i)))

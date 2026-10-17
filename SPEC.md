@@ -107,8 +107,17 @@ An instance is a top-level definition whose type is a data type (F14).
   the layer category to the types. Default: `denote I ws` is a functor for
   each weight assignment `ws`. It sends a shape `s` to `Tensor (instF I) s`
   and a layer `L` to `layerDen L ws`. The identity law and the composition
-  law hold by refl. Status: slice Z5b gives `Layer`, `idL` and `layerSeq`
-  with this denotation. Slice Z5c gives `TypeFunctor` and `denote`.
+  law hold by refl. Status: built with the default. Slice Z5b gives
+  `Layer`, `idL` and `layerSeq` with this denotation. Slice Z5c gives
+  `TypeFunctor` and `denote`: `tfOb` is `Tensor (instF I)`, `tfHom L` is
+  `layerDen L ws`, and `tfId` and `tfSeq` hold by refl.
+- O2. The order of composition in `Category` (USER flag 7, N9). The
+  design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
+  diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order
+  of `∘`: `catSeq a b c g f` is `g` after `f`, as in `layerSeq`. With
+  this order, `LayerCat` is well typed. The check row
+  `test/check/cat-seq-order.lang` shows that the diagrammatic order is
+  refused. Status: built in slice Z5c. Not RULED.
 
 ## 10. Milestones
 

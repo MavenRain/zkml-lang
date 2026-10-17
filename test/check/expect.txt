@@ -58,3 +58,9 @@ layer-assoc-direction.lang TYPE_MISMATCH
 isprop-pathp-face.lang TYPE_LINE
 layer-ext-const.lang TYPE_MISMATCH
 isprop-redef.lang REFUSE_NAME
+cat-seq-order.lang TYPE_MISMATCH
+cat-idl-swap.lang TYPE_MISMATCH
+tfun-seq-order.lang TYPE_MISMATCH
+denote-hom.lang TYPE_ENDPOINT
+isset-hom-square.lang TYPE_MISMATCH
+isprop-isset-side.lang TYPE_ENDPOINT

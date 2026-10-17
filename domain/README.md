@@ -73,9 +73,22 @@ tests use these names, so keep them when you replace the sample.
 | `idL`, `seqDen`, `soundnessSeq`, `seqWitness`, `completenessSeq`, `layerSeq`, `resourcesSeq` | the identity layer and the sequential composition | `examples/layer.lang` |
 | `layerSoundT`, `layerCompleteT`, `layerSoundProp`, `layerCompleteProp`, `layerExt` | the field types, their h-level, and a Path in `Layer` from Paths of the circuit, the denotation and the resources | `layerIdl`, `layerIdr`, `layerAssoc` |
 | `layerIdl`, `layerIdr`, `layerAssoc` | the category laws of `Layer` | `examples/layer.lang` |
+| `isSetPi`, `isSetResource`, `isPropIsSet`, `isPropSquareP` | more of the h-level library: a Pi of sets is a set, `Resource` is a set, a proposition is a set, a square of propositions has a filler | `isSetHom` |
+| `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
+| `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
+| `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |
+| `LayerCat (I : Inst)` | the category of layers: the objects are shapes, the morphisms are layers | `examples/category.lang` |
+| `TypeFunctor (C : Category)` | record of a functor from `C` to the types: `tfOb`, `tfHom`, `tfId`, `tfSeq` | `denote` |
+| `denote` | `(I : Inst) -> instWeights I -> TypeFunctor (LayerCat I)`: `Tensor (instF I)` on the shapes, `layerDen L ws` on the layers | `examples/category.lang` |
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.
+`catSeq` takes the same order: `catSeq C a b c g f` is `g` after `f`
+(flag 7, `SPEC.md` O2).
+
+The domain has no `isSetCircuit` definition. `isSetHom` uses
+`circSquash` directly. `squashIsSet` in `examples/qiit.lang` has the
+same statement.
 
 ## How to replace the domain
 

@@ -1,0 +1,2 @@
+def bad : (I : Inst) -> instWeights I -> TypeFunctor (LayerCat I) :=
+  fun I ws => mkTFun (LayerCat I) (fun (s : Shape) => Tensor (instF I) s) (fun (a b : Shape) (L : Layer I a b) (x : Tensor (instF I) a) => instEval I a b (layerCircuit L) (instInputWit I a ws x)) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
