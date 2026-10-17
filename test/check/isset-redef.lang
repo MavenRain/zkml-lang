@@ -1,0 +1,1 @@
+def isSet : (B : Type 0) -> Type 0 := fun B => B

@@ -11,15 +11,12 @@ def loopAt : (r : I) -> Path Circle (circleLoop @ r) (circleLoop @ r) := fun r =
 def loopEnd0 : Path (Path Circle circleBase circleBase) (loopAt i0) refl := refl
 def loopEnd1 : Path (Path Circle circleBase circleBase) (loopAt i1) refl := refl
 def glue : (A : Type 0) -> (R : A -> A -> Type 0) -> (a : A) -> (b : A) -> R a b -> Path (Quot A R) (quotIn A R a) (quotIn A R b) := fun A R a b r => quotGlue A R a b r
-def isPropTrunc : (A : Type 0) -> (x : Trunc A) -> (y : Trunc A) -> Path (Trunc A) x y := fun A => truncSquash A
 def isSetQuot : (A : Type 0) -> (R : A -> A -> Type 0) -> (x : Quot A R) -> (y : Quot A R) -> (p : Path (Quot A R) x y) -> (q : Path (Quot A R) x y) -> Path (Path (Quot A R) x y) p q := fun A R => quotSquash A R
 def transpBase : Path Circle (transp (fun i => Circle) i0 circleBase) circleBase := refl
 def loopTwice : Path Circle circleBase circleBase := trans circleLoop circleLoop
 def loopTwiceEnd : Path Circle (loopTwice @ i0) circleBase := refl
 def base : Circle := circleBase
 def pointCount : (n : Nat) -> Nat := fun (n : Nat) => first (fold (fun (acc : Prod Nat Circle) => pair (natAdd (first acc) 1) (second acc)) (pair 0 circleBase) n)
-def isProp : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> Path B x y
-def isSet : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> (p : Path B x y) -> (q : Path B x y) -> Path (Path B x y) p q
 def circleRec : (B : Type 0) -> (b : B) -> (l : Path B b b) -> Circle -> B := fun B b l x => fold b l x
 def truncRec : (A : Type 0) -> (B : Type 0) -> (f : A -> B) -> (pr : isProp B) -> Trunc A -> B := fun A B f pr x => fold f pr x
 def quotRec : (A : Type 0) -> (R : A -> A -> Type 0) -> (B : Type 0) -> (f : A -> B) -> (g : (a : A) -> (b : A) -> R a b -> Path B (f a) (f b)) -> (st : isSet B) -> Quot A R -> B := fun A R B f g st x => fold f g st x

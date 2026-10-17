@@ -469,8 +469,9 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   `i0` gives `a` and `i1` gives `b`. Dimension 2, at `r1` then `r2`:
   `r1 = i0` gives `p @ r2`, `r1 = i1` gives `q @ r2`, `r2 = i0` gives
   `a` and `r2 = i1` gives `b`. `examples/hit.lang` gives the accept
-  cases: the ends of `circleLoop` by `refl`, the type of `quotGlue`,
-  `isPropTrunc` from `truncSquash` and `isSetQuot` from `quotSquash`.
+  cases: the ends of `circleLoop` by `refl`, the type of `quotGlue` and
+  `isSetQuot` from `quotSquash`. The domain gives `isPropTrunc` from
+  `truncSquash` (part Z5b).
 - Formal `hcomp`: `hcomp side u0` at a higher inductive type is a
   canonical value (a formal constructor) when no face of the side
   holds. When a face holds it is that branch at `i1`, as at every type.
@@ -501,8 +502,9 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   a data fold; on a path constructor at `r` it is the case at the
   folded fields, at `r`; on the formal `hcomp` it is an `hcomp` at `B`
   whose side is the fold of the side. `isProp B` is the case type of
-  `truncSquash` and `isSet B` is the case type of `quotSquash`; the
-  checker does not check the h-level of `B`. At run time only the
+  `truncSquash` and `isSet B` is the case type of `quotSquash`. Since
+  part Z5b, `isProp` and `isSet` are domain definitions. The checker
+  does not check the h-level of `B`. At run time only the
   point constructors have an arm: a path value gives
   `REFUSE_RUNTIME_PATH`. `examples/hit.lang` gives `circleRec`,
   `truncRec`, `quotRec` and their laws by `refl`. The rejects
@@ -589,8 +591,8 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   types from the index telescope, so stuck folds round trip, including
   motives with dependent indices or a result in `Type 1`.
 - Limits: a `Nat`-valued fold out of `Circuit` checks (part Z5a).
-  `circCount` in `examples/nat.lang` gives `natAddAssoc` for the
-  `circAssoc` case and `natIsSet` for the `circSquash` case (C6). A fold
+  `circCount` in `examples/nat.lang` gives the domain lemma
+  `natAddAssoc` for the `circAssoc` case and `natIsSet` for the `circSquash` case (C6). A fold
   out of `Circuit` lands in `Nat`, in `Circuit` or in a set that the
   program proves. A fold
   over a tree of `Circuit` at run time fails with `REFUSE_RUNTIME_TREE`
@@ -624,7 +626,13 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   its accumulator (`examples/nat.lang`, `natSuccForget`).
 - `natMax a b : Nat` gives the larger number. The lowering writes it as
   `add(a, sub(b, a))`, where `sub(b, a)` is 0 when `b` is less than `a`.
-  It adds no IR operation. `natMax` has no neutral rule.
+  It adds no IR operation. With a neutral argument, three rules apply
+  (part Z5b, flag 12): `natMax a 0` is `a`, `natMax 0 b` is `b`, and
+  `natMax (natAdd a 1) (natAdd b 1)` is `natAdd (natMax a b) 1`. The
+  last rule keeps the overflow trap: the two sides trap when `a` or `b`
+  is `2^64-1`. `examples/nat.lang` proves `natMaxZeroR`, `natMaxZeroL`
+  and `natMaxSucc` by `refl`. The domain proves `natMaxAssoc` by
+  induction.
 - `natIsSet x y p q : Path (Path Nat x y) p q` when `x y : Nat` and
   `p q : Path Nat x y`. It is a trusted proof that `Nat` is a set. It
   has no reduction rule, so it is always stuck. It has no run-time
@@ -637,9 +645,10 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   `itemEta`, `shapeEta` and `lotEta` by `refl`. A family with two point
   constructors (`test/check/eta-two-ctor.lang`) or with a path
   constructor (`test/check/eta-hit.lang`) fails with `TYPE_ENDPOINT`.
-- Limits: `natMax n 0` does not convert with `n`
-  (`test/check/natmax-neutral.lang`, `TYPE_ENDPOINT`). Thus
-  `natMaxAssoc` cannot be proved (Z5 flag 12). The succ iota of the
+- Limits: `natMax n n` does not convert with `n`, because `natMax` has
+  no idempotence rule (`test/check/natmax-neutral.lang`,
+  `TYPE_ENDPOINT`). `natMaxAssoc` does not hold by `refl`
+  (`test/check/natmax-assoc-refl.lang`, `TYPE_ENDPOINT`). The succ iota of the
   motive form applies only to `natAdd x 1`. `natAdd x L` with a number
   `L` greater than 1 does not unfold in the iota, and it does not
   convert with `natAdd (natAdd x (L - 1)) 1`.

@@ -1,0 +1,14 @@
+-- Layers over an abstract instance I (slice Z5b): idL, layerSeq, their parts and the category laws.
+def idCircuit : (I : Inst) -> (s : Shape) -> Path (Circuit s s) (layerCircuit (idL I s)) (circId s) := fun I s => refl
+def idDen : (I : Inst) -> (s : Shape) -> (ws : instWeights I) -> (x : Tensor (instF I) s) -> Path (Tensor (instF I) s) (layerDen (idL I s) ws x) x := fun I s ws x => refl
+def idRes : (I : Inst) -> (s : Shape) -> Path Resource (layerRes (idL I s)) zeroR := fun I s => refl
+def seqCircuit : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Circuit a c) (layerCircuit (layerSeq I a b c L2 L1)) (circSeq a b c (layerCircuit L1) (layerCircuit L2)) := fun I a b c L2 L1 => refl
+def seqDenOf : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (ws : instWeights I) -> (x : Tensor (instF I) a) -> Path (Tensor (instF I) c) (layerDen (layerSeq I a b c L2 L1) ws x) (layerDen L2 ws (layerDen L1 ws x)) := fun I a b c L2 L1 ws x => refl
+def seqIdRes : (I : Inst) -> (s : Shape) -> Path Resource (layerRes (layerSeq I s s s (idL I s) (idL I s))) zeroR := fun I s => refl
+def seqThree : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Layer I a d := fun I a b c d L3 L2 L1 => layerSeq I a c d L3 (layerSeq I a b c L2 L1)
+def seqThreeRes : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path Resource (layerRes (seqThree I a b c d L3 L2 L1)) (resAdd (layerRes L3) (resAdd (layerRes L2) (layerRes L1))) := fun I a b c d L3 L2 L1 => refl
+def propPath : (A : Type 0) -> isProp A -> (x y : A) -> Path A x y := fun A h x y => isPropPathP (fun j => A) (fun j => h) x y
+def idlStart : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Layer I a b) ((layerIdl I a b L) @ i0) (layerSeq I a b b (idL I b) L) := fun I a b L => refl
+def idrCircuit : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Circuit a b) (circSeq a a b (circId a) (layerCircuit L)) (layerCircuit L) := fun I a b L => <i> layerCircuit ((layerIdr I a b L) @ i)
+def assocRes : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path Resource (resAdd (resAdd (layerRes L3) (layerRes L2)) (layerRes L1)) (resAdd (layerRes L3) (resAdd (layerRes L2) (layerRes L1))) := fun I a b c d L3 L2 L1 => <i> layerRes ((layerAssoc I a b c d L3 L2 L1) @ i)
+def assocEnd : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Layer I a d) ((layerAssoc I a b c d L3 L2 L1) @ i1) (layerSeq I a c d L3 (layerSeq I a b c L2 L1)) := fun I a b c d L3 L2 L1 => refl

@@ -1,0 +1,1 @@
+def bad : (I : Inst) -> (s : Shape) -> Path Resource (layerRes (idL I s)) (res 1 0 0) := fun I s => refl

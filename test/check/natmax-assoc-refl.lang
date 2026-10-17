@@ -1,0 +1,3 @@
+-- natMax associativity needs Nat induction (natMaxAssoc): the two ends stay
+-- stuck when a, b and c are variables.
+def m : (a : Nat) -> (b : Nat) -> (c : Nat) -> Path Nat (natMax (natMax a b) c) (natMax a (natMax b c)) := fun a b c => refl

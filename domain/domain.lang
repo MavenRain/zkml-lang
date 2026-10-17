@@ -46,3 +46,136 @@ family Rose := rose (roseKids : Kids)
   and Kids := kidsNil | kidsCons (kidsHead : Rose) (kidsTail : Kids)
   | kidsSwap (swapX swapY : Rose) (swapK : Kids) : Path Kids (kidsCons swapX (kidsCons swapY swapK)) (kidsCons swapY (kidsCons swapX swapK))
   | kidsSquash (ksqK ksqL : Kids) (ksqP ksqQ : Path Kids ksqK ksqL) : Path (Path Kids ksqK ksqL) ksqP ksqQ
+
+-- Nat lemmas (slice Z5). Each is a proof by Nat induction: a fold with a motive.
+def natAddAssoc : (a : Nat) -> (b : Nat) -> (c : Nat) -> Path Nat (natAdd (natAdd a b) c) (natAdd a (natAdd b c)) :=
+  fun a b c => fold (fun (c : Nat) => Path Nat (natAdd (natAdd a b) c) (natAdd a (natAdd b c))) (fun (k : Nat) => fun (ih : Path Nat (natAdd (natAdd a b) k) (natAdd a (natAdd b k))) => cong (fun (z : Nat) => natAdd z 1) ih) refl c
+def natMaxAssoc : (a : Nat) -> (b : Nat) -> (c : Nat) -> Path Nat (natMax (natMax a b) c) (natMax a (natMax b c)) :=
+  fun a => fold (fun (a : Nat) => (b : Nat) -> (c : Nat) -> Path Nat (natMax (natMax a b) c) (natMax a (natMax b c))) (fun (k : Nat) => fun (ih : (b : Nat) -> (c : Nat) -> Path Nat (natMax (natMax k b) c) (natMax k (natMax b c))) => fun (b : Nat) => fold (fun (b : Nat) => (c : Nat) -> Path Nat (natMax (natMax (natAdd k 1) b) c) (natMax (natAdd k 1) (natMax b c))) (fun (j : Nat) => fun (ihb : (c : Nat) -> Path Nat (natMax (natMax (natAdd k 1) j) c) (natMax (natAdd k 1) (natMax j c))) => fun (c : Nat) => fold (fun (c : Nat) => Path Nat (natMax (natMax (natAdd k 1) (natAdd j 1)) c) (natMax (natAdd k 1) (natMax (natAdd j 1) c))) (fun (i : Nat) => fun (ihc : Path Nat (natMax (natMax (natAdd k 1) (natAdd j 1)) i) (natMax (natAdd k 1) (natMax (natAdd j 1) i))) => cong (fun (z : Nat) => natAdd z 1) (ih j i)) refl c) (fun (c : Nat) => refl) b) (fun (b : Nat) => fun (c : Nat) => refl) a
+-- Resource (N1): the cost of a layer. resAdd adds the gates and the lookups and
+-- takes the larger degree. The unit laws hold by refl (the natAdd and natMax
+-- neutral rules and record eta). resAssoc joins the three component paths.
+family Resource := res (resGates resLookups resDegree : Nat)
+def zeroR : Resource := res 0 0 0
+def resAdd : (r : Resource) -> (s : Resource) -> Resource :=
+  fun (r : Resource) (s : Resource) => res (natAdd (resGates r) (resGates s)) (natAdd (resLookups r) (resLookups s)) (natMax (resDegree r) (resDegree s))
+def resUnitL : (r : Resource) -> Path Resource (resAdd zeroR r) r :=
+  fun (r : Resource) => refl
+def resUnitR : (r : Resource) -> Path Resource (resAdd r zeroR) r :=
+  fun (r : Resource) => refl
+def resAssoc : (r : Resource) -> (s : Resource) -> (t : Resource) -> Path Resource (resAdd (resAdd r s) t) (resAdd r (resAdd s t)) :=
+  fun (r : Resource) (s : Resource) (t : Resource) => <i> res ((natAddAssoc (resGates r) (resGates s) (resGates t)) @ i) ((natAddAssoc (resLookups r) (resLookups s) (resLookups t)) @ i) ((natMaxAssoc (resDegree r) (resDegree s) (resDegree t)) @ i)
+-- A monoid with a carrier in Type 0. Monoid is in Type 1.
+family Monoid := mkMonoid (monCarrier : Type 0) (monUnit : monCarrier) (monOp : monCarrier -> monCarrier -> monCarrier)
+  (monAssoc : (x : monCarrier) -> (y : monCarrier) -> (z : monCarrier) -> Path monCarrier (monOp (monOp x y) z) (monOp x (monOp y z)))
+  (monIdl : (x : monCarrier) -> Path monCarrier (monOp monUnit x) x)
+  (monIdr : (x : monCarrier) -> Path monCarrier (monOp x monUnit) x)
+def ResourceMonoid : Monoid := mkMonoid Resource zeroR resAdd resAssoc resUnitL resUnitR
+-- Tensor A s: a nested List over A, with one List level for each dimension of s.
+def Tensor : Type 0 -> Shape -> Type 0 :=
+  fun (A : Type 0) (s : Shape) => fold (fun (d : Nat) (T : Type 0) => List T) A (dims s)
+-- A set: two paths between the same two points are equal (slice Z5b).
+def isSet : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> (p : Path B x y) -> (q : Path B x y) -> Path (Path B x y) p q
+-- An instance (D7): the field, the witness, the weights (N7) and the circuit semantics.
+-- The input witness fields (N3) give the completeness of idL. The weights are an argument, because completeness quantifies over the weights (N7).
+-- The id and seq fields (N8) give the soundness and completeness of idL and layerSeq for an abstract instance.
+family Inst := mkInst (instF : Type 0) (instWitness : Type 0) (instWeights : Type 0)
+  (instWeightsOf : instWitness -> instWeights)
+  (instSat : (a b : Shape) -> Circuit a b -> Tensor instF a -> instWitness -> Type 0)
+  (instEval : (a b : Shape) -> Circuit a b -> instWitness -> Tensor instF b)
+  (instInputWit : (s : Shape) -> instWeights -> Tensor instF s -> instWitness)
+  (instInputWeights : (s : Shape) -> (ws : instWeights) -> (x : Tensor instF s) -> Path instWeights (instWeightsOf (instInputWit s ws x)) ws)
+  (instInputSat : (s : Shape) -> (ws : instWeights) -> (x : Tensor instF s) -> instSat s s (circId s) x (instInputWit s ws x))
+  (instInputEval : (s : Shape) -> (ws : instWeights) -> (x : Tensor instF s) -> Path (Tensor instF s) (instEval s s (circId s) (instInputWit s ws x)) x)
+  (instIdSound : (s : Shape) -> (x : Tensor instF s) -> (w : instWitness) -> instSat s s (circId s) x w -> Path (Tensor instF s) x (instEval s s (circId s) w))
+  (instSeqSat : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor instF a) -> (w : instWitness) -> instSat a c (circSeq a b c f g) x w -> Prod (instSat a b f x w) (instSat b c g (instEval a b f w) w))
+  (instSeqEval : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (w : instWitness) -> Path (Tensor instF c) (instEval a c (circSeq a b c f g) w) (instEval b c g w))
+  (instSeqWit : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> instWitness -> instWitness -> instWitness)
+  (instSeqWitWeights : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : instWitness) -> Path instWeights (instWeightsOf u) (instWeightsOf v) -> Path instWeights (instWeightsOf (instSeqWit a b c f g u v)) (instWeightsOf u))
+  (instSeqWitSat : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor instF a) -> (u v : instWitness) -> instSat a b f x u -> instSat b c g (instEval a b f u) v -> instSat a c (circSeq a b c f g) x (instSeqWit a b c f g u v))
+  (instSeqWitEval : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : instWitness) -> Path (Tensor instF c) (instEval a c (circSeq a b c f g) (instSeqWit a b c f g u v)) (instEval b c g v))
+  (instTensorSet : (s : Shape) -> isSet (Tensor instF s))
+-- The completeness witness of a layer at the weights ws and the input x: a witness with the weights ws
+-- that satisfies the circuit at x, and the circuit value of the witness is the denotation.
+def layerWit : (I : Inst) -> (a b : Shape) -> (f : Circuit a b) -> (den : instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> (ws : instWeights I) -> (x : Tensor (instF I) a) -> Type 0 :=
+  fun I a b f den ws x => Sigma (w : instWitness I) (Prod (Path (instWeights I) (instWeightsOf I w) ws) (Prod (instSat I a b f x w) (Path (Tensor (instF I) b) (den ws x) (instEval I a b f w))))
+-- A layer (D8): a circuit, a denotation over the weights (N7), soundness, completeness and resources.
+family Layer (I : Inst) (inS outS : Shape) := layer (layerCircuit : Circuit inS outS)
+  (layerDen : instWeights I -> Tensor (instF I) inS -> Tensor (instF I) outS)
+  (layerSound : (x : Tensor (instF I) inS) -> (w : instWitness I) -> instSat I inS outS layerCircuit x w -> Path (Tensor (instF I) outS) (layerDen (instWeightsOf I w) x) (instEval I inS outS layerCircuit w))
+  (layerComplete : (ws : instWeights I) -> (x : Tensor (instF I) inS) -> Trunc (layerWit I inS outS layerCircuit layerDen ws x))
+  (layerRes : Resource)
+-- The identity layer: the circuit circId, the identity denotation and zero resources.
+def idL : (I : Inst) -> (s : Shape) -> Layer I s s :=
+  fun I s => layer I s s (circId s) (fun (ws : instWeights I) (x : Tensor (instF I) s) => x)
+    (fun (x : Tensor (instF I) s) (w : instWitness I) (h : instSat I s s (circId s) x w) => instIdSound I s x w h)
+    (fun (ws : instWeights I) (x : Tensor (instF I) s) => truncIn (layerWit I s s (circId s) (fun (vs : instWeights I) (y : Tensor (instF I) s) => y) ws x) (pack (instInputWit I s ws x) (pair (instInputWeights I s ws x) (pair (instInputSat I s ws x) (symm (instInputEval I s ws x))))))
+    zeroR
+-- The denotation of layerSeq: first L1, then L2, with the same weights.
+def seqDen : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> instWeights I -> Tensor (instF I) a -> Tensor (instF I) c :=
+  fun I a b c L2 L1 ws x => layerDen L2 ws (layerDen L1 ws x)
+-- The soundness of layerSeq: soundness of L1, then of L2 at the circuit value of L1, then instSeqEval (N8).
+def soundnessSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (x : Tensor (instF I) a) -> (w : instWitness I) -> instSat I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) x w -> Path (Tensor (instF I) c) (seqDen I a b c L2 L1 (instWeightsOf I w) x) (instEval I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) w) :=
+  fun I a b c L2 L1 x w h => trans (cong (fun (y : Tensor (instF I) b) => layerDen L2 (instWeightsOf I w) y) (layerSound L1 x w (first (instSeqSat I a b c (layerCircuit L1) (layerCircuit L2) x w h))))
+    (trans (layerSound L2 (instEval I a b (layerCircuit L1) w) w (second (instSeqSat I a b c (layerCircuit L1) (layerCircuit L2) x w h))) (symm (instSeqEval I a b c (layerCircuit L1) (layerCircuit L2) w)))
+-- The witness of layerSeq from a witness of L1 and a witness of L2 (instSeqWit and its laws, N8).
+def seqWitness : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (ws : instWeights I) -> (x : Tensor (instF I) a) -> (s1 : layerWit I a b (layerCircuit L1) (layerDen L1) ws x) -> (s2 : layerWit I b c (layerCircuit L2) (layerDen L2) ws (layerDen L1 ws x)) -> layerWit I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1) ws x :=
+  fun I a b c L2 L1 ws x s1 s2 => pack (instSeqWit I a b c (layerCircuit L1) (layerCircuit L2) (witness s1) (witness s2))
+    (pair (trans (instSeqWitWeights I a b c (layerCircuit L1) (layerCircuit L2) (witness s1) (witness s2) (trans (first (payload s1)) (symm (first (payload s2))))) (first (payload s1)))
+      (pair (instSeqWitSat I a b c (layerCircuit L1) (layerCircuit L2) x (witness s1) (witness s2) (first (second (payload s1))) (transp (fun i => instSat I b c (layerCircuit L2) ((second (second (payload s1))) @ i) (witness s2)) i0 (first (second (payload s2)))))
+        (trans (second (second (payload s2))) (symm (instSeqWitEval I a b c (layerCircuit L1) (layerCircuit L2) (witness s1) (witness s2))))))
+-- The completeness of layerSeq: a map of two truncations into a truncation.
+def completenessSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> (ws : instWeights I) -> (x : Tensor (instF I) a) -> Trunc (layerWit I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1) ws x) :=
+  fun I a b c L2 L1 ws x => fold (fun (s1 : layerWit I a b (layerCircuit L1) (layerDen L1) ws x) => fold (fun (s2 : layerWit I b c (layerCircuit L2) (layerDen L2) ws (layerDen L1 ws x)) => truncIn (layerWit I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1) ws x) (seqWitness I a b c L2 L1 ws x s1 s2))
+      (truncSquash (layerWit I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1) ws x)) (layerComplete L2 ws (layerDen L1 ws x)))
+    (truncSquash (layerWit I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1) ws x)) (layerComplete L1 ws x)
+-- Sequential composition (D9), design order: layerSeq I a b c L2 L1 is first L1, then L2.
+def layerSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Layer I a c :=
+  fun I a b c L2 L1 => layer I a c (circSeq a b c (layerCircuit L1) (layerCircuit L2)) (seqDen I a b c L2 L1)
+    (soundnessSeq I a b c L2 L1) (completenessSeq I a b c L2 L1) (resAdd (layerRes L2) (layerRes L1))
+-- The resources of layerSeq are the sum of the resources of the two layers.
+def resourcesSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path Resource (layerRes (layerSeq I a b c L2 L1)) (resAdd (layerRes L2) (layerRes L1)) :=
+  fun I a b c L2 L1 => refl
+-- h-levels (D10). A proposition has a path between any two of its elements.
+def isProp : (A : Type 0) -> Type 0 := fun A => (x : A) -> (y : A) -> Path A x y
+def isPropPi : (A : Type 0) -> (B : A -> Type 0) -> ((a : A) -> isProp (B a)) -> isProp ((a : A) -> B a) :=
+  fun A B h f g => <i> fun (a : A) => (h a (f a) (g a)) @ i
+def isPropPathInSet : (A : Type 0) -> isSet A -> (x y : A) -> isProp (Path A x y) :=
+  fun A s x y => s x y
+def isPropTrunc : (A : Type 0) -> isProp (Trunc A) := fun A x y => truncSquash A x y
+-- A line of propositions has a PathP between any two end points: transp each end point to i, then take the path of the proposition at i.
+def isPropPathP : (B : I -> Type 0) -> ((i : I) -> isProp (B i)) -> (b0 : B i0) -> (b1 : B i1) -> PathP B b0 b1 :=
+  fun B h b0 b1 => <i> (h i (transp (fun j => B (i /\ j)) (~ i) b0) (transp (fun j => B (i \/ ~ j)) i b1)) @ i
+-- The types of the soundness and completeness fields of a layer, as functions of the circuit and the denotation.
+def layerSoundT : (I : Inst) -> (a b : Shape) -> Circuit a b -> (instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> Type 0 :=
+  fun I a b c d => (x : Tensor (instF I) a) -> (w : instWitness I) -> instSat I a b c x w -> Path (Tensor (instF I) b) (d (instWeightsOf I w) x) (instEval I a b c w)
+def layerCompleteT : (I : Inst) -> (a b : Shape) -> Circuit a b -> (instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> Type 0 :=
+  fun I a b c d => (ws : instWeights I) -> (x : Tensor (instF I) a) -> Trunc (layerWit I a b c d ws x)
+-- Soundness is a proposition: a Pi into a path in a set (instTensorSet).
+def layerSoundProp : (I : Inst) -> (a b : Shape) -> (c : Circuit a b) -> (d : instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> isProp (layerSoundT I a b c d) :=
+  fun I a b c d => isPropPi (Tensor (instF I) a) (fun x => (w : instWitness I) -> instSat I a b c x w -> Path (Tensor (instF I) b) (d (instWeightsOf I w) x) (instEval I a b c w))
+    (fun x => isPropPi (instWitness I) (fun w => instSat I a b c x w -> Path (Tensor (instF I) b) (d (instWeightsOf I w) x) (instEval I a b c w))
+      (fun w => isPropPi (instSat I a b c x w) (fun h => Path (Tensor (instF I) b) (d (instWeightsOf I w) x) (instEval I a b c w))
+        (fun h => isPropPathInSet (Tensor (instF I) b) (instTensorSet I b) (d (instWeightsOf I w) x) (instEval I a b c w))))
+-- Completeness is a proposition: a Pi into a Trunc (truncSquash).
+def layerCompleteProp : (I : Inst) -> (a b : Shape) -> (c : Circuit a b) -> (d : instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> isProp (layerCompleteT I a b c d) :=
+  fun I a b c d => isPropPi (instWeights I) (fun ws => (x : Tensor (instF I) a) -> Trunc (layerWit I a b c d ws x))
+    (fun ws => isPropPi (Tensor (instF I) a) (fun x => Trunc (layerWit I a b c d ws x)) (fun x => isPropTrunc (layerWit I a b c d ws x)))
+-- Layer extensionality (D10): paths on the circuit, the denotation and the resources give a path in Layer.
+-- The soundness and completeness paths come from isPropPathP.
+def layerExt : (I : Inst) -> (a b : Shape) -> (L1 L2 : Layer I a b) -> (pc : Path (Circuit a b) (layerCircuit L1) (layerCircuit L2)) -> (pd : Path (instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) (layerDen L1) (layerDen L2)) -> Path Resource (layerRes L1) (layerRes L2) -> Path (Layer I a b) L1 L2 :=
+  fun I a b L1 L2 pc pd pr => <i> layer I a b (pc @ i) (pd @ i)
+    ((isPropPathP (fun j => layerSoundT I a b (pc @ j) (pd @ j)) (fun j => layerSoundProp I a b (pc @ j) (pd @ j)) (layerSound L1) (layerSound L2)) @ i)
+    ((isPropPathP (fun j => layerCompleteT I a b (pc @ j) (pd @ j)) (fun j => layerCompleteProp I a b (pc @ j) (pd @ j)) (layerComplete L1) (layerComplete L2)) @ i)
+    (pr @ i)
+-- The category laws on Layer (N2, D10). Each law is a layerExt proof, not refl. The circuit path is a Circuit
+-- path constructor, the denotation path is refl and the resource path is a Resource law.
+-- layerIdl: idL after L (design idL-unitl; circIdr, resUnitL).
+def layerIdl : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Layer I a b) (layerSeq I a b b (idL I b) L) L :=
+  fun I a b L => layerExt I a b (layerSeq I a b b (idL I b) L) L (circIdr a b (layerCircuit L)) refl (resUnitL (layerRes L))
+-- layerIdr: L after idL (design idL-unitr; circIdl, resUnitR).
+def layerIdr : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Layer I a b) (layerSeq I a a b L (idL I a)) L :=
+  fun I a b L => layerExt I a b (layerSeq I a a b L (idL I a)) L (circIdl a b (layerCircuit L)) refl (resUnitR (layerRes L))
+-- layerAssoc: the design order (L3 o L2) o L1 to L3 o (L2 o L1); the circuit path is symm of circAssoc.
+def layerAssoc : (I : Inst) -> (a b c d : Shape) -> (L3 : Layer I c d) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Layer I a d) (layerSeq I a b d (layerSeq I b c d L3 L2) L1) (layerSeq I a c d L3 (layerSeq I a b c L2 L1)) :=
+  fun I a b c d L3 L2 L1 => layerExt I a d (layerSeq I a b d (layerSeq I b c d L3 L2) L1) (layerSeq I a c d L3 (layerSeq I a b c L2 L1)) (symm (circAssoc a b c d (layerCircuit L1) (layerCircuit L2) (layerCircuit L3))) refl (resAssoc (layerRes L3) (layerRes L2) (layerRes L1))

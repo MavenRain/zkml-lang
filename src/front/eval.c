@@ -841,12 +841,27 @@ static const Value *nat_test(Machine *m, Op op, const Value *const *a, uint32_t 
   return flag(m, op == OP_NAT_EQ ? x == y : x <= y);
 }
 
-/* natMax (D3). No neutral rule: a neutral argument gives the stuck
-   operation. */
+/* natMax (D3, flag 12). With a neutral argument, natMax a 0 is a,
+   natMax 0 b is b and natMax (natAdd a 1) (natAdd b 1) is
+   natAdd (natMax a b) 1. The last rule keeps the overflow trap: the two
+   sides trap when a or b is the largest number. Two numbers give the
+   larger as before. */
 static const Value *nat_max(Machine *m, const Value *const *a, uint32_t n) {
+  const Value *pair[2];
   const Value *out;
   uint64_t x = 0;
   uint64_t y = 0;
+  if (nat_zero(a[1]) && scrut_of(a[0]) == SCRUT_NEUTRAL)
+    return a[0];
+  if (nat_zero(a[0]) && scrut_of(a[1]) == SCRUT_NEUTRAL)
+    return a[1];
+  if (nat_succ(a[0]) && nat_succ(a[1])) {
+    pair[0] = a[0]->args[0];
+    pair[1] = a[1]->args[0];
+    pair[0] = nat_max(m, pair, 2u);
+    pair[1] = a[1]->args[1];
+    return pair[0] == NULL ? NULL : nat_add(m, pair, 2u);
+  }
   if (!nat_args(m, OP_NAT_MAX, a, n, &x, &y, &out))
     return out;
   return val_nat(m, x < y ? y : x);

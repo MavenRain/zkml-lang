@@ -2,14 +2,19 @@
 -- M : Nat -> Type 0 is the induction principle of Nat: base : M 0 and
 -- step : (k : Nat) -> M k -> M (natAdd k 1). natAdd has three neutral
 -- rules: natAdd a 0 => a, natAdd 0 b => b and natAdd a (natAdd b 1) =>
--- natAdd (natAdd a b) 1. natMax has no neutral rule. natIsSet is a trusted
+-- natAdd (natAdd a b) 1. natMax has three neutral rules: natMax a 0 => a,
+-- natMax 0 b => b and natMax (natAdd a 1) (natAdd b 1) =>
+-- natAdd (natMax a b) 1. natAddAssoc and natMaxAssoc are domain lemmas
+-- (domain/domain.lang). natIsSet is a trusted
 -- proof of isSet Nat. A family with one point constructor, no index and no
 -- path constructor has eta. circCount is a Nat-valued fold out of Circuit:
 -- natAddAssoc is its circAssoc case and natIsSet is its circSquash case.
 def natAddZeroL : (b : Nat) -> Path Nat (natAdd 0 b) b := fun b => refl
 def natAddZeroR : (a : Nat) -> Path Nat (natAdd a 0) a := fun a => refl
 def natAddSucc : (a : Nat) -> (b : Nat) -> Path Nat (natAdd a (natAdd b 1)) (natAdd (natAdd a b) 1) := fun a b => refl
-def natAddAssoc : (a : Nat) -> (b : Nat) -> (c : Nat) -> Path Nat (natAdd (natAdd a b) c) (natAdd a (natAdd b c)) := fun a b c => fold (fun (c : Nat) => Path Nat (natAdd (natAdd a b) c) (natAdd a (natAdd b c))) (fun (k : Nat) => fun (ih : Path Nat (natAdd (natAdd a b) k) (natAdd a (natAdd b k))) => cong (fun (z : Nat) => natAdd z 1) ih) refl c
+def natMaxZeroR : (a : Nat) -> Path Nat (natMax a 0) a := fun a => refl
+def natMaxZeroL : (b : Nat) -> Path Nat (natMax 0 b) b := fun b => refl
+def natMaxSucc : (a : Nat) -> (b : Nat) -> Path Nat (natMax (natAdd a 1) (natAdd b 1)) (natAdd (natMax a b) 1) := fun a b => refl
 def natCount : (n : Nat) -> Nat := fun (n : Nat) => fold (fun (k : Nat) => Nat) (fun (k : Nat) => fun (acc : Nat) => natAdd acc 1) 0 n
 def natCountSucc : (n : Nat) -> Path Nat (natCount (natAdd n 1)) (natAdd (natCount n) 1) := fun n => refl
 def natTri : (n : Nat) -> Nat := fun (n : Nat) => fold (fun (k : Nat) => Nat) (fun (k : Nat) => fun (acc : Nat) => natAdd acc k) 0 n

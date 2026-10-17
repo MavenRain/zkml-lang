@@ -1,0 +1,3 @@
+-- resAdd is commutative only up to the natAdd and natMax laws: refl does not
+-- prove resAdd r s = resAdd s r for variables.
+def m : (r : Resource) -> (s : Resource) -> Path Resource (resAdd r s) (resAdd s r) := fun r s => refl

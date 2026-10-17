@@ -1,0 +1,1 @@
+def bad : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path (Layer I a b) (layerSeq I a b b (idL I b) L) L := fun I a b L => layerExt I a b (layerSeq I a b b (idL I b) L) L (circIdl a b (layerCircuit L)) refl (resUnitL (layerRes L))

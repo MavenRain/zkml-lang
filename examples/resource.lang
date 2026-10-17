@@ -1,0 +1,17 @@
+-- Resource (slice Z5, part Z5b): the cost of a layer, a monoid under resAdd
+-- with the unit zeroR. Resource, resAdd, zeroR, the laws, Monoid,
+-- ResourceMonoid and Tensor are domain names (domain/domain.lang).
+-- An entry with arguments and a Resource result is not an entry yet (flag 13),
+-- so resGatesOf and resDegreeOf give one Nat field of a sum.
+def resPair : Resource := resAdd (res 10 2 3) (res 5 1 4)
+def resGatesOf : (a : Nat) -> (b : Nat) -> Nat := fun (a : Nat) => fun (b : Nat) => resGates (resAdd (res a 1 a) (res b 2 b))
+def resDegreeOf : (a : Nat) -> (b : Nat) -> Nat := fun (a : Nat) => fun (b : Nat) => resDegree (resAdd (res a 1 a) (res b 2 b))
+def resPairValue : Path Resource resPair (res 15 3 4) := refl
+def resZeroL : (r : Resource) -> Path Resource (resAdd zeroR r) r := resUnitL
+def resZeroR : (r : Resource) -> Path Resource (resAdd r zeroR) r := resUnitR
+def resAssocLeft : (r : Resource) -> (s : Resource) -> (t : Resource) -> Path Resource ((resAssoc r s t) @ i0) (resAdd (resAdd r s) t) := fun r s t => refl
+def resAssocRight : (r : Resource) -> (s : Resource) -> (t : Resource) -> Path Resource ((resAssoc r s t) @ i1) (resAdd r (resAdd s t)) := fun r s t => refl
+def resMonoidUnit : Path Resource (monUnit ResourceMonoid) zeroR := refl
+def resMonoidOp : Path Resource (monOp ResourceMonoid (res 1 2 3) (res 4 5 6)) (res 5 7 6) := refl
+def tensorScalar : Tensor Nat (shape nil) := 7
+def tensorGrid : Tensor Nat (shape (cons 2 (cons 3 nil))) := cons (cons 1 (cons 2 (cons 3 nil))) (cons (cons 4 (cons 5 (cons 6 nil))) nil)

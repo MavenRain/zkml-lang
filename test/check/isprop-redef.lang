@@ -1,0 +1,1 @@
+def isProp : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> Path B x y

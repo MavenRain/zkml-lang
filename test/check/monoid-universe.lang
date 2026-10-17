@@ -1,0 +1,2 @@
+-- Monoid has a field in Type 0, so Monoid is in Type 1, not in Type 0.
+def m : Type 0 := Monoid

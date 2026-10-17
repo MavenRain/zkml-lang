@@ -2,7 +2,6 @@
 -- motive for each sort (Rose, then Kids), then one case for each
 -- constructor of the block (rose, kidsNil, kidsCons, kidsSwap, kidsSquash),
 -- then the value. The identity algebras keep closed trees, by refl.
-def isSet : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> (p : Path B x y) -> (q : Path B x y) -> Path (Path B x y) p q
 def kidsIsSet : isSet Kids := fun k l p q => kidsSquash k l p q
 def roseMap : Rose -> Rose := fun r => fold Rose Kids (fun ks => rose ks) kidsNil (fun h t => kidsCons h t) (fun x y k => kidsSwap x y k) (fun k l p q => kidsSquash k l p q) r
 def kidsMap : Kids -> Kids := fun ks => fold Rose Kids (fun ks => rose ks) kidsNil (fun h t => kidsCons h t) (fun x y k => kidsSwap x y k) (fun k l p q => kidsSquash k l p q) ks

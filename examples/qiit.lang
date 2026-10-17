@@ -7,7 +7,6 @@
 -- motive. circMap is the identity algebra and circFlip reverses a circuit;
 -- their reduction laws hold by refl on closed circuits.
 
-def isSet : (B : Type 0) -> Type 0 := fun B => (x : B) -> (y : B) -> (p : Path B x y) -> (q : Path B x y) -> Path (Path B x y) p q
 def circMap : (a : Shape) -> (b : Shape) -> Circuit a b -> Circuit a b := fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Circuit a b) (fun idA => circId idA) (fun seqA seqB seqC seqF seqG => circSeq seqA seqB seqC seqF seqG) (fun idlA idlB idlF => circIdl idlA idlB idlF) (fun idrA idrB idrF => circIdr idrA idrB idrF) (fun asA asB asC asD asF asG asH => circAssoc asA asB asC asD asF asG asH) (fun sqA sqB sqF sqG sqP sqQ => circSquash sqA sqB sqF sqG sqP sqQ) x
 def circFlip : (a : Shape) -> (b : Shape) -> Circuit a b -> Circuit b a := fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA) (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF) (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF) (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF)) (fun sqA sqB sqF sqG sqP sqQ => circSquash sqB sqA sqF sqG sqP sqQ) x
 def squashIsSet : (a : Shape) -> (b : Shape) -> isSet (Circuit a b) := fun a b => circSquash a b

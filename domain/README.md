@@ -54,6 +54,29 @@ The definitions are `lineTotal`, `isRed`, `total`, `redTotal` and `depth`.
 lowering refuses a fold over a run-time tree. Rule R1 lets only this file
 declare a family, so the family must be here.
 
+## The ZkML core (slice Z5)
+
+The file also holds the core of the language. The examples and the
+tests use these names, so keep them when you replace the sample.
+
+| Name | Kind | Use |
+|---|---|---|
+| `natAddAssoc`, `natMaxAssoc` | `Nat` lemmas, by induction | `circCount` in `examples/nat.lang`, `resAssoc` |
+| `Resource` | record: `resGates`, `resLookups`, `resDegree` | the cost of a layer |
+| `zeroR`, `resAdd`, `resUnitL`, `resUnitR`, `resAssoc` | the `Resource` monoid and its laws | `examples/resource.lang` |
+| `Monoid`, `ResourceMonoid` | record of a monoid in `Type 0`, and the `Resource` instance | `examples/resource.lang` |
+| `Tensor` | `Type 0 -> Shape -> Type 0`, a `List` level for each dimension | the `Inst` fields |
+| `isSet`, `isProp`, `isPropPi`, `isPropPathInSet`, `isPropTrunc`, `isPropPathP` | the h-level library | `layerSoundProp`, `layerCompleteProp`, `examples/hit.lang`, `examples/qiit.lang`, `examples/rose.lang` |
+| `Inst` | record of a backend: `instF`, `instWitness`, `instWeights`, `instSat`, `instEval`, `instInputWit` and their laws | the parameter of `Layer` |
+| `Layer (I : Inst) (inS outS : Shape)` | record: `layerCircuit`, `layerDen`, `layerSound`, `layerComplete`, `layerRes` | `examples/layer.lang` |
+| `layerWit` | the completeness witness of a layer (a Sigma) | the `layerComplete` field |
+| `idL`, `seqDen`, `soundnessSeq`, `seqWitness`, `completenessSeq`, `layerSeq`, `resourcesSeq` | the identity layer and the sequential composition | `examples/layer.lang` |
+| `layerSoundT`, `layerCompleteT`, `layerSoundProp`, `layerCompleteProp`, `layerExt` | the field types, their h-level, and a Path in `Layer` from Paths of the circuit, the denotation and the resources | `layerIdl`, `layerIdr`, `layerAssoc` |
+| `layerIdl`, `layerIdr`, `layerAssoc` | the category laws of `Layer` | `examples/layer.lang` |
+
+`layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
+`resAdd (layerRes L2) (layerRes L1)`.
+
 ## How to replace the domain
 
 1. Write your families and definitions in `domain/domain.lang`. Keep the

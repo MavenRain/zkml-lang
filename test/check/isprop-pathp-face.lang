@@ -1,0 +1,1 @@
+def bad : (B : I -> Type 0) -> ((i : I) -> isProp (B i)) -> (b0 : B i0) -> (b1 : B i1) -> PathP B b0 b1 := fun B h b0 b1 => <i> (h i (transp (fun j => B (i /\ j)) i b0) (transp (fun j => B (i \/ ~ j)) i b1)) @ i

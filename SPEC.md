@@ -101,7 +101,14 @@ An instance is a top-level definition whose type is a data type (F14).
 > so on. Mark each decision as "RULED YYYY-MM-DD (USER): <the ruling>". Mark
 > each fact that a probe found as "Probe-forced".
 
-- O1. <question>.
+- O1. The denotation of a layer (PLAN N7, ruling O4). The weights are part
+  of the witness. Thus a layer denotes a function `Weights -> Tensor ->
+  Tensor`, not `Tensor -> Tensor`. The design gives one functor `denote` from
+  the layer category to the types. Default: `denote I ws` is a functor for
+  each weight assignment `ws`. It sends a shape `s` to `Tensor (instF I) s`
+  and a layer `L` to `layerDen L ws`. The identity law and the composition
+  law hold by refl. Status: slice Z5b gives `Layer`, `idL` and `layerSeq`
+  with this denotation. Slice Z5c gives `TypeFunctor` and `denote`.
 
 ## 10. Milestones
 

@@ -1,0 +1,2 @@
+-- The fourth field of mkMonoid is the associativity law, not a unit law.
+def m : Monoid := mkMonoid Resource zeroR resAdd resUnitL resUnitL resUnitR

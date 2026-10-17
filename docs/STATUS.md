@@ -9,7 +9,10 @@ domain, path constructor values, the formal `hcomp` and the `fold`
 eliminator, and slice Z4 (C5): indexed sorts with the motive fold (part
 Z4a) and mutual blocks (part Z4b). It implements part Z5a of slice Z5:
 `Nat` induction, the `natAdd` neutral rules, `natMax`, `natIsSet` and
-record eta. Parts Z5b and Z5c and slices Z6 to Z11 are not started.
+record eta. It implements part Z5b: the `natMax` neutral rules and, in
+the domain, `Resource`, `Inst`, `Layer`, the h-level library and the
+category laws of `Layer`. Part Z5c and slices Z6 to Z11 are not
+started.
 
 ## Implemented
 
@@ -59,9 +62,24 @@ record eta. Parts Z5b and Z5c and slices Z6 to Z11 are not started.
   run time fails with `REFUSE_RUNTIME_TREE`. Z4 is done.
 - Z5 part Z5a: the motive form of the `Nat` fold (induction), the
   `natAdd` neutral rules R1 to R3, `natMax`, `natIsSet` and record eta
-  (FORMERS F6 and C6). `examples/nat.lang` proves `natAddAssoc` by
-  induction and gives a `Nat`-valued fold out of `Circuit`
-  (`circCount`).
+  (FORMERS F6 and C6). `examples/nat.lang` gives a `Nat`-valued fold
+  out of `Circuit` (`circCount`). Part Z5b moved `natAddAssoc` (by
+  induction) to the domain.
+- Z5 part Z5b: the `natMax` neutral rules (FORMERS C6, flag 12). In
+  `domain/domain.lang`: `natAddAssoc` and `natMaxAssoc` by induction;
+  the `Resource` monoid (`zeroR`, `resAdd`, `resUnitL` and `resUnitR`
+  by `refl`, `resAssoc`), the `Monoid` record and `ResourceMonoid`;
+  `Tensor`; the backend record `Inst` and the record `Layer I inS outS`
+  (circuit, denotation, soundness, completeness and resources); `idL`
+  and `layerSeq` with `soundnessSeq`, `completenessSeq` and
+  `resourcesSeq`. The h-level library gives `isSet`, `isProp`,
+  `isPropPi`, `isPropPathInSet`, `isPropTrunc` and `isPropPathP`.
+  `layerExt` gives a Path in `Layer` from a Path of the circuits, a Path
+  of the denotations and a Path of the resources, because the soundness
+  and completeness fields are propositions. The category laws
+  `layerIdl`, `layerIdr` and `layerAssoc` are `layerExt` proofs, not
+  `refl` (flag 8). `examples/resource.lang` and `examples/layer.lang`
+  give the accept cases.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
 
 ## Remaining work
@@ -117,8 +135,28 @@ record eta. Parts Z5b and Z5c and slices Z6 to Z11 are not started.
 - `PathP` constructors, a dimension of 3 or more and `transp` at a
   higher inductive type whose parameters vary are later slices. A `fold`
   over a higher inductive type has no motive (no dependent elimination).
-- `natMax n 0` does not convert with `n`, so `natMaxAssoc` cannot be
-  proved. Cause: `natMax` has no neutral rule (Z5 flag 12).
+- `natMax n n` does not convert with `n`. Cause: `natMax` has no
+  idempotence rule. The three neutral rules of part Z5b (flag 12) give
+  `natMaxAssoc` by induction.
+- A definition with arguments and a record result (`Resource`, `Item`)
+  is not an entry, so the lowering does not take it (flag 13). It is a
+  kit limit (`src/front/check.c`, `EVAL_ARGS`). `resGatesOf` and
+  `resDegreeOf` in `examples/resource.lang` give `resAdd` and `natMax`
+  at run time through `Nat` fields.
+- `Tensor F s` currently checks the number of dimensions, but not their
+  sizes. Each dimension adds a `List` level and its numeric size is
+  ignored, so short rows and ragged tensors typecheck. The nested
+  Fin-indexed representation in the design remains to be implemented.
+- The domain has no concrete `Inst` (flag 15). Cause: `instEval` and
+  `instInputWit` must give a `Tensor F s` at a neutral shape `s`.
+  `Tensor` is a `List` fold with no motive, and the language has no
+  dependent `List` elimination, so no term gives a tensor at a neutral
+  shape. A concrete instance (slice Z6) has the same block. A `List`
+  motive fold or a tensor primitive can remove it.
+- In a signature that binds an `Inst` as `I`, the name `I` hides the
+  interval type `I`, so the signature cannot write `(j : I)`. An
+  interval lambda in a type needs `(i : I)`. Give the `Inst` another
+  name (for example `K`) when the signature needs the interval type.
 - The succ iota of the `Nat` motive fold applies only to `natAdd x 1`.
   `natAdd x L` with a number `L` greater than 1 does not unfold. Cause:
   the iota matches only the form `natAdd x 1`.

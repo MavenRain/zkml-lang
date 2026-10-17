@@ -45,3 +45,16 @@ natmax-neutral.lang TYPE_ENDPOINT
 eta-two-ctor.lang TYPE_ENDPOINT
 eta-hit.lang TYPE_ENDPOINT
 natadd-assoc-refl.lang TYPE_ENDPOINT
+resadd-comm-refl.lang TYPE_ENDPOINT
+natmax-assoc-refl.lang TYPE_ENDPOINT
+monoid-field-order.lang TYPE_MISMATCH
+monoid-universe.lang TYPE_MISMATCH
+layer-seq-order.lang TYPE_MISMATCH
+layer-res-order.lang TYPE_ENDPOINT
+layer-id-res.lang TYPE_ENDPOINT
+isset-redef.lang REFUSE_NAME
+layer-idl-circuit.lang TYPE_MISMATCH
+layer-assoc-direction.lang TYPE_MISMATCH
+isprop-pathp-face.lang TYPE_LINE
+layer-ext-const.lang TYPE_MISMATCH
+isprop-redef.lang REFUSE_NAME

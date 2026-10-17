@@ -1,0 +1,1 @@
+def bad : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path Resource (layerRes (layerSeq I a b c L2 L1)) (resAdd (layerRes L1) (layerRes L2)) := fun I a b c L2 L1 => refl
