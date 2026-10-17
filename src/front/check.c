@@ -1116,6 +1116,50 @@ static const Core *fold_nat_motive(Call *k, const Core *mc, const Value *motive,
   return k->type == NULL ? NULL : core_op(c, OP_FOLD_NAT, 1u, 0, cores, 4u);
 }
 
+/* D1 over List A: M of fold M step base l, as try_nat_motive. The type
+   List A can contain variables of the context, thus the motive body is
+   checked in the context. */
+static const Core *try_list_motive(Checker *c, const Term *t, const Value *st, const Value **motive) {
+  Diag saved = *c->m->diag;
+  const Core *types[1];
+  const Core *mc;
+  types[0] = quote_value(c->m, c->level, st);
+  mc = types[0] == NULL ? NULL : check_motive_body(c, "List", 1u, types, t, 0u, c->env);
+  *motive = here(c, mc);
+  if (*motive == NULL)
+    *c->m->diag = saved;
+  return *motive == NULL ? NULL : mc;
+}
+
+/* D1 over List A: fold M step base l, with M : List A -> Type l, base :
+   M nil and step : (h : A) -> (t : List A) -> M t -> M (cons h t). The
+   result is M l. The layout is [M, step, base, l] and inst 1 marks the
+   motive. */
+static const Core *fold_list_motive(Call *k, const Core *mc, const Value *motive, const Core *s, const Value *st) {
+  Checker *c = k->c;
+  Machine *m = c->m;
+  const Value *hv = val_var(m, c->level);
+  const Value *tv = val_var(m, c->level + 1u);
+  const Value *mt = apply_value(m, motive, tv);
+  const Value *mnext = apply_value(m, motive, val_make(m, OP_CONS, 0u, 2u, hv, tv, NULL));
+  const Core *dt = mt == NULL ? NULL : quote_value(m, c->level + 2u, mt);
+  const Core *rt = mnext == NULL ? NULL : quote_value(m, c->level + 3u, mnext);
+  const Core *acc = dt == NULL || rt == NULL ? NULL : core_bind(c, CORE_PI, "acc", dt, rt);
+  const Core *list = quote_value(m, c->level + 1u, st);
+  const Core *tail = acc == NULL || list == NULL ? NULL : core_bind(c, CORE_PI, "t", list, acc);
+  const Core *elem = quote_value(m, c->level, st->args[0]);
+  const Value *want = tail == NULL || elem == NULL ? NULL : here(c, core_bind(c, CORE_PI, "h", elem, tail));
+  const Value *empty = apply_value(m, motive, val_make(m, OP_NIL, 0u, 0u, NULL, NULL, NULL));
+  const Core *cores[4];
+  cores[0] = mc;
+  cores[2] = empty == NULL ? NULL : check(c, k->args[2], empty);
+  cores[1] = cores[2] == NULL || want == NULL ? NULL : check(c, k->args[1], want);
+  cores[3] = s;
+  k->used = 4u;
+  k->type = cores[1] == NULL ? NULL : apply_value(m, motive, here(c, s));
+  return k->type == NULL ? NULL : core_op(c, OP_FOLD_LIST, 1u, 0, cores, 4u);
+}
+
 static int simple_scrutinee(const Value *t) {
   return val_is(t, OP_NAT) || val_is(t, OP_LIST);
 }
@@ -1134,6 +1178,9 @@ static const Core *rule_fold(Call *k) {
   mc = s != NULL && val_is(st, OP_NAT) ? try_nat_motive(c, k->args[0], &motive) : NULL;
   if (mc != NULL)
     return fold_nat_motive(k, mc, motive, s);
+  mc = s != NULL && val_is(st, OP_LIST) ? try_list_motive(c, k->args[0], st, &motive) : NULL;
+  if (mc != NULL)
+    return fold_list_motive(k, mc, motive, s, st);
   s = try_infer(c, k->args[k->argc - 1u], &st);
   fam = val_is(st, OP_FAMILY) ? st->inst : NO_FAMILY;
   /* The constructor metadata of a family is not complete inside its own

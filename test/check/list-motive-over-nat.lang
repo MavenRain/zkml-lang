@@ -1,0 +1,1 @@
+def natMotive : (xs : List Nat) -> Nat := fun xs => fold (fun (n : Nat) => Nat) (fun (h : Nat) => fun (t : List Nat) => fun (acc : Nat) => natAdd acc h) 0 xs

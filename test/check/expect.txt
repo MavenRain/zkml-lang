@@ -64,3 +64,6 @@ tfun-seq-order.lang TYPE_MISMATCH
 denote-hom.lang TYPE_ENDPOINT
 isset-hom-square.lang TYPE_MISMATCH
 isprop-isset-side.lang TYPE_ENDPOINT
+list-motive-no-tail.lang TYPE_MISMATCH
+list-motive-over-nat.lang TYPE_MISMATCH
+list-motive-base.lang TYPE_MISMATCH

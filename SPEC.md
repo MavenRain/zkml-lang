@@ -117,7 +117,8 @@ An instance is a top-level definition whose type is a data type (F14).
   of `∘`: `catSeq a b c g f` is `g` after `f`, as in `layerSeq`. With
   this order, `LayerCat` is well typed. The check row
   `test/check/cat-seq-order.lang` shows that the diagrammatic order is
-  refused. Status: built in slice Z5c. Not RULED.
+  refused. Status: built in slice Z5c. RULED 2026-10-16 (USER): `catSeq`
+  keeps the order of `∘`. No code change.
 
 ## 10. Milestones
 

@@ -1,0 +1,11 @@
+-- List induction (slice Z6, part Z6a). `fold M step base xs` with a motive
+-- M : List A -> Type 0 is the induction principle of List: base : M nil and
+-- step : (h : A) -> (t : List A) -> M t -> M (cons h t). The step gets the
+-- head, the tail and the result for the tail. zeroL folds at a neutral shape.
+def zeroL : (A : Type 0) -> A -> (s : Shape) -> Tensor A s := fun A z s => fold (fun (l : List Nat) => fold (fun (d : Nat) (T : Type 0) => List T) A l) (fun (d : Nat) => fun (l : List Nat) => fun (ih : fold (fun (d : Nat) (T : Type 0) => List T) A l) => nil) z (dims s)
+def mapIdList : (A : Type 0) -> (xs : List A) -> Path (List A) (map (fun (a : A) => a) xs) xs := fun A xs => fold (fun (ys : List A) => Path (List A) (map (fun (a : A) => a) ys) ys) (fun (h : A) => fun (t : List A) => fun (ih : Path (List A) (map (fun (a : A) => a) t) t) => cong (fun (y : List A) => cons h y) ih) refl xs
+def app : (A : Type 0) -> List A -> List A -> List A := fun A xs ys => fold (fun (h : A) (acc : List A) => cons h acc) ys xs
+def appendNilList : (A : Type 0) -> (xs : List A) -> Path (List A) (app A xs nil) xs := fun A xs => fold (fun (ys : List A) => Path (List A) (app A ys nil) ys) (fun (h : A) => fun (t : List A) => fun (ih : Path (List A) (app A t nil) t) => cong (fun (y : List A) => cons h y) ih) refl xs
+def tailSum : Nat := fold (fun (ys : List Nat) => Nat) (fun (h : Nat) => fun (t : List Nat) => fun (acc : Nat) => natAdd acc (fold (fun (x : Nat) (a : Nat) => natAdd x a) 0 t)) 0 (cons 3 (cons 4 (cons 5 nil)))
+def downN : (n : Nat) -> List Nat := fun n => unfold (fun (k : Nat) => some (pair k (natSub k 1))) n n
+def lenM : (n : Nat) -> Nat := fun n => fold (fun (ys : List Nat) => Nat) (fun (h : Nat) => fun (t : List Nat) => fun (acc : Nat) => natAdd acc 1) 0 (downN n)

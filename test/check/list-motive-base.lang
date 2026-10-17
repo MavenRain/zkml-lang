@@ -1,0 +1,1 @@
+def consBase : (xs : List Nat) -> fold (fun (d : Nat) (T : Type 0) => List T) Nat xs := fun xs => fold (fun (l : List Nat) => fold (fun (d : Nat) (T : Type 0) => List T) Nat l) (fun (d : Nat) => fun (l : List Nat) => fun (ih : fold (fun (d : Nat) (T : Type 0) => List T) Nat l) => nil) (cons 1 nil) xs

@@ -12,8 +12,9 @@ Z4a) and mutual blocks (part Z4b). It implements part Z5a of slice Z5:
 record eta. It implements part Z5b: the `natMax` neutral rules and, in
 the domain, `Resource`, `Inst`, `Layer`, the h-level library and the
 category laws of `Layer`. It implements part Z5c: `isSetHom`, the
-category `LayerCat` and the functor `denote`. Slice Z5 is DONE. Slices
-Z6 to Z11 are not started.
+category `LayerCat` and the functor `denote`. Slice Z5 is DONE. It
+implements part Z6a: the `List` motive fold (C7). Slice Z6 is in progress.
+Slices Z7 to Z11 are not started.
 
 ## Implemented
 
@@ -88,7 +89,7 @@ Z6 to Z11 are not started.
   the resources. `isSetHom` (N4) shows that `Layer I a b` is a set. The
   record `Category` and `LayerCat I` give the category of layers.
   `catSeq` takes the order of `∘` (`g` after `f`), not the diagrammatic
-  order (flag 7, `SPEC.md` O2). The record `TypeFunctor C` and
+  order (flag 7, `SPEC.md` O2, RULED 2026-10-16). The record `TypeFunctor C` and
   `denote I ws` give the denotation functor: `Tensor (instF I)` on the
   shapes and `layerDen L ws` on the layers. The identity and
   composition laws hold by `refl`. `examples/category.lang` gives the
@@ -99,8 +100,8 @@ Z6 to Z11 are not started.
 
 ## Remaining work
 
-1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Slice Z6 needs a ruling
-   on item O5 (attention shapes) first.
+1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
+   shapes) is RULED. Part Z6a is DONE. Part Z6b is next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
@@ -162,12 +163,11 @@ Z6 to Z11 are not started.
   sizes. Each dimension adds a `List` level and its numeric size is
   ignored, so short rows and ragged tensors typecheck. The nested
   Fin-indexed representation in the design remains to be implemented.
-- The domain has no concrete `Inst` (flag 15). Cause: `instEval` and
-  `instInputWit` must give a `Tensor F s` at a neutral shape `s`.
-  `Tensor` is a `List` fold with no motive, and the language has no
-  dependent `List` elimination, so no term gives a tensor at a neutral
-  shape. A concrete instance (slice Z6) has the same block. A `List`
-  motive fold or a tensor primitive can remove it.
+- The domain has no concrete `Inst` (flag 15, RULED (a) 2026-10-16).
+  Cause: `instEval` and `instInputWit` must give a `Tensor F s` at a
+  neutral shape `s`. Part Z6a adds the `List` motive fold (C7). With it,
+  `zeroL` in `examples/listind.lang` gives a tensor at a neutral shape.
+  Part Z6d adds a concrete instance. Then flag 15 closes.
 - `examples/category.lang` has no entry. Each definition in it takes an
   abstract `Inst`, because the domain has no concrete `Inst` (flag 15).
   The lowering gives an empty module.

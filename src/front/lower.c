@@ -832,19 +832,24 @@ static int prepend(Low *l, Buf *b, Operand h, Slot out) {
 }
 
 /* A right fold over a list. F takes the head, then the acc. A trap tail
-   gives a trap base acc. */
+   gives a trap base acc. With a motive (inst 1), the args are M, F, Z and
+   the list, and F also takes the tail of the cell: F head tail acc. */
 static int fold_list(Low *l, Buf *b, const Value *v, Operand *out) {
+  uint32_t at = v->inst;
+  const IrExpr *node;
   Operand x;
-  Operand args[2];
+  Operand args[3];
   Walk w;
   Slot acc = slot_new(l);
   Buf in = buf_empty();
   Buf body = buf_empty();
   *out = slot_get(l, acc);
-  args[1] = slot_get(l, acc);
-  return lower(l, b, v->args[2], &x) && walk(l, b, x, LIST_REC, 2u, &w) && lower_into(l, &in, v->args[1], acc) &&
-         guard(l, b, ex_local(l, w.end), acc, &in) && chain_head(l, &body, &w, &args[0]) &&
-         apply_into(l, &body, v->args[0], args, 2u, acc) && chain_end(l, b, &w, &body);
+  args[1u + at] = slot_get(l, acc);
+  return lower(l, b, v->args[2u + at], &x) && walk(l, b, x, LIST_REC, 2u, &w) &&
+         lower_into(l, &in, v->args[1u + at], acc) && guard(l, b, ex_local(l, w.end), acc, &in) &&
+         chain_node(l, &body, &w, &node) && field_at(l, &body, node, 0, &args[0]) &&
+         (at == 0u || field_at(l, &body, node, 1, &args[1])) &&
+         apply_into(l, &body, v->args[at], args, 2u + at, acc) && chain_end(l, b, &w, &body);
 }
 
 /* MAP on a list. A trap tail stays a trap tail. */

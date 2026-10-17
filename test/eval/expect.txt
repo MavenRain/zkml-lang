@@ -63,3 +63,6 @@ resource resDegreeOf 9 3 => 9
 resource resDegreeOf 18446744073709551615 0 => 18446744073709551615
 resource tensorScalar => 7
 resource tensorGrid => cons (cons 1 (cons 2 (cons 3 nil))) (cons (cons 4 (cons 5 (cons 6 nil))) nil)
+listind tailSum => 14
+listind lenM 3 => 3
+listind lenM 0 => 0

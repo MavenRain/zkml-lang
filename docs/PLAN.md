@@ -128,7 +128,8 @@ type does not check as written, and the default for each.
   induction principle. If not, add one. Status: DONE 2026-10-16.
 - Z6: The BabyBear and BN254 instances (N3), `cost` (N5) and the operators
   `matmul`, `softmax`, `attention`, `layerNorm`, `quantize`, `lookup`,
-  `residual`, `residual-loop` (N6). Needs O5 first.
+  `residual`, `residual-loop` (N6). O5 is RULED. Status: part Z6a (the
+  `List` motive fold, flag 15) DONE 2026-10-16. Parts Z6b to Z6g remain.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.
@@ -156,8 +157,9 @@ type does not check as written, and the default for each.
   list them.
 - O4: matmul weights (N7). RULED 2026-10-15 (USER): (b), the weights are
   part of the witness. The Layer type change is the N7 default.
-- O5: attention shapes (N7). Default: `shape (h ∷ d ∷ [])` to the same
-  shape, with the weights of O4. A USER ruling is needed before Z6.
+- O5: attention shapes (N7). RULED 2026-10-16 (USER): the default.
+  `attention` maps `shape (h ∷ d ∷ [])` to the same shape, with one head
+  and the weights W_Q, W_K and W_V (d by d) in the witness (O4).
 - O6: LLZK tools. `llzk-opt` needs an LLVM and MLIR build. Install
   APPROVED 2026-10-15 (USER). The build stays under 4 GB, or uses a release
   binary.
