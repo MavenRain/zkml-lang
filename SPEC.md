@@ -119,6 +119,32 @@ An instance is a top-level definition whose type is a data type (F14).
   `test/check/cat-seq-order.lang` shows that the diagrammatic order is
   refused. Status: built in slice Z5c. RULED 2026-10-16 (USER): `catSeq`
   keeps the order of `∘`. No code change.
+- O9. The sequence witness laws of `Inst` (USER flag 16, N8). In part
+  Z5b, `instSeqSat` gave the same witness `w` to the two stages of
+  `circSeq a b c f g`, and `instSeqEval` gave the value of the sequence
+  at `w` as the value of `g` at `w`. With these laws, each layer of an
+  instance must be an idempotent endo-layer (the F16 chain). RULED
+  2026-10-16 (USER): (a). `instSeqSat` gives a truncated split,
+  `Trunc (Sigma (u v : instWitness) ...)` with four parts:
+  `Path w (instSeqWit a b c f g u v)`, a Path from the weights of `u` to
+  the weights of `v`, `instSat a b f x u` and
+  `instSat b c g (instEval a b f u) v`. The domain has no `instSeqEval`.
+  `instSeqWitEval` stays. `instSeqWitSat` also requires the weights
+  path, so only witnesses with equal weights establish satisfaction
+  of their composite. `seqWitness` obtains this path from the two
+  component witnesses at the common weights `ws`.
+  Probe-forced: the weights path. `soundnessSeq`
+  gives the denotation at `instWeightsOf w`, and without the weights
+  path `soundnessSeq` does not check. `soundnessSplit` gives the
+  soundness at one split. `soundnessSeq` folds the `Trunc` into the goal
+  by `soundnessSplit`, because the goal is a path in a set. The check
+  row `test/check/inst-seq-eval.lang` shows that a use of `instSeqEval`
+  is refused (`NAME_UNKNOWN`). The check row
+  `test/check/inst-seq-same-wit.lang` shows that the same witness for
+  the two stages is refused (`TYPE_MISMATCH`). The check row
+  `test/check/inst-seq-mixed-weights.lang` refuses witness composition
+  without the weights path (`TYPE_MISMATCH`). Status: built in part
+  Z6b.
 
 ## 10. Milestones
 

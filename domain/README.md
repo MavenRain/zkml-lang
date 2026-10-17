@@ -70,7 +70,7 @@ tests use these names, so keep them when you replace the sample.
 | `Inst` | record of a backend: `instF`, `instWitness`, `instWeights`, `instSat`, `instEval`, `instInputWit` and their laws | the parameter of `Layer` |
 | `Layer (I : Inst) (inS outS : Shape)` | record: `layerCircuit`, `layerDen`, `layerSound`, `layerComplete`, `layerRes` | `examples/layer.lang` |
 | `layerWit` | the completeness witness of a layer (a Sigma) | the `layerComplete` field |
-| `idL`, `seqDen`, `soundnessSeq`, `seqWitness`, `completenessSeq`, `layerSeq`, `resourcesSeq` | the identity layer and the sequential composition | `examples/layer.lang` |
+| `idL`, `seqDen`, `soundnessSplit`, `soundnessSeq`, `seqWitness`, `completenessSeq`, `layerSeq`, `resourcesSeq` | the identity layer and the sequential composition | `examples/layer.lang` |
 | `layerSoundT`, `layerCompleteT`, `layerSoundProp`, `layerCompleteProp`, `layerExt` | the field types, their h-level, and a Path in `Layer` from Paths of the circuit, the denotation and the resources | `layerIdl`, `layerIdr`, `layerAssoc` |
 | `layerIdl`, `layerIdr`, `layerAssoc` | the category laws of `Layer` | `examples/layer.lang` |
 | `isSetPi`, `isSetResource`, `isPropIsSet`, `isPropSquareP` | more of the h-level library: a Pi of sets is a set, `Resource` is a set, a proposition is a set, a square of propositions has a filler | `isSetHom` |
@@ -83,6 +83,8 @@ tests use these names, so keep them when you replace the sample.
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.
+`instSeqWitSat` requires a path between the weights of the component
+witnesses. `seqWitness` supplies it from their common weights `ws`.
 `catSeq` takes the same order: `catSeq C a b c g f` is `g` after `f`
 (flag 7, `SPEC.md` O2).
 

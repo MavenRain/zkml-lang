@@ -13,7 +13,8 @@ record eta. It implements part Z5b: the `natMax` neutral rules and, in
 the domain, `Resource`, `Inst`, `Layer`, the h-level library and the
 category laws of `Layer`. It implements part Z5c: `isSetHom`, the
 category `LayerCat` and the functor `denote`. Slice Z5 is DONE. It
-implements part Z6a: the `List` motive fold (C7). Slice Z6 is in progress.
+implements part Z6a: the `List` motive fold (C7), and part Z6b: the
+split witness of `instSeqSat` (flag 16). Slice Z6 is in progress.
 Slices Z7 to Z11 are not started.
 
 ## Implemented
@@ -101,7 +102,7 @@ Slices Z7 to Z11 are not started.
 ## Remaining work
 
 1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
-   shapes) is RULED. Part Z6a is DONE. Part Z6b is next.
+   shapes) is RULED. Parts Z6a and Z6b are DONE. Part Z6c is next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
@@ -178,6 +179,14 @@ Slices Z7 to Z11 are not started.
   (flag 6). `instInputWit` takes the weights, and `instInputWeights`
   gives them back (flag 14). The N3 design gives
   `inputWitness : Tensor s -> Witness`.
+- The sequence witness law `instSeqSat` gives a truncated split (flag
+  16, RULED (a) 2026-10-16, `SPEC.md` O9). A witness `w` of
+  `circSeq a b c f g` is `instSeqWit u v` for a `u` and a `v` with the
+  same weights: `u` for `f` and `v` for `g`. Part Z6b removes
+  `instSeqEval` and adds `soundnessSplit`. `soundnessSeq` folds the
+  `Trunc` by `soundnessSplit`. The concrete witness model is an
+  associative trace from set-valued folds, not a Type-valued fold over
+  `Circuit`. It comes with a concrete `Inst` in part Z6d.
 - In a signature that binds an `Inst` as `I`, the name `I` hides the
   interval type `I`, so the signature cannot write `(j : I)`. An
   interval lambda in a type needs `(i : I)`. Give the `Inst` another

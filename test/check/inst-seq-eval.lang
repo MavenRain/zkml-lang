@@ -1,0 +1,3 @@
+-- Flag 16: instSeqEval is removed, so a use of it must be refused. Z6 map probe f16: instEval depends only on the output shape. p1 (cong over circIdr) and p2 (instSeqEval at circId b) share the end instEval I a b (circSeq a b b f (circId b)) w.
+def p1 : (I : Inst) -> (a : Shape) -> (b : Shape) -> (f : Circuit a b) -> (w : instWitness I) -> Path (Tensor (instF I) b) (instEval I a b (circSeq a b b f (circId b)) w) (instEval I a b f w) := fun I a b f w => cong (fun (c : Circuit a b) => instEval I a b c w) (circIdr a b f)
+def p2 : (I : Inst) -> (a : Shape) -> (b : Shape) -> (f : Circuit a b) -> (w : instWitness I) -> Path (Tensor (instF I) b) (instEval I a b (circSeq a b b f (circId b)) w) (instEval I b b (circId b) w) := fun I a b f w => instSeqEval I a b b f (circId b) w

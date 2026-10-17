@@ -1,0 +1,4 @@
+-- Flag 16: instSeqSat gives a truncated split w = instSeqWit u v, not the same witness w for the two stages.
+-- The F16 chain uses instSat a b f x w from a witness of the sequence at w. The checker must refuse it.
+def sameWit : (I : Inst) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor (instF I) a) -> (w : instWitness I) -> instSat I a c (circSeq a b c f g) x w -> instSat I a b f x w :=
+  fun I a b c f g x w h => first (instSeqSat I a b c f g x w h)

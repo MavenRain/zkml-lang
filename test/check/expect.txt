@@ -67,3 +67,6 @@ isprop-isset-side.lang TYPE_ENDPOINT
 list-motive-no-tail.lang TYPE_MISMATCH
 list-motive-over-nat.lang TYPE_MISMATCH
 list-motive-base.lang TYPE_MISMATCH
+inst-seq-eval.lang NAME_UNKNOWN
+inst-seq-same-wit.lang TYPE_MISMATCH
+inst-seq-mixed-weights.lang TYPE_MISMATCH

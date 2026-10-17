@@ -1,0 +1,4 @@
+-- A sequence uses one weight assignment for both stages.
+-- Satisfying witnesses alone do not establish that their weights agree.
+def mixedWeights : (I : Inst) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor (instF I) a) -> (u v : instWitness I) -> instSat I a b f x u -> instSat I b c g (instEval I a b f u) v -> instSat I a c (circSeq a b c f g) x (instSeqWit I a b c f g u v) :=
+  fun I a b c f g x u v hu hv => instSeqWitSat I a b c f g x u v hu hv
