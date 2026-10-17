@@ -81,7 +81,10 @@ tests use these names, so keep them when you replace the sample.
 | `TensorL`, `listRep` | the `Tensor` at a list of dimensions; a list of `n` copies of a value | the tensor operations |
 | `listUncons`, `listView` | the head and tail as an option; the empty or nonempty case with an equality for transport | runtime zip and stage decoding |
 | `zeroT`, `mapT`, `listZipWith`, `zipWithT`, `sumT` | the tensor operations: one value at each entry, a map, a zip, and a sum with an `add` argument | a concrete `Inst` (part Z6d) |
-| `Stage`, `stageEnc`, `tensorConv`, `stageDec`, `tensorConvSame`, `stageDecEnc` | a stage of a trace (a shape and a tensor), the read of a stage at a shape, and the round trip | a concrete `Inst` (part Z6d) |
+| `Stage`, `stageEnc`, `tensorConv`, `stageDec`, `tensorConvSame`, `stageDecEnc` | a stage of a trace (a shape and a tensor), the read of a stage at a shape, and the round trip | `bbInst` (part Z6d) |
+| `stageLast` | the last stage of a trace, or none for the empty trace | `bbInstEval` |
+| `bbP`, `bbAdd`, `bbSub`, `bbMul`, `bbNeg` | the BabyBear field operations on a Nat below p = 2^31 - 2^27 + 1 | `examples/babybear.lang` |
+| `bbRun`, `bbInstSat`, `bbInstEval`, `bbInstInputWit`, `bbInstSeqWit`, the other `bbInst` fields, `bbInst` | the BabyBear `Inst` at a weights type `W`: a witness is the weights and a trace, and satisfaction is a path from `bbRun` to the read of the last stage | `examples/babybear.lang` (flag 15 closed) |
 | `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
 | `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
 | `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |

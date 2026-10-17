@@ -33,3 +33,8 @@ def circCountSeq : (d : List Nat) -> Path Nat (circCount (shape d) (shape d) (ci
 def natPartial : Nat -> Nat := fold (fun k => Nat) (fun k acc => natAdd acc 1) 0
 def natApplied : Nat := fold (fun k => Nat -> Nat) (fun k f x => natAdd (f x) k) (fun x => x) 3 4
 def natSuccForget : Nat -> Nat := fun n => fold (fun k => Nat) (fun k acc => 0) 0 (natAdd n 1)
+-- natDiv and natMod (Z6d): the quotient and the remainder. A divisor of 0
+-- traps. natDivPick traps only when the flag selects the division by 0.
+def natDivOf : Nat -> Nat -> Nat := fun a b => natDiv a b
+def natModOf : Nat -> Nat -> Nat := fun a b => natMod a b
+def natDivPick : Flag -> Nat -> Nat := fun b n => flagIf b (natDiv n 0) (natMod n 3)

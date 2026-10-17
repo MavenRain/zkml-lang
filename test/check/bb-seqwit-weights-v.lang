@@ -1,0 +1,4 @@
+-- bbInstSeqWit keeps the weights of u. The weights of v do not follow by refl.
+-- Refused: TYPE_ENDPOINT.
+def badWeights : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : Prod W (List (Stage Nat))) -> Path W (bbInstWeightsOf W (bbInstSeqWit W a b c f g u v)) (bbInstWeightsOf W v) :=
+  fun W a b c f g u v => refl

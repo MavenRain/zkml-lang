@@ -1,0 +1,17 @@
+-- BabyBear field arithmetic and the read of a BabyBear witness (Z6d).
+def bbAddOf : Nat -> Nat -> Nat := fun a b => bbAdd a b
+def bbSubOf : Nat -> Nat -> Nat := fun a b => bbSub a b
+def bbMulOf : Nat -> Nat -> Nat := fun a b => bbMul a b
+def bbNegOf : Nat -> Nat := fun a => bbNeg a
+def bbNegAdd : Path Nat (bbAdd 5 (bbNeg 5)) 0 := refl
+-- The sum of the input stage at the shape [2], and the read of an empty trace.
+def bbEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbInstEval Nat (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (bbInstInputWit Nat (shape (cons 2 nil)) 5 (cons a (cons b nil))))
+def bbEvalEmpty : Nat -> Nat := fun a => sumT Nat bbAdd 0 (shape (cons 3 nil)) (bbInstEval Nat (shape (cons 3 nil)) (shape (cons 3 nil)) (circId (shape (cons 3 nil))) (pair a nil))
+-- Entries over Layer (Z6d): the denotation of the identity layer of bbInst,
+-- of a sequence of two identity layers, and the gates of the sequence.
+def bbLayerIdSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (idL (bbInst Nat) (shape (cons 2 nil))) 5 (cons a (cons b nil)))
+def bbLayerSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (layerSeq (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat) (shape (cons 2 nil))) (idL (bbInst Nat) (shape (cons 2 nil)))) 5 (cons a (cons b nil)))
+def bbLayerSeqGates : Nat -> Nat := fun n => natAdd n (resGates (layerRes (layerSeq (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat) (shape (cons 2 nil))) (idL (bbInst Nat) (shape (cons 2 nil))))))
+-- bbRun and the instEval field of bbInst at closed shapes.
+def bbRunSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) (cons a (cons b nil)))
+def bbInstEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (instEval (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (bbInst Nat) (shape (cons 2 nil)) 5 (cons a (cons b nil))))

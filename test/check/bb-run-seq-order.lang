@@ -1,0 +1,4 @@
+-- bbRun with the seq case in the wrong order: seqF after seqG. seqG takes a
+-- tensor at seqB, and x is at seqA. Refused: TYPE_MISMATCH.
+def badRun : (a b : Shape) -> Circuit a b -> Tensor Nat a -> Tensor Nat b :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Tensor Nat a -> Tensor Nat b) (fun idA => fun (x : Tensor Nat idA) => x) (fun seqA seqB seqC seqF seqG => fun (x : Tensor Nat seqA) => seqF (seqG x)) (fun idlA idlB idlF => <i> idlF) (fun idrA idrB idrF => <i> idrF) (fun asA asB asC asD asF asG asH => <i> fun (x : Tensor Nat asA) => asH (asG (asF x))) (fun sqA sqB sqF sqG sqP sqQ => isSetPi (Tensor Nat sqA) (fun (y : Tensor Nat sqA) => Tensor Nat sqB) (fun (y : Tensor Nat sqA) => bbInstTensorSet sqB) sqF sqG sqP sqQ) f

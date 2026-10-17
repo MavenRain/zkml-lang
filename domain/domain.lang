@@ -318,6 +318,66 @@ def tensorConvSame : (A : Type 0) -> (z : A) -> (l : List Nat) -> (x : TensorL A
 -- stageDecEnc: the round trip. stageDec at the shape of the stage gives the tensor back.
 def stageDecEnc : (A : Type 0) -> (z : A) -> (s : Shape) -> (x : Tensor A s) -> Path (Tensor A s) (stageDec A z s (stageEnc A s x)) x :=
   fun A z s x => tensorConvSame A z (dims s) x
+-- stageLast: the last stage of a trace, or none for the empty trace.
+def stageLast : (A : Type 0) -> List (Stage A) -> Option (Stage A) :=
+  fun A xs => fold (fun (h : Stage A) (r : Option (Stage A)) => option (some h) (fun (t : Stage A) => some t) r) none xs
+-- BabyBear (Z6d): p = 2^31 - 2^27 + 1. A field value is a Nat below p. The
+-- product of two values is below 2^62, so natMul does not trap. bbSub
+-- reduces b first, so a + p - b does not truncate at 0.
+def bbP : Nat := 2013265921
+def bbAdd : Nat -> Nat -> Nat := fun a b => natMod (natAdd a b) bbP
+def bbSub : Nat -> Nat -> Nat := fun a b => natMod (natSub (natAdd a bbP) (natMod b bbP)) bbP
+def bbMul : Nat -> Nat -> Nat := fun a b => natMod (natMul a b) bbP
+def bbNeg : Nat -> Nat := fun a => bbSub 0 a
+-- The BabyBear Inst fields. The weights type W is an argument (one record
+-- per model). A witness is the weights and a trace of stages.
+def bbInstTensorSet : (s : Shape) -> isSet (Tensor Nat s) := fun s => isSetTensor Nat natIsSet s
+def bbInstInputWit : (W : Type 0) -> (s : Shape) -> W -> Tensor Nat s -> Prod W (List (Stage Nat)) :=
+  fun W s ws x => pair ws (cons (stageEnc Nat s x) nil)
+-- bbInstEval reads the last stage at the shape b. The empty trace gives zeroT.
+def bbInstEval : (W : Type 0) -> (a b : Shape) -> Circuit a b -> Prod W (List (Stage Nat)) -> Tensor Nat b :=
+  fun W a b f w => option (zeroT Nat 0 b) (fun (st : Stage Nat) => stageDec Nat 0 b st) (stageLast Nat (second w))
+-- bbInstInputEval: the input witness has one stage, so the read is the round trip.
+def bbInstInputEval : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Nat s) -> Path (Tensor Nat s) (bbInstEval W s s (circId s) (bbInstInputWit W s ws x)) x :=
+  fun W s ws x => stageDecEnc Nat 0 s x
+-- bbRun: the function of a circuit, by a Circuit fold into the functions from
+-- Tensor Nat a to Tensor Nat b. The laws hold by refl. The squash case is
+-- isSetPi with bbInstTensorSet, because these functions are a set.
+def bbRun : (a b : Shape) -> Circuit a b -> Tensor Nat a -> Tensor Nat b :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Tensor Nat a -> Tensor Nat b)
+    (fun idA => fun (x : Tensor Nat idA) => x)
+    (fun seqA seqB seqC seqF seqG => fun (x : Tensor Nat seqA) => seqG (seqF x))
+    (fun idlA idlB idlF => <i> idlF)
+    (fun idrA idrB idrF => <i> idrF)
+    (fun asA asB asC asD asF asG asH => <i> fun (x : Tensor Nat asA) => asH (asG (asF x)))
+    (fun sqA sqB sqF sqG sqP sqQ => isSetPi (Tensor Nat sqA) (fun (y : Tensor Nat sqA) => Tensor Nat sqB) (fun (y : Tensor Nat sqA) => bbInstTensorSet sqB) sqF sqG sqP sqQ) f
+-- bbInstSat: a witness satisfies f at x when its last stage gives the result of
+-- bbRun. It is a path in a set, not a Type-valued fold over Circuit.
+def bbInstSat : (W : Type 0) -> (a b : Shape) -> Circuit a b -> Tensor Nat a -> Prod W (List (Stage Nat)) -> Type 0 :=
+  fun W a b f x w => Path (Tensor Nat b) (bbRun a b f x) (bbInstEval W a b f w)
+def bbInstWeightsOf : (W : Type 0) -> Prod W (List (Stage Nat)) -> W := fun W w => first w
+def bbInstInputWeights : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Nat s) -> Path W (bbInstWeightsOf W (bbInstInputWit W s ws x)) ws := fun W s ws x => refl
+-- The input witness satisfies circId by the round trip of its stage.
+def bbInstInputSat : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Nat s) -> bbInstSat W s s (circId s) x (bbInstInputWit W s ws x) := fun W s ws x => symm (bbInstInputEval W s ws x)
+def bbInstIdSound : (W : Type 0) -> (s : Shape) -> (x : Tensor Nat s) -> (w : Prod W (List (Stage Nat))) -> bbInstSat W s s (circId s) x w -> Path (Tensor Nat s) x (bbInstEval W s s (circId s) w) := fun W s x w h => h
+-- bbInstSeqWit keeps the weights of u and the trace of v. An append of the
+-- traces does not give bbInstSeqWitEval when v has no stages. It also does not
+-- give bbInstSeqSat, because bbInstSat constrains only the last stage of w.
+def bbInstSeqWit : (W : Type 0) -> (a b c : Shape) -> Circuit a b -> Circuit b c -> Prod W (List (Stage Nat)) -> Prod W (List (Stage Nat)) -> Prod W (List (Stage Nat)) :=
+  fun W a b c f g u v => pair (first u) (second v)
+def bbInstSeqWitWeights : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : Prod W (List (Stage Nat))) -> Path W (bbInstWeightsOf W u) (bbInstWeightsOf W v) -> Path W (bbInstWeightsOf W (bbInstSeqWit W a b c f g u v)) (bbInstWeightsOf W u) :=
+  fun W a b c f g u v p => refl
+def bbInstSeqWitEval : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : Prod W (List (Stage Nat))) -> Path (Tensor Nat c) (bbInstEval W a c (circSeq a b c f g) (bbInstSeqWit W a b c f g u v)) (bbInstEval W b c g v) :=
+  fun W a b c f g u v => refl
+def bbInstSeqWitSat : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor Nat a) -> (u v : Prod W (List (Stage Nat))) -> Path W (bbInstWeightsOf W u) (bbInstWeightsOf W v) -> bbInstSat W a b f x u -> bbInstSat W b c g (bbInstEval W a b f u) v -> bbInstSat W a c (circSeq a b c f g) x (bbInstSeqWit W a b c f g u v) :=
+  fun W a b c f g x u v p hu hv => trans (cong (fun (y : Tensor Nat b) => bbRun b c g y) hu) hv
+-- bbInstSeqSat: u is the weights of w and one stage with the result of f at x.
+-- v is w.
+def bbInstSeqSat : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor Nat a) -> (w : Prod W (List (Stage Nat))) -> bbInstSat W a c (circSeq a b c f g) x w -> Trunc (Sigma (u : Prod W (List (Stage Nat))) (Sigma (v : Prod W (List (Stage Nat))) (Prod (Path (Prod W (List (Stage Nat))) w (bbInstSeqWit W a b c f g u v)) (Prod (Path W (bbInstWeightsOf W u) (bbInstWeightsOf W v)) (Prod (bbInstSat W a b f x u) (bbInstSat W b c g (bbInstEval W a b f u) v)))))) :=
+  fun W a b c f g x w h => truncIn (Sigma (u : Prod W (List (Stage Nat))) (Sigma (v : Prod W (List (Stage Nat))) (Prod (Path (Prod W (List (Stage Nat))) w (bbInstSeqWit W a b c f g u v)) (Prod (Path W (bbInstWeightsOf W u) (bbInstWeightsOf W v)) (Prod (bbInstSat W a b f x u) (bbInstSat W b c g (bbInstEval W a b f u) v))))))
+    (pack (pair (first w) (cons (stageEnc Nat b (bbRun a b f x)) nil)) (pack w (pair refl (pair refl (pair (symm (stageDecEnc Nat 0 b (bbRun a b f x))) (trans (cong (fun (y : Tensor Nat b) => bbRun b c g y) (stageDecEnc Nat 0 b (bbRun a b f x))) h))))))
+-- bbInst: the BabyBear Inst at the weights type W. A concrete Inst exists (flag 15).
+def bbInst : (W : Type 0) -> Inst := fun W => mkInst Nat (Prod W (List (Stage Nat))) W (bbInstWeightsOf W) (bbInstSat W) (bbInstEval W) (bbInstInputWit W) (bbInstInputWeights W) (bbInstInputSat W) (bbInstInputEval W) (bbInstIdSound W) (bbInstSeqWit W) (bbInstSeqSat W) (bbInstSeqWitWeights W) (bbInstSeqWitSat W) (bbInstSeqWitEval W) bbInstTensorSet
 -- isPropSquareP: a square of propositions has a filler for any four sides.
 -- The base is a transp of the corner b00. Each side is a path of the proposition from the base.
 def isPropSquareP : (B : I -> I -> Type 0) -> ((j : I) -> (i : I) -> isProp (B j i)) -> (b00 : B i0 i0) -> (b01 : B i0 i1) -> (b10 : B i1 i0) -> (b11 : B i1 i1) -> (t : PathP (fun (i : I) => B i0 i) b00 b01) -> (u : PathP (fun (i : I) => B i1 i) b10 b11) -> (r : PathP (fun (j : I) => B j i0) b00 b10) -> (s : PathP (fun (j : I) => B j i1) b01 b11) -> PathP (fun (j : I) => PathP (fun (i : I) => B j i) (r @ j) (s @ j)) t u :=

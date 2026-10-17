@@ -1,0 +1,1 @@
+def bbEvalFirst : (x : Nat) -> Path Nat (bbInstEval Nat (shape nil) (shape nil) (circId (shape nil)) (pair 5 (cons (stageEnc Nat (shape nil) x) (cons (stageEnc Nat (shape nil) 0) nil)))) x := fun x => refl

@@ -104,7 +104,7 @@ Slices Z7 to Z11 are not started.
 ## Remaining work
 
 1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
-   shapes) is RULED. Parts Z6a, Z6b and Z6c are DONE. Part Z6d is next.
+   shapes) is RULED. Parts Z6a to Z6d are DONE. Part Z6e is next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
@@ -166,14 +166,12 @@ Slices Z7 to Z11 are not started.
   sizes. Each dimension adds a `List` level and its numeric size is
   ignored, so short rows and ragged tensors typecheck. The nested
   Fin-indexed representation in the design remains to be implemented.
-- The domain has no concrete `Inst` (flag 15, RULED (a) 2026-10-16).
-  Cause: `instEval` and `instInputWit` must give a `Tensor F s` at a
-  neutral shape `s`. Part Z6a adds the `List` motive fold (C7). With it,
-  `zeroL` in `examples/listind.lang` gives a tensor at a neutral shape.
-  Part Z6d adds a concrete instance. Then flag 15 closes.
+- Flag 15 (RULED (a) 2026-10-16) is closed in part Z6d. The domain has
+  a concrete `Inst`: `bbInst W`. `examples/babybear.lang` has entries
+  over `Layer` at closed shapes.
 - `examples/category.lang` has no entry. Each definition in it takes an
-  abstract `Inst`, because the domain has no concrete `Inst` (flag 15).
-  The lowering gives an empty module.
+  abstract `Inst`. The lowering gives an empty module. The entries over
+  the concrete `bbInst` are in `examples/babybear.lang`.
 - The `Inst` record is different from the N3 design at two points. A
   USER ruling is open for each. `Inst` carries the identity and
   sequence witness laws (`instIdSound`, `instSeqSat` and the related
@@ -186,9 +184,10 @@ Slices Z7 to Z11 are not started.
   `circSeq a b c f g` is `instSeqWit u v` for a `u` and a `v` with the
   same weights: `u` for `f` and `v` for `g`. Part Z6b removes
   `instSeqEval` and adds `soundnessSplit`. `soundnessSeq` folds the
-  `Trunc` by `soundnessSplit`. The concrete witness model is an
-  associative trace from set-valued folds, not a Type-valued fold over
-  `Circuit`. It comes with a concrete `Inst` in part Z6d.
+  `Trunc` by `soundnessSplit`. The concrete witness model of part Z6d
+  uses set-valued folds, not a Type-valued fold over `Circuit`.
+  `bbInstSeqWit u v` keeps the trace of `v`, not an append of the traces
+  (flag 20, open with the USER).
 - Part Z6c: `isSetList` by encode-decode, and `isSetTensor` from
   `isSet F`. A concrete `Inst` gets `instTensorSet` from it in part
   Z6d. `zeroT`, `mapT`, `zipWithT` and `sumT` are `List` motive folds
@@ -198,6 +197,21 @@ Slices Z7 to Z11 are not started.
   reads a stage at the shape `s`, one level at a time. `stageDecEnc`
   is the round trip at the shape of the stage, by `List` induction.
   The stage needs no new family.
+- Part Z6d: the kit operations `natDiv` and `natMod` (the quotient and
+  the remainder). A divisor of 0 traps. The trap gives the code
+  `EVAL_OVERFLOW` and its overflow text, as each kit trap does (flag 19,
+  RULED (a) 2026-10-17). The Wasm writer uses a divisor of 1 when the
+  divisor is 0 and records the trap in the flag. The domain adds
+  `stageLast`, the BabyBear field operations (`bbP`, `bbAdd`, `bbSub`,
+  `bbMul`, `bbNeg`) and `bbInst W`, a concrete `Inst` at a weights type
+  `W`. Flag 15 is closed. A witness is the weights and a trace of
+  stages. `bbRun` gives the function of a circuit, by a `Circuit` fold
+  into a set of functions. A witness satisfies `f` at `x` when the read
+  of its last stage is `bbRun f x`. `bbInstSeqWit u v` keeps the weights
+  of `u` and the trace of `v` (flag 20). An append of the traces does
+  not give `instSeqWitEval` when `v` has no stages. It also does not
+  give `instSeqSat`, because satisfaction constrains only the last stage.
+  `examples/babybear.lang` has the first entries over `Layer`.
   `listZipWith` unfolds the two list tails. `tensorConv` uses a list
   view with an equality for transport. These case splits return data,
   so zip and stage decoding also lower when their input lists and

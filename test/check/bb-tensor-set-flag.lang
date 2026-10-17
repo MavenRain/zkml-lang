@@ -1,0 +1,1 @@
+def bbSetFlag : (s : Shape) -> isSet (Tensor Nat s) := fun s => isSetTensor Flag natIsSet s

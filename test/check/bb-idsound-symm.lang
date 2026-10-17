@@ -1,0 +1,3 @@
+-- bbInstIdSound with the path in the wrong direction. Refused: TYPE_MISMATCH.
+def badSound : (W : Type 0) -> (s : Shape) -> (x : Tensor Nat s) -> (w : Prod W (List (Stage Nat))) -> bbInstSat W s s (circId s) x w -> Path (Tensor Nat s) x (bbInstEval W s s (circId s) w) :=
+  fun W s x w h => symm h

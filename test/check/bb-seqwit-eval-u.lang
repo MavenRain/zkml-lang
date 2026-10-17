@@ -1,0 +1,4 @@
+-- bbInstSeqWit keeps the trace of v. The read of u does not follow by refl.
+-- Refused: TYPE_ENDPOINT.
+def badEval : (W : Type 0) -> (s : Shape) -> (u v : Prod W (List (Stage Nat))) -> Path (Tensor Nat s) (bbInstEval W s s (circSeq s s s (circId s) (circId s)) (bbInstSeqWit W s s s (circId s) (circId s) u v)) (bbInstEval W s s (circId s) u) :=
+  fun W s u v => refl

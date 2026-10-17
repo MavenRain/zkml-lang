@@ -81,3 +81,11 @@ list-zip-with-short.lang TYPE_ENDPOINT
 tensor-zip-one-arg.lang TYPE_MISMATCH
 tensor-sum-no-zero.lang TYPE_MISMATCH
 stage-dec-enc-refl.lang TYPE_ENDPOINT
+bb-input-wit-wrong-shape.lang TYPE_MISMATCH
+bb-eval-first-stage.lang TYPE_ENDPOINT
+bb-tensor-set-flag.lang TYPE_MISMATCH
+natdiv-zero-refl.lang TYPE_ENDPOINT
+bb-run-seq-order.lang TYPE_MISMATCH
+bb-seqwit-weights-v.lang TYPE_ENDPOINT
+bb-seqwit-eval-u.lang TYPE_ENDPOINT
+bb-idsound-symm.lang TYPE_MISMATCH

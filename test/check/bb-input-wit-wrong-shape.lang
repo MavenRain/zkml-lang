@@ -1,0 +1,1 @@
+def bbWitWrongShape : Prod Nat (List (Stage Nat)) := bbInstInputWit Nat (shape nil) 5 (cons 1 nil)
