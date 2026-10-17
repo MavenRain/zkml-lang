@@ -1,0 +1,2 @@
+-- sumT needs the zero of add before the shape.
+def sumNoZero : Nat := sumT Nat (fun (a : Nat) (b : Nat) => natAdd a b) (shape (cons 2 nil)) (cons 1 (cons 2 nil))

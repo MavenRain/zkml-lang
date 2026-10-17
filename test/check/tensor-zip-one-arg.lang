@@ -1,0 +1,2 @@
+-- zipWithT needs a function of two arguments.
+def zipOneArg : Tensor Nat (shape (cons 2 nil)) := zipWithT Nat Nat Nat (fun (a : Nat) => a) (shape (cons 2 nil)) (cons 1 (cons 2 nil)) (cons 3 (cons 4 nil))

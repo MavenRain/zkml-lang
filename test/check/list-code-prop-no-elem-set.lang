@@ -1,0 +1,2 @@
+-- The code is a proposition only when A is a set.
+def listCodePropNoElemSet : (A : Type 0) -> (xs ys : List A) -> isProp (listCode A xs ys) := fun A xs ys => isPropListCode A xs ys

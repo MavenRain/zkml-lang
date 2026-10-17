@@ -70,3 +70,14 @@ list-motive-base.lang TYPE_MISMATCH
 inst-seq-eval.lang NAME_UNKNOWN
 inst-seq-same-wit.lang TYPE_MISMATCH
 inst-seq-mixed-weights.lang TYPE_MISMATCH
+list-set-no-elem-set.lang TYPE_MISMATCH
+tensor-set-no-field-set.lang TYPE_MISMATCH
+list-code-prop-no-elem-set.lang TYPE_MISMATCH
+list-code-nil-cons.lang TYPE_MISMATCH
+void-elim-refl.lang TYPE_ENDPOINT
+tensor-zero-wrong-shape.lang TYPE_MISMATCH
+tensor-map-wrong-shape.lang TYPE_MISMATCH
+list-zip-with-short.lang TYPE_ENDPOINT
+tensor-zip-one-arg.lang TYPE_MISMATCH
+tensor-sum-no-zero.lang TYPE_MISMATCH
+stage-dec-enc-refl.lang TYPE_ENDPOINT

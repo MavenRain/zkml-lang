@@ -1,0 +1,2 @@
+-- mapT keeps the shape.
+def mapWrongShape : Tensor Nat (shape (cons 2 nil)) -> Tensor Nat (shape (cons 2 (cons 2 nil))) := fun (x : Tensor Nat (shape (cons 2 nil))) => mapT Nat Nat (fun (a : Nat) => a) (shape (cons 2 nil)) x

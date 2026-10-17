@@ -1,0 +1,2 @@
+-- The round trip of a stage needs List induction: map is stuck at a neutral list, so refl fails.
+def decEncRefl : (x : Tensor Nat (shape (cons 2 nil))) -> Path (Tensor Nat (shape (cons 2 nil))) (stageDec Nat 0 (shape (cons 2 nil)) (stageEnc Nat (shape (cons 2 nil)) x)) x := fun x => refl

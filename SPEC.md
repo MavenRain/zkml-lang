@@ -145,6 +145,13 @@ An instance is a top-level definition whose type is a data type (F14).
   `test/check/inst-seq-mixed-weights.lang` refuses witness composition
   without the weights path (`TYPE_MISMATCH`). Status: built in part
   Z6b.
+- O10. No empty type and no `Unit` eta (flag 18). The kit has no Empty
+  former, because a family needs at least one constructor. `Unit` has
+  no eta and no eliminator, so `isProp Unit` does not check. Part Z6c
+  uses stand-ins: `Void` is `Path Nat 0 1`, `voidElim` is a `transp`
+  over a `Nat` motive fold, and the code of nil and nil is
+  `Path Nat 0 0`. Default (i): keep the stand-ins, with no kit change.
+  Status: OPEN.
 
 ## 10. Milestones
 

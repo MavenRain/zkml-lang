@@ -130,8 +130,9 @@ type does not check as written, and the default for each.
   `matmul`, `softmax`, `attention`, `layerNorm`, `quantize`, `lookup`,
   `residual`, `residual-loop` (N6). O5 is RULED. Status: part Z6a (the
   `List` motive fold, flag 15) DONE 2026-10-16. Part Z6b (the split
-  witness of `instSeqSat`, flag 16) DONE 2026-10-17. Parts Z6c to Z6g
-  remain.
+  witness of `instSeqSat`, flag 16) DONE 2026-10-17. Part Z6c (the
+  tensor library over the `List` fold) DONE 2026-10-17. Parts Z6d to
+  Z6g remain.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.

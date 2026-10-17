@@ -74,6 +74,14 @@ tests use these names, so keep them when you replace the sample.
 | `layerSoundT`, `layerCompleteT`, `layerSoundProp`, `layerCompleteProp`, `layerExt` | the field types, their h-level, and a Path in `Layer` from Paths of the circuit, the denotation and the resources | `layerIdl`, `layerIdr`, `layerAssoc` |
 | `layerIdl`, `layerIdr`, `layerAssoc` | the category laws of `Layer` | `examples/layer.lang` |
 | `isSetPi`, `isSetResource`, `isPropIsSet`, `isPropSquareP` | more of the h-level library: a Pi of sets is a set, `Resource` is a set, a proposition is a set, a square of propositions has a filler | `isSetHom` |
+| `isPropProd`, `Void`, `isPropVoid`, `voidElim` | a product of propositions is a proposition; `Void` is `Path Nat 0 1` (flag 18), a proposition with a map to each type | `listCode`, `isPropListCode` |
+| `listCode`, `listCodeRefl`, `listEncode`, `listDecode`, `listDecodeRefl`, `listDecodeEncode`, `isPropListCode` | the encode-decode code of `List A`: a path of two lists is a path of the heads and a code of the tails | `isSetList` |
+| `isSetList` | `List A` is a set when `A` is a set | `isSetTensor` |
+| `isSetTensor` | `Tensor F s` is a set when `F` is a set | a concrete `Inst` (part Z6d) |
+| `TensorL`, `listRep` | the `Tensor` at a list of dimensions; a list of `n` copies of a value | the tensor operations |
+| `listUncons`, `listView` | the head and tail as an option; the empty or nonempty case with an equality for transport | runtime zip and stage decoding |
+| `zeroT`, `mapT`, `listZipWith`, `zipWithT`, `sumT` | the tensor operations: one value at each entry, a map, a zip, and a sum with an `add` argument | a concrete `Inst` (part Z6d) |
+| `Stage`, `stageEnc`, `tensorConv`, `stageDec`, `tensorConvSame`, `stageDecEnc` | a stage of a trace (a shape and a tensor), the read of a stage at a shape, and the round trip | a concrete `Inst` (part Z6d) |
 | `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
 | `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
 | `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |

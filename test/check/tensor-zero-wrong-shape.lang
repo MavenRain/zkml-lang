@@ -1,0 +1,2 @@
+-- zeroT gives a tensor at the shape of its argument.
+def zeroWrongShape : Tensor Nat (shape (cons 2 nil)) := zeroT Nat 0 (shape nil)

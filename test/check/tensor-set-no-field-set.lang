@@ -1,0 +1,2 @@
+-- isSetTensor needs isSet F before the shape.
+def tensorSetNoFieldSet : (F : Type 0) -> (s : Shape) -> isSet (Tensor F s) := fun F s => isSetTensor F s

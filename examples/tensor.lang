@@ -1,0 +1,10 @@
+-- Tensor operations on runtime lists, including stages of different ranks.
+def tensorDown : Nat -> List Nat := fun n => unfold (fun (k : Nat) => some (pair k (natSub k 1))) n n
+def tensorAdd : Nat -> Nat -> Nat := fun a b => natAdd a b
+def tensorListSum : List Nat -> Nat := fun xs => fold tensorAdd 0 xs
+def zipListSum : Nat -> Nat -> Nat := fun n m => tensorListSum (listZipWith Nat Nat Nat tensorAdd (tensorDown n) (tensorDown m))
+def zipTensorSum : Nat -> Nat -> Nat := fun n m => sumT Nat tensorAdd 0 (shape (cons n nil)) (zipWithT Nat Nat Nat tensorAdd (shape (cons n nil)) (tensorDown n) (tensorDown m))
+def chooseTensorStage : Flag -> Nat -> Stage Nat := fun b n => flagIf b (stageEnc Nat (shape nil) n) (stageEnc Nat (shape (cons 1 nil)) (cons n nil))
+def scalarStageRead : Flag -> Nat -> Nat := fun b n => stageDec Nat 0 (shape nil) (chooseTensorStage b n)
+def vectorStageRead : Flag -> Nat -> Nat := fun b n => tensorListSum (stageDec Nat 0 (shape (cons 1 nil)) (chooseTensorStage b n))
+def generatedStageRead : Nat -> Nat := fun n => tensorListSum (stageDec Nat 0 (shape (cons 1 nil)) (stageEnc Nat (shape (tensorDown n)) (zeroT Nat 7 (shape (tensorDown n)))))

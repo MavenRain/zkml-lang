@@ -1,0 +1,2 @@
+-- Void is Path Nat 0 1, so refl is not a Void.
+def voidFromRefl : (T : Type 0) -> T := fun T => voidElim T refl

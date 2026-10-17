@@ -1,0 +1,2 @@
+-- The code of nil and a cons cell is Void, so the reflexive code of nil does not fit it.
+def listCodeNilCons : (A : Type 0) -> (a : A) -> listCode A nil (cons a nil) := fun A a => listCodeRefl A nil

@@ -1,0 +1,2 @@
+-- isSetList needs isSet A. Without it the result is not isSet (List A).
+def listSetNoElemSet : (A : Type 0) -> isSet (List A) := fun A => isSetList A

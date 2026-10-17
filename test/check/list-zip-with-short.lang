@@ -1,0 +1,2 @@
+-- listZipWith stops at the end of the shorter list.
+def zipShort : Path (List Nat) (listZipWith Nat Nat Nat (fun (a : Nat) (b : Nat) => natAdd a b) (cons 1 (cons 2 nil)) (cons 10 nil)) (cons 11 (cons 2 nil)) := refl
