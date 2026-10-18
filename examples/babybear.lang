@@ -15,3 +15,12 @@ def bbLayerSeqGates : Nat -> Nat := fun n => natAdd n (resGates (layerRes (layer
 -- bbRun and the instEval field of bbInst at closed shapes.
 def bbRunSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) (cons a (cons b nil)))
 def bbInstEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (instEval (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (bbInst Nat) (shape (cons 2 nil)) 5 (cons a (cons b nil))))
+-- Operators (Z6e): opQuantize s 3 divides each entry by 8. circResidual adds x.
+-- cost: opRes gives 6 gates and 6 lookups at the shape [2, 3], the sum 6 gates.
+def bbRunQuantize : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) (cons 1000 (cons 7 nil))) (cons 125 (cons 0 nil)) := refl
+def bbRunResidual : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) (cons 1000 (cons 7 nil))) (cons 1125 (cons 7 nil)) := refl
+def costResidual : Path Resource (cost (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (circResidual (shape (cons 2 (cons 3 nil))) (circOp (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (opQuantize (shape (cons 2 (cons 3 nil))) 1)))) (res 12 6 1) := refl
+def bbQuantizeSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) (cons u (cons v nil)))
+-- Quantization is defined at every Nat shift, including 64 and larger.
+def bbQuantizeScalar : Nat -> Nat -> Nat := fun k x => bbOpRun (shape nil) (shape nil) (opQuantize (shape nil) k) x
+def bbRunQuantizeWide : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 64)) (cons 1000 (cons 7 nil))) (cons 0 (cons 0 nil)) := refl

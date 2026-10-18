@@ -530,8 +530,8 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   that depends on a recursive field fail with `DOMAIN_INDEX`. A result
   whose head is another family and an end that is not a point term fail
   with `DOMAIN_HIT`. The kit domain declares `Circuit` with the point
-  constructors `circId` and `circSeq` and the path constructors
-  `circIdl`, `circIdr`, `circAssoc` and `circSquash`.
+  constructors `circId`, `circSeq`, `circOp` and `circResidual` and the
+  path constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`.
 - Declaration (part Z4b, mutual blocks): `family Rose := ... and Kids :=
   ...` declares the sorts of a block together, in order. The headers of
   all the sorts bind before the check reads a constructor, so a

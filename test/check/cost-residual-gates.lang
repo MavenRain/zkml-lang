@@ -1,0 +1,3 @@
+-- costResidual at res 6 6 1: the residual sum adds 6 linear gates, so the
+-- cost is res 12 6 1. Refused: TYPE_ENDPOINT.
+def badCost : Path Resource (cost (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (circResidual (shape (cons 2 (cons 3 nil))) (circOp (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (opQuantize (shape (cons 2 (cons 3 nil))) 1)))) (res 6 6 1) := refl

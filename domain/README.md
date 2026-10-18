@@ -85,6 +85,14 @@ tests use these names, so keep them when you replace the sample.
 | `stageLast` | the last stage of a trace, or none for the empty trace | `bbInstEval` |
 | `bbP`, `bbAdd`, `bbSub`, `bbMul`, `bbNeg` | the BabyBear field operations on a Nat below p = 2^31 - 2^27 + 1 | `examples/babybear.lang` |
 | `bbRun`, `bbInstSat`, `bbInstEval`, `bbInstInputWit`, `bbInstSeqWit`, the other `bbInst` fields, `bbInst` | the BabyBear `Inst` at a weights type `W`: a witness is the weights and a trace, and satisfaction is a path from `bbRun` to the read of the last stage | `examples/babybear.lang` (flag 15 closed) |
+| `Op (a b : Shape)` | the operators: `opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS` divides each entry by 2^k (part Z6e) | `circOp` |
+| `circOp`, `circResidual` | the `Circuit` constructors for one operator and for a residual step x + f x (part Z6e) | `bbRun`, `cost` |
+| `pow2` | 2 to the power k, by `Nat` induction; exponents at least 64 overflow `Nat` | arithmetic helper |
+| `bbOpRun` | the function of an operator, by an `Op` fold; quantization uses at most 64 halvings, so any shift at least 64 gives zero | `bbRun` |
+| `shapeSize` | the number of entries at a shape (the product of the dims) | `opRes`, `cost` |
+| `opRes` | the resources of an operator: `opQuantize` uses one linear gate and one range lookup for each entry | `cost` |
+| `cost` | the resources of a circuit, by a `Circuit` fold (N5); `circResidual` adds one linear gate for each entry | `costLayer`, `examples/babybear.lang` |
+| `costLayer`, `costLayerRes` | a layer with the cost of its circuit as its resources, and the path from its `layerRes` to `cost` | `examples/babybear.lang` |
 | `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
 | `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
 | `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |

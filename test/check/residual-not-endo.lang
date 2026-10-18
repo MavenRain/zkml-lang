@@ -1,0 +1,4 @@
+-- circResidual over a circuit from (shape nil) to (shape (cons 1 nil)). The
+-- inner circuit of circResidual goes from rsS to rsS. Refused: TYPE_MISMATCH.
+def badResidual : Circuit (shape nil) (shape (cons 1 nil)) -> Circuit (shape nil) (shape nil) :=
+  fun f => circResidual (shape nil) f

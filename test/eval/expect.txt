@@ -36,7 +36,7 @@ qiit flipped => circSeq (shape (cons 1 nil)) (shape (cons 1 nil)) (shape (cons 1
 qiit rank => 2
 qiit rankPlus 3 => 5
 qiit seqCount 2 => 2
-qiit circFlip => fun a => fun b => fun x => fold (fun _x0 => fun _x1 => Circuit _x1 _x0) (fun _x0 => circId _x0) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => circSeq _x2 _x1 _x0 _x4 _x3) (fun _x0 => fun _x1 => fun _x2 => (<_x3> ((circIdr _x1 _x0 _x2) @ _x3))) (fun _x0 => fun _x1 => fun _x2 => (<_x3> ((circIdl _x1 _x0 _x2) @ _x3))) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => fun _x5 => fun _x6 => (<_x7> ((circAssoc _x3 _x2 _x1 _x0 _x6 _x5 _x4) @ (~ _x7)))) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => fun _x5 => (<_x6> (<_x7> (((circSquash _x1 _x0 _x2 _x3 _x4 _x5) @ _x6) @ _x7)))) x
+qiit circFlip => fun a => fun b => fun x => fold (fun _x0 => fun _x1 => Circuit _x1 _x0) (fun _x0 => circId _x0) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => circSeq _x2 _x1 _x0 _x4 _x3) (fun _x0 => fun _x1 => fun _x2 => circOp _x1 _x0 (fold (fun _x3 => fun _x4 => Op _x4 _x3) (fun _x3 => fun _x4 => opQuantize _x3 _x4) _x2)) (fun _x0 => fun _x1 => circResidual _x0 _x1) (fun _x0 => fun _x1 => fun _x2 => (<_x3> ((circIdr _x1 _x0 _x2) @ _x3))) (fun _x0 => fun _x1 => fun _x2 => (<_x3> ((circIdl _x1 _x0 _x2) @ _x3))) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => fun _x5 => fun _x6 => (<_x7> ((circAssoc _x3 _x2 _x1 _x0 _x6 _x5 _x4) @ (~ _x7)))) (fun _x0 => fun _x1 => fun _x2 => fun _x3 => fun _x4 => fun _x5 => (<_x6> (<_x7> (((circSquash _x1 _x0 _x2 _x3 _x4 _x5) @ _x6) @ _x7)))) x
 rose roseMapped => rose (kidsCons (rose kidsNil) (kidsCons (rose kidsNil) kidsNil))
 rose kidsMapped => kidsCons (rose kidsNil) (kidsCons (rose (kidsCons (rose kidsNil) (kidsCons (rose kidsNil) kidsNil))) kidsNil)
 rose kidsSwapped => (<i> ((kidsSwap (rose (kidsCons (rose kidsNil) (kidsCons (rose kidsNil) kidsNil))) (rose kidsNil) kidsNil) @ (~ i)))
@@ -97,3 +97,11 @@ babybear bbLayerSeqSum 3 4 => 7
 babybear bbLayerSeqGates 2 => 2
 babybear bbRunSeqSum 2013265920 2013265920 => 2013265919
 babybear bbInstEvalSum 6 7 => 13
+babybear bbQuantizeSum 1000 7 => 1132
+babybear bbQuantizeScalar 0 7 => 7
+babybear bbQuantizeScalar 1 7 => 3
+babybear bbQuantizeScalar 63 18446744073709551615 => 1
+babybear bbQuantizeScalar 64 7 => 0
+babybear bbQuantizeScalar 64 18446744073709551615 => 0
+babybear bbQuantizeScalar 65 7 => 0
+babybear bbQuantizeScalar 18446744073709551615 7 => 0

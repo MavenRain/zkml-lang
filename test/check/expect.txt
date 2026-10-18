@@ -89,3 +89,7 @@ bb-run-seq-order.lang TYPE_MISMATCH
 bb-seqwit-weights-v.lang TYPE_ENDPOINT
 bb-seqwit-eval-u.lang TYPE_ENDPOINT
 bb-idsound-symm.lang TYPE_MISMATCH
+op-flip-noswap.lang TYPE_MISMATCH
+residual-not-endo.lang TYPE_MISMATCH
+op-quantize-shape.lang TYPE_MISMATCH
+cost-residual-gates.lang TYPE_ENDPOINT

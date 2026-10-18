@@ -89,11 +89,13 @@ type does not check as written, and the default for each.
   Layer.
 - N5 resources-export: `resources` is a free field of Layer, so
   resources-export does not hold for each Layer value. Default: a cost
-  function `cost : Circuit a b → Resource` counts multiplication gates,
-  lookups and degree. Linear operations cost nothing, so the residual
-  value `L .resources ∙ zeroR` agrees with it. The guest proves
-  `resources ≡ cost circuit` for each layer constructor and for `∘`, and
-  states resources-export for those layers.
+  function `cost : Circuit a b → Resource` counts constraint gates,
+  lookups and degree. This includes linear gates: quantization uses one
+  gate and one range lookup per entry, and a residual adds one gate per
+  entry to the cost of its inner circuit. `costLayer` sets resources to
+  this cost, with `costLayerRes` as its proof. The guest proves
+  `resources ≡ cost circuit` for sequential compositions of these layers
+  and states resources-export for them.
 - N6 Field operators: soundness makes `denotation x ≡ eval circuit w`, so
   the denotation of `softmax`, `layerNorm` and `quantize` is the field
   function that the circuit computes: fixed point values with scale 2^k,
@@ -133,7 +135,9 @@ type does not check as written, and the default for each.
   witness of `instSeqSat`, flag 16) DONE 2026-10-17. Part Z6c (the
   tensor library over the `List` fold) DONE 2026-10-17. Part Z6d
   (`natDiv`, `natMod` and the BabyBear `Inst`, flag 15 closed) DONE
-  2026-10-17. Parts Z6e to Z6g remain.
+  2026-10-17. Part Z6e (the `Op` family with `opQuantize`, the
+  constructors `circOp` and `circResidual`, and `cost`) DONE
+  2026-10-17. Parts Z6f and Z6g remain.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.

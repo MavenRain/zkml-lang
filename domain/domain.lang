@@ -29,10 +29,18 @@ family Quot (A : Type 0) (R : A -> A -> Type 0) := quotIn (quotRep : A)
 -- Quotient inductive-inductive types (former C5): Circuit is indexed by Shape.
 -- Each point constructor states its result; the header binders are the index telescope.
 -- Field names are domain-wide projection names (rule R4), so each constructor has its own.
+-- circOp is one operator. circResidual f is x + f x (Circuit has no products).
 family Shape := shape (dims : List Nat)
+-- Operators (Z6e): Op a b is a primitive step from the shape a to the shape b,
+-- with one constructor for each operator. opQuantize s k divides each entry by
+-- 2^k. The operators with weights (matmul, layerNorm, attention) come in Z6f,
+-- because the weights (O4) are in the witness and bbRun has no witness.
+family Op (a b : Shape) := opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS
 family Circuit (a b : Shape) :=
     circId (idA : Shape) : Circuit idA idA
   | circSeq (seqA seqB seqC : Shape) (seqF : Circuit seqA seqB) (seqG : Circuit seqB seqC) : Circuit seqA seqC
+  | circOp (opA opB : Shape) (opO : Op opA opB) : Circuit opA opB
+  | circResidual (rsS : Shape) (rsF : Circuit rsS rsS) : Circuit rsS rsS
   | circIdl (idlA idlB : Shape) (idlF : Circuit idlA idlB)
       : Path (Circuit idlA idlB) (circSeq idlA idlA idlB (circId idlA) idlF) idlF
   | circIdr (idrA idrB : Shape) (idrF : Circuit idrA idrB)
@@ -194,6 +202,23 @@ def isSetResource : isSet Resource :=
   fun x y p q => <i> <j> res (natIsSet (resGates x) (resGates y) (<k> resGates (p @ k)) (<k> resGates (q @ k)) @ i @ j)
     (natIsSet (resLookups x) (resLookups y) (<k> resLookups (p @ k)) (<k> resLookups (q @ k)) @ i @ j)
     (natIsSet (resDegree x) (resDegree y) (<k> resDegree (p @ k)) (<k> resDegree (q @ k)) @ i @ j)
+-- shapeSize s: the number of entries at the shape s (the product of the dims).
+def shapeSize : Shape -> Nat := fun s => fold (fun (d : Nat) (acc : Nat) => natMul d acc) 1 (dims s)
+-- opRes: the resources of an operator, by an Op fold. opQuantize s k uses one
+-- linear gate (x = q 2^k + r) and one range lookup (r < 2^k) for each entry.
+def opRes : (a b : Shape) -> Op a b -> Resource :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Resource) (fun qzS qzK => res (shapeSize qzS) (shapeSize qzS) 1) o
+-- cost (N5): the resources of a circuit, by a Circuit fold. circId costs zeroR,
+-- circSeq adds and circOp costs opRes. circResidual adds one linear gate for each
+-- entry (the sum x + f x). The path cases are the Resource laws and isSetResource.
+def cost : (a b : Shape) -> Circuit a b -> Resource :=
+  fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Resource) (fun idA => zeroR) (fun seqA seqB seqC seqF seqG => resAdd seqF seqG) (fun opA opB opO => opRes opA opB opO) (fun rsS rsF => resAdd rsF (res (shapeSize rsS) 0 1)) (fun idlA idlB idlF => refl) (fun idrA idrB idrF => refl) (fun asA asB asC asD asF asG asH => resAssoc asF asG asH) (fun sqA sqB sqF sqG sqP sqQ => isSetResource sqF sqG sqP sqQ) x
+-- costLayer: a layer with the cost of its circuit as its resources. layerRes
+-- stays a free field of Layer (N5), so costLayer is a smart constructor.
+def costLayer : (I : Inst) -> (a b : Shape) -> (f : Circuit a b) -> (den : instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> (snd : (x : Tensor (instF I) a) -> (w : instWitness I) -> instSat I a b f x w -> Path (Tensor (instF I) b) (den (instWeightsOf I w) x) (instEval I a b f w)) -> (cpl : (ws : instWeights I) -> (x : Tensor (instF I) a) -> Trunc (layerWit I a b f den ws x)) -> Layer I a b :=
+  fun I a b f den snd cpl => layer I a b f den snd cpl (cost a b f)
+def costLayerRes : (I : Inst) -> (a b : Shape) -> (f : Circuit a b) -> (den : instWeights I -> Tensor (instF I) a -> Tensor (instF I) b) -> (snd : (x : Tensor (instF I) a) -> (w : instWitness I) -> instSat I a b f x w -> Path (Tensor (instF I) b) (den (instWeightsOf I w) x) (instEval I a b f w)) -> (cpl : (ws : instWeights I) -> (x : Tensor (instF I) a) -> Trunc (layerWit I a b f den ws x)) -> Path Resource (layerRes (costLayer I a b f den snd cpl)) (cost a b f) :=
+  fun I a b f den snd cpl => refl
 -- isPropIsSet: a proposition is a set. The square is an hcomp of the paths h x _ from x.
 def isPropIsSet : (A : Type 0) -> isProp A -> isSet A :=
   fun A h x y p q => <j> <i> hcomp (fun k => [ ~ i |-> h x x @ k , i |-> h x y @ k , ~ j |-> h x (p @ i) @ k , j |-> h x (q @ i) @ k ]) x
@@ -340,13 +365,24 @@ def bbInstEval : (W : Type 0) -> (a b : Shape) -> Circuit a b -> Prod W (List (S
 -- bbInstInputEval: the input witness has one stage, so the read is the round trip.
 def bbInstInputEval : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Nat s) -> Path (Tensor Nat s) (bbInstEval W s s (circId s) (bbInstInputWit W s ws x)) x :=
   fun W s ws x => stageDecEnc Nat 0 s x
+-- pow2 k: 2 to the power k, by Nat induction. Exponents >= 64 overflow Nat.
+def pow2 : Nat -> Nat := fun k => fold (fun (n : Nat) => Nat) (fun (n : Nat) (acc : Nat) => natMul acc 2) 1 k
+-- bbOpRun: the function of an operator, by an Op fold. opQuantize s k divides
+-- each entry by 2^k and removes the remainder. Halve at most 64 times, since
+-- every Nat is below 2^64. This avoids constructing an overflowing divisor.
+def bbOpRun : (a b : Shape) -> Op a b -> Tensor Nat a -> Tensor Nat b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Tensor Nat a -> Tensor Nat b)
+    (fun qzS qzK => mapT Nat Nat (fun (v : Nat) => fold (fun (n : Nat) => Nat) (fun (n : Nat) (acc : Nat) => natDiv acc 2) v (natSub qzK (natSub qzK 64))) qzS) o
 -- bbRun: the function of a circuit, by a Circuit fold into the functions from
 -- Tensor Nat a to Tensor Nat b. The laws hold by refl. The squash case is
--- isSetPi with bbInstTensorSet, because these functions are a set.
+-- isSetPi with bbInstTensorSet, because these functions are a set. circOp runs
+-- bbOpRun. circResidual adds x to the result of the inner circuit (bbAdd).
 def bbRun : (a b : Shape) -> Circuit a b -> Tensor Nat a -> Tensor Nat b :=
   fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Tensor Nat a -> Tensor Nat b)
     (fun idA => fun (x : Tensor Nat idA) => x)
     (fun seqA seqB seqC seqF seqG => fun (x : Tensor Nat seqA) => seqG (seqF x))
+    (fun opA opB opO => bbOpRun opA opB opO)
+    (fun rsS rsF => fun (x : Tensor Nat rsS) => zipWithT Nat Nat Nat bbAdd rsS x (rsF x))
     (fun idlA idlB idlF => <i> idlF)
     (fun idrA idrB idrF => <i> idrF)
     (fun asA asB asC asD asF asG asH => <i> fun (x : Tensor Nat asA) => asH (asG (asF x)))

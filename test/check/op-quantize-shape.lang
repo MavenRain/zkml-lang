@@ -1,0 +1,3 @@
+-- opQuantize at Op (shape nil) (shape (cons 1 nil)). opQuantize s k is at
+-- Op s s. Refused: TYPE_MISMATCH.
+def badQuantize : Op (shape nil) (shape (cons 1 nil)) := opQuantize (shape nil) 3

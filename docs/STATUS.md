@@ -55,8 +55,9 @@ Slices Z7 to Z11 are not started.
   for each constructor and its laws by `refl`; Z3 is done.
   `examples/hit.lang` gives the accept cases.
 - C5 part Z4a: indexed sorts in `domain/domain.lang` (`Circuit (a b : Shape)`
-  with the point constructors `circId` and `circSeq` and the path
-  constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`), the
+  with the point constructors `circId`, `circSeq`, `circOp` and
+  `circResidual` and the path constructors `circIdl`, `circIdr`,
+  `circAssoc` and `circSquash`), the
   `fold` eliminator with a motive over the indices, and cases over the
   fields only. `examples/qiit.lang` gives the accept cases and the laws
   of `circMap` and `circFlip` by `refl`.
@@ -104,7 +105,7 @@ Slices Z7 to Z11 are not started.
 ## Remaining work
 
 1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
-   shapes) is RULED. Parts Z6a to Z6d are DONE. Part Z6e is next.
+   shapes) is RULED. Parts Z6a to Z6e are DONE. Part Z6f is next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

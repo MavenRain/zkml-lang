@@ -117,9 +117,12 @@ static int roundtrip_in(const char *domain, const char *type, const char *body) 
 /* Z4a: the kit domain's indexed family, for the C5 round trips. */
 static const char circuit_domain[] =
   "family Shape := shape (dims : List Nat)\n"
+  "family Op (a b : Shape) := opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS\n"
   "family Circuit (a b : Shape) :=\n"
   "    circId (idA : Shape) : Circuit idA idA\n"
   "  | circSeq (seqA seqB seqC : Shape) (seqF : Circuit seqA seqB) (seqG : Circuit seqB seqC) : Circuit seqA seqC\n"
+  "  | circOp (opA opB : Shape) (opO : Op opA opB) : Circuit opA opB\n"
+  "  | circResidual (rsS : Shape) (rsF : Circuit rsS rsS) : Circuit rsS rsS\n"
   "  | circIdl (idlA idlB : Shape) (idlF : Circuit idlA idlB)\n"
   "      : Path (Circuit idlA idlB) (circSeq idlA idlA idlB (circId idlA) idlF) idlF\n"
   "  | circIdr (idrA idrB : Shape) (idrF : Circuit idrA idrB)\n"
@@ -213,12 +216,16 @@ int main(void) {
   ok &= roundtrip_in(circuit_domain, "(a : Shape) -> (b : Shape) -> Circuit a b -> Circuit b a",
                      "fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA)"
                      " (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF)"
+                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) opO))"
+                     " (fun rsS rsF => circResidual rsS rsF)"
                      " (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF)"
                      " (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF))"
                      " (fun sqA sqB sqF sqG sqP sqQ => circSquash sqB sqA sqF sqG sqP sqQ) x");
   ok &= roundtrip_in(circuit_domain, "(i : I) -> Circuit (shape nil) (shape nil)",
                      "fun i => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA)"
                      " (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF)"
+                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) opO))"
+                     " (fun rsS rsF => circResidual rsS rsF)"
                      " (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF)"
                      " (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF))"
                      " (fun sqA sqB sqF sqG sqP sqQ => circSquash sqB sqA sqF sqG sqP sqQ)"
