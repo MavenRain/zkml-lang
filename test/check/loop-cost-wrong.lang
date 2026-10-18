@@ -1,0 +1,3 @@
+-- Two residual steps of opQuantize at [2] cost res 8 4 1, not res 4 2 1.
+-- Refused: TYPE_ENDPOINT.
+def costLoop2 : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidualLoop (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) 2)) (res 4 2 1) := refl

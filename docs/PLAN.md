@@ -137,7 +137,10 @@ type does not check as written, and the default for each.
   (`natDiv`, `natMod` and the BabyBear `Inst`, flag 15 closed) DONE
   2026-10-17. Part Z6e (the `Op` family with `opQuantize`, the
   constructors `circOp` and `circResidual`, and `cost`) DONE
-  2026-10-17. Parts Z6f and Z6g remain.
+  2026-10-17. Part Z6f session 1 (`opMatMul`, the weights in `bbRun`,
+  `circResidualLoop` and `costResidualLoop`) DONE 2026-10-18. The other
+  operators of Z6f (`layerNorm`, `softmax` and `attention`) and part Z6g
+  remain.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.

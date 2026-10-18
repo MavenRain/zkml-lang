@@ -1,0 +1,3 @@
+-- opMatMul 3 2 0 maps the shape [3] to the shape [2], not [2] to [3].
+-- Refused: TYPE_MISMATCH.
+def badMatMul : Op (shape (cons 2 nil)) (shape (cons 3 nil)) := opMatMul 3 2 0

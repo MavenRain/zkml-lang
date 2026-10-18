@@ -1,4 +1,4 @@
 -- circFlip with the circOp case not swapped: circOp opA opB opO is at
 -- Circuit opA opB, and the motive needs Circuit opB opA. Refused: TYPE_MISMATCH.
-def opFlip : (a : Shape) -> (b : Shape) -> Op a b -> Op b a := fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) o
+def opFlip : (a : Shape) -> (b : Shape) -> Op a b -> Op b a := fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) (fun mmN mmM mmK => opMatMul mmM mmN mmK) o
 def badFlip : (a : Shape) -> (b : Shape) -> Circuit a b -> Circuit b a := fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA) (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF) (fun opA opB opO => circOp opA opB opO) (fun rsS rsF => circResidual rsS rsF) (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF) (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF)) (fun sqA sqB sqF sqG sqP sqQ => circSquash sqB sqA sqF sqG sqP sqQ) x

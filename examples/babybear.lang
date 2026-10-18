@@ -9,18 +9,30 @@ def bbEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 
 def bbEvalEmpty : Nat -> Nat := fun a => sumT Nat bbAdd 0 (shape (cons 3 nil)) (bbInstEval Nat (shape (cons 3 nil)) (shape (cons 3 nil)) (circId (shape (cons 3 nil))) (pair a nil))
 -- Entries over Layer (Z6d): the denotation of the identity layer of bbInst,
 -- of a sequence of two identity layers, and the gates of the sequence.
-def bbLayerIdSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (idL (bbInst Nat) (shape (cons 2 nil))) 5 (cons a (cons b nil)))
-def bbLayerSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (layerSeq (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat) (shape (cons 2 nil))) (idL (bbInst Nat) (shape (cons 2 nil)))) 5 (cons a (cons b nil)))
-def bbLayerSeqGates : Nat -> Nat := fun n => natAdd n (resGates (layerRes (layerSeq (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat) (shape (cons 2 nil))) (idL (bbInst Nat) (shape (cons 2 nil))))))
+def bbLayerIdSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (idL (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil))) 5 (cons a (cons b nil)))
+def bbLayerSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (layerDen (layerSeq (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil))) (idL (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil)))) 5 (cons a (cons b nil)))
+def bbLayerSeqGates : Nat -> Nat := fun n => natAdd n (resGates (layerRes (layerSeq (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (idL (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil))) (idL (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil))))))
 -- bbRun and the instEval field of bbInst at closed shapes.
-def bbRunSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) (cons a (cons b nil)))
-def bbInstEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (instEval (bbInst Nat) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (bbInst Nat) (shape (cons 2 nil)) 5 (cons a (cons b nil))))
+def bbRunSeqSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) nil (cons a (cons b nil)))
+def bbInstEvalSum : Nat -> Nat -> Nat := fun a b => sumT Nat bbAdd 0 (shape (cons 2 nil)) (instEval (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (bbInst Nat (bbNoWeights Nat)) (shape (cons 2 nil)) 5 (cons a (cons b nil))))
 -- Operators (Z6e): opQuantize s 3 divides each entry by 8. circResidual adds x.
 -- cost: opRes gives 6 gates and 6 lookups at the shape [2, 3], the sum 6 gates.
-def bbRunQuantize : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) (cons 1000 (cons 7 nil))) (cons 125 (cons 0 nil)) := refl
-def bbRunResidual : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) (cons 1000 (cons 7 nil))) (cons 1125 (cons 7 nil)) := refl
+def bbRunQuantize : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) nil (cons 1000 (cons 7 nil))) (cons 125 (cons 0 nil)) := refl
+def bbRunResidual : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) nil (cons 1000 (cons 7 nil))) (cons 1125 (cons 7 nil)) := refl
 def costResidual : Path Resource (cost (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (circResidual (shape (cons 2 (cons 3 nil))) (circOp (shape (cons 2 (cons 3 nil))) (shape (cons 2 (cons 3 nil))) (opQuantize (shape (cons 2 (cons 3 nil))) 1)))) (res 12 6 1) := refl
-def bbQuantizeSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) (cons u (cons v nil)))
+def bbQuantizeSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3))) nil (cons u (cons v nil)))
 -- Quantization is defined at every Nat shift, including 64 and larger.
-def bbQuantizeScalar : Nat -> Nat -> Nat := fun k x => bbOpRun (shape nil) (shape nil) (opQuantize (shape nil) k) x
-def bbRunQuantizeWide : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 64)) (cons 1000 (cons 7 nil))) (cons 0 (cons 0 nil)) := refl
+def bbQuantizeScalar : Nat -> Nat -> Nat := fun k x => bbOpRun (shape nil) (shape nil) (opQuantize (shape nil) k) nil x
+def bbRunQuantizeWide : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 64)) nil (cons 1000 (cons 7 nil))) (cons 0 (cons 0 nil)) := refl
+-- opMatMul (Z6f): the matrix 0 of bbMatW has the rows [1, 2, 3] and [4, 5, 6].
+-- bbRun multiplies [1, 1, 1] by it and gives [6, 15]. opRes gives 6 gates of degree 2.
+def bbMatW : BbWeights := cons (cons (cons 1 (cons 2 (cons 3 nil))) (cons (cons 4 (cons 5 (cons 6 nil))) nil)) nil
+def bbRunMatMul : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0)) bbMatW (cons 1 (cons 1 (cons 1 nil)))) (cons 6 (cons 15 nil)) := refl
+def costMatMul : Path Resource (cost (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0))) (res 6 0 2) := refl
+-- The matrix 1 is out of range, so opMatMul 3 2 1 reads nil and gives nil.
+def bbRunMatMulMissing : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 1)) bbMatW (cons 1 (cons 1 (cons 1 nil)))) nil := refl
+-- residual-loop (N6): two residual steps of opQuantize s 3 at [2]. One step costs
+-- res 4 2 1, so two steps cost res 8 4 1 (costResidualLoop at n = 2, refl here).
+def costLoop2 : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidualLoop (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) 2)) (res 8 4 1) := refl
+def bbMatMulSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0)) bbMatW (cons u (cons v (cons 1 nil))))
+def bbLoopSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidualLoop (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) 2) nil (cons u (cons v nil)))

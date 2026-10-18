@@ -84,15 +84,22 @@ tests use these names, so keep them when you replace the sample.
 | `Stage`, `stageEnc`, `tensorConv`, `stageDec`, `tensorConvSame`, `stageDecEnc` | a stage of a trace (a shape and a tensor), the read of a stage at a shape, and the round trip | `bbInst` (part Z6d) |
 | `stageLast` | the last stage of a trace, or none for the empty trace | `bbInstEval` |
 | `bbP`, `bbAdd`, `bbSub`, `bbMul`, `bbNeg` | the BabyBear field operations on a Nat below p = 2^31 - 2^27 + 1 | `examples/babybear.lang` |
-| `bbRun`, `bbInstSat`, `bbInstEval`, `bbInstInputWit`, `bbInstSeqWit`, the other `bbInst` fields, `bbInst` | the BabyBear `Inst` at a weights type `W`: a witness is the weights and a trace, and satisfaction is a path from `bbRun` to the read of the last stage | `examples/babybear.lang` (flag 15 closed) |
-| `Op (a b : Shape)` | the operators: `opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS` divides each entry by 2^k (part Z6e) | `circOp` |
+| `bbRun`, `bbInstSat`, `bbInstEval`, `bbInstInputWit`, `bbInstSeqWit`, the other `bbInst` fields, `bbInst` | the BabyBear `Inst` at a weights type `W` and a reader `rd : W -> BbWeights` (part Z6f, flag 23): a witness is the weights and a trace, and satisfaction is a path from `bbRun` at `rd` of the weights to the read of the last stage. `bbRun a b f ws x` takes the weights `ws` before the input `x` | `examples/babybear.lang` (flag 15 closed) |
+| `Op (a b : Shape)` | the operators: `opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS` divides each entry by 2^k (part Z6e); `opMatMul (mmN mmM mmK : Nat) : Op [mmN] [mmM]` multiplies the input by the matrix mmK of the weights (part Z6f, flag 24) | `circOp` |
 | `circOp`, `circResidual` | the `Circuit` constructors for one operator and for a residual step x + f x (part Z6e) | `bbRun`, `cost` |
 | `pow2` | 2 to the power k, by `Nat` induction; exponents at least 64 overflow `Nat` | arithmetic helper |
-| `bbOpRun` | the function of an operator, by an `Op` fold; quantization uses at most 64 halvings, so any shift at least 64 gives zero | `bbRun` |
+| `bbOpRun` | the function of an operator at the weights, by an `Op` fold; quantization uses at most 64 halvings, so any shift at least 64 gives zero; `opMatMul` reads its matrix with `listAt` and gives nil when the index is out of range | `bbRun` |
 | `shapeSize` | the number of entries at a shape (the product of the dims) | `opRes`, `cost` |
-| `opRes` | the resources of an operator: `opQuantize` uses one linear gate and one range lookup for each entry | `cost` |
+| `opRes` | the resources of an operator: `opQuantize` uses one linear gate and one range lookup for each entry; `opMatMul n m k` uses n m gates of degree 2 and no lookups | `cost` |
 | `cost` | the resources of a circuit, by a `Circuit` fold (N5); `circResidual` adds one linear gate for each entry | `costLayer`, `examples/babybear.lang` |
 | `costLayer`, `costLayerRes` | a layer with the cost of its circuit as its resources, and the path from its `layerRes` to `cost` | `examples/babybear.lang` |
+| `BbWeights` | the weights of `bbRun`: a list of matrices, and a matrix is a list of rows (part Z6f, flag 22) | `bbRun`, `bbInst` |
+| `listAt` | the entry k of a list, or a default when the list is too short; a `Nat` fold drops k entries and a `List` fold takes the head | `bbOpRun` |
+| `bbDot`, `bbMatVec` | the BabyBear dot product of two lists (it stops at the shorter list), and one dot product for each row of a matrix | `bbOpRun` |
+| `bbNoWeights` | the reader that gives no matrices, for a weights type without `opMatMul` (flag 23) | `examples/babybear.lang` |
+| `circResidualLoop` | n residual steps of a circuit after `circId`, by `Nat` induction | `costResidualLoop`, `examples/babybear.lang` |
+| `resScale` | n copies of a resource under `resAdd`, from `zeroR` | `costResidualLoop` |
+| `costResidualLoop` | the path from the cost of n residual steps to `resScale n` of the cost of one step, for each n, by `Nat` induction | `examples/babybear.lang` |
 | `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
 | `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
 | `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |

@@ -105,7 +105,12 @@ Slices Z7 to Z11 are not started.
 ## Remaining work
 
 1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
-   shapes) is RULED. Parts Z6a to Z6e are DONE. Part Z6f is next.
+   shapes) is RULED. Parts Z6a to Z6e are DONE. Part Z6f session 1 is
+   DONE: the `Op` family has `opQuantize` and `opMatMul`, `bbRun` takes
+   the weights, and `circResidualLoop` gives n residual steps with a cost
+   law for each n. Flags 22 to 25 are open, and the build uses the
+   defaults. The other operators of Z6f (`layerNorm`, `softmax` and
+   `attention`) are next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
@@ -168,8 +173,9 @@ Slices Z7 to Z11 are not started.
   ignored, so short rows and ragged tensors typecheck. The nested
   Fin-indexed representation in the design remains to be implemented.
 - Flag 15 (RULED (a) 2026-10-16) is closed in part Z6d. The domain has
-  a concrete `Inst`: `bbInst W`. `examples/babybear.lang` has entries
-  over `Layer` at closed shapes.
+  a concrete `Inst`: `bbInst W rd`, where `rd : W -> BbWeights` reads
+  the matrices from the weights (part Z6f). `examples/babybear.lang`
+  has entries over `Layer` at closed shapes.
 - `examples/category.lang` has no entry. Each definition in it takes an
   abstract `Inst`. The lowering gives an empty module. The entries over
   the concrete `bbInst` are in `examples/babybear.lang`.
@@ -204,12 +210,14 @@ Slices Z7 to Z11 are not started.
   RULED (a) 2026-10-17). The Wasm writer uses a divisor of 1 when the
   divisor is 0 and records the trap in the flag. The domain adds
   `stageLast`, the BabyBear field operations (`bbP`, `bbAdd`, `bbSub`,
-  `bbMul`, `bbNeg`) and `bbInst W`, a concrete `Inst` at a weights type
-  `W`. Flag 15 is closed. A witness is the weights and a trace of
-  stages. `bbRun` gives the function of a circuit, by a `Circuit` fold
-  into a set of functions. A witness satisfies `f` at `x` when the read
-  of its last stage is `bbRun f x`. `bbInstSeqWit u v` keeps the weights
-  of `u` and the trace of `v` (flag 20). An append of the traces does
+  `bbMul`, `bbNeg`) and `bbInst W rd`, a concrete `Inst` at a weights type
+  `W` and a reader `rd : W -> BbWeights` (part Z6f). Flag 15 is closed.
+  A witness is the weights and a trace of stages. `bbRun` gives the
+  function of a circuit, by a `Circuit` fold into a set of functions.
+  A witness satisfies `f` at `x` when the read
+  of its last stage is `bbRun a b f (rd (first w)) x`, where `w` is the
+  witness. `bbInstSeqWit u v` keeps the weights of `u` and the trace of
+  `v` (flag 20). An append of the traces does
   not give `instSeqWitEval` when `v` has no stages. It also does not
   give `instSeqSat`, because satisfaction constrains only the last stage.
   `examples/babybear.lang` has the first entries over `Layer`.

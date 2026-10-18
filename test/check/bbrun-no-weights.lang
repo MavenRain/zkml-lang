@@ -1,0 +1,2 @@
+-- bbRun without the weights: x is where the weights go. Refused: TYPE_MISMATCH.
+def badRun : (a b : Shape) -> Circuit a b -> Tensor Nat a -> Tensor Nat b := fun a b f x => bbRun a b f x

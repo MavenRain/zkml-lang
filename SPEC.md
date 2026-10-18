@@ -110,7 +110,10 @@ An instance is a top-level definition whose type is a data type (F14).
   law hold by refl. Status: built with the default. Slice Z5b gives
   `Layer`, `idL` and `layerSeq` with this denotation. Slice Z5c gives
   `TypeFunctor` and `denote`: `tfOb` is `Tensor (instF I)`, `tfHom L` is
-  `layerDen L ws`, and `tfId` and `tfSeq` hold by refl.
+  `layerDen L ws`, and `tfId` and `tfSeq` hold by refl. Part Z6f: `bbRun
+  a b f ws x` takes the weights `ws : BbWeights` before the input `x`. Thus
+  `bbRun a b f ws` has the form of `layerDen L ws`, and `opMatMul` reads
+  its matrix from `ws`.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order
