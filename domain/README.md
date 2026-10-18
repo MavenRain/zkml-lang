@@ -85,12 +85,12 @@ tests use these names, so keep them when you replace the sample.
 | `stageLast` | the last stage of a trace, or none for the empty trace | `bbInstEval` |
 | `bbP`, `bbAdd`, `bbSub`, `bbMul`, `bbNeg` | the BabyBear field operations on a Nat below p = 2^31 - 2^27 + 1 | `examples/babybear.lang` |
 | `bbRun`, `bbInstSat`, `bbInstEval`, `bbInstInputWit`, `bbInstSeqWit`, the other `bbInst` fields, `bbInst` | the BabyBear `Inst` at a weights type `W` and a reader `rd : W -> BbWeights` (part Z6f, flag 23): a witness is the weights and a trace, and satisfaction is a path from `bbRun` at `rd` of the weights to the read of the last stage. `bbRun a b f ws x` takes the weights `ws` before the input `x` | `examples/babybear.lang` (flag 15 closed) |
-| `Op (a b : Shape)` | the operators: `opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS` divides each entry by 2^k (part Z6e); `opMatMul (mmN mmM mmK : Nat) : Op [mmN] [mmM]` multiplies the input by the matrix mmK of the weights (part Z6f, flag 24) | `circOp` |
+| `Op (a b : Shape)` | the operators: `opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS` divides each entry by 2^k (part Z6e); `opMatMul (mmN mmM mmK : Nat) : Op [mmN] [mmM]` multiplies the input by the matrix mmK of the weights (part Z6f, flag 24); `opLookup (lkS : Shape) (lkT : Nat) : Op lkS lkS` reads each entry in the table lkT of the weights, and `opSoftmax (smS : Shape) (smT smK : Nat)` and `opLayerNorm (lnS : Shape) (lnG lnT : Nat)` (both `Op s s`) operate on each row of the last dim (part Z6f, flags 26 to 28) | `circOp` |
 | `circOp`, `circResidual` | the `Circuit` constructors for one operator and for a residual step x + f x (part Z6e) | `bbRun`, `cost` |
 | `pow2` | 2 to the power k, by `Nat` induction; exponents at least 64 overflow `Nat` | arithmetic helper |
-| `bbOpRun` | the function of an operator at the weights, by an `Op` fold; quantization uses at most 64 halvings, so any shift at least 64 gives zero; `opMatMul` reads its matrix with `listAt` and gives nil when the index is out of range | `bbRun` |
+| `bbOpRun` | the function of an operator at the weights, by an `Op` fold; quantization uses at most 64 halvings, so any shift at least 64 gives zero; `opMatMul` reads its matrix with `listAt` and gives nil when the index is out of range; `opLookup` gives 0 for a key that is not in the table; `opSoftmax` and `opLayerNorm` use `mapLastT` | `bbRun` |
 | `shapeSize` | the number of entries at a shape (the product of the dims) | `opRes`, `cost` |
-| `opRes` | the resources of an operator: `opQuantize` uses one linear gate and one range lookup for each entry; `opMatMul n m k` uses n m gates of degree 2 and no lookups | `cost` |
+| `opRes` | the resources of an operator: `opQuantize` uses one linear gate and one range lookup for each entry; `opMatMul n m k` uses n m gates of degree 2 and no lookups; `opLookup` uses one lookup for each entry; `opSoftmax` uses 2 gates and 3 lookups for each entry and 1 gate for each row; `opLayerNorm` uses 4 gates for each entry and 2 gates and 3 lookups for each row (flag 29) | `cost` |
 | `cost` | the resources of a circuit, by a `Circuit` fold (N5); `circResidual` adds one linear gate for each entry | `costLayer`, `examples/babybear.lang` |
 | `costLayer`, `costLayerRes` | a layer with the cost of its circuit as its resources, and the path from its `layerRes` to `cost` | `examples/babybear.lang` |
 | `BbWeights` | the weights of `bbRun`: a list of matrices, and a matrix is a list of rows (part Z6f, flag 22) | `bbRun`, `bbInst` |
@@ -100,6 +100,13 @@ tests use these names, so keep them when you replace the sample.
 | `circResidualLoop` | n residual steps of a circuit after `circId`, by `Nat` induction | `costResidualLoop`, `examples/babybear.lang` |
 | `resScale` | n copies of a resource under `resAdd`, from `zeroR` | `costResidualLoop` |
 | `costResidualLoop` | the path from the cost of n residual steps to `resScale n` of the cost of one step, for each n, by `Nat` induction | `examples/babybear.lang` |
+| `shapeRows` | the number of rows of the last dim: the product of the other dims (1 at rank 0) | `opRes` |
+| `mapLastT` | a row function on each row of the last dim of a tensor; at rank 0 the entry is a row of length 1 (flag 30) | `bbOpRun` |
+| `listLen`, `listSumNat`, `listMaxNat` | the length, the `Nat` sum and the `Nat` max of a list | `bbSoftmaxRow`, `bbLnMean` |
+| `bbTableRow`, `bbLookup` | read the key and value of a row; the value of the first complete row `[key, value]` with the key, or a default when none has the key. Rows missing a key or value are ignored by lookup and membership (flag 26) | `bbOpRun` |
+| `bbTableHit`, `bbTableMem`, `bbTableIn` | 1 when a row of the table has the key, else 0; the membership of a key, a path in `Nat` (flag 18 (i)); the keys of the table with a membership proof | `examples/babybear.lang` |
+| `bbSoftmaxDouble`, `bbSoftmaxScale`, `bbSoftmaxDiv`, `bbSoftmaxExp`, `bbSoftmaxNorm`, `bbSoftmaxRow` | the softmax of a row: the table at the max minus x (`natSub`) for each entry, then each entry times 2^k divided by the sum (a sum of 0 reads as 1). `bbSoftmaxDiv k t e` and `bbSoftmaxNorm k e` take the exponent k. Quotient and remainder doubling avoids intermediate product overflow, including when k is at least 64 and the quotient still fits `Nat` (flag 27) | `bbOpRun` |
+| `bbLnMean`, `bbLnCenter`, `bbLnVar`, `bbLnAffine`, `bbLnScaled`, `bbLayerNormRow` | the layerNorm of a row: the mean (`natDiv`), c = x minus the mean in the field, the variance, r = the table at the variance (the inverse square root), and gamma c r plus beta (flag 28) | `bbOpRun` |
 | `layerExt2` | a square in `Layer` from squares of the circuit, the denotation and the resources | `isSetHom` |
 | `isSetHom` | `Layer I a b` is a set (N4) | `LayerCat` |
 | `Category` | record: `catOb`, `catHom`, `catId`, `catSeq`, `catIdl`, `catIdr`, `catAssoc`, `catHomSet` | `LayerCat`, `TypeFunctor` |

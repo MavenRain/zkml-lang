@@ -1,0 +1,3 @@
+-- An Op fold needs one case for each of the 5 constructors, not 2.
+-- Refused: TYPE_MISMATCH.
+def badFold : (a b : Shape) -> Op a b -> Nat := fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Nat) (fun qzS qzK => 0) (fun mmN mmM mmK => 1) o

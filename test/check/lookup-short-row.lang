@@ -1,0 +1,2 @@
+-- A key without a value is not a table entry. Refused: TYPE_ENDPOINT.
+def badMem : bbTableMem (cons (cons 7 nil) nil) 7 := refl

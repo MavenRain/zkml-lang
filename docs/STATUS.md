@@ -109,8 +109,11 @@ Slices Z7 to Z11 are not started.
    DONE: the `Op` family has `opQuantize` and `opMatMul`, `bbRun` takes
    the weights, and `circResidualLoop` gives n residual steps with a cost
    law for each n. Flags 22 to 25 are open, and the build uses the
-   defaults. The other operators of Z6f (`layerNorm`, `softmax` and
-   `attention`) are next.
+   defaults. Part Z6f session 2 is DONE: the `Op` family also has
+   `opLookup` (a table lookup for each entry), `opSoftmax` and
+   `opLayerNorm` (on each row of the last dim), each with a cost in
+   `opRes`. Flags 26 to 30 are open, and the build uses the defaults.
+   `attention` is part Z6g.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

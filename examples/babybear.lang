@@ -36,3 +36,25 @@ def bbRunMatMulMissing : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (c
 def costLoop2 : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidualLoop (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) 2)) (res 8 4 1) := refl
 def bbMatMulSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0)) bbMatW (cons u (cons v (cons 1 nil))))
 def bbLoopSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidualLoop (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) 2) nil (cons u (cons v nil)))
+-- opLookup, opSoftmax, opLayerNorm (Z6f): bbExpTbl is 2^3 exp(-d) for d = 0, 1, 2.
+-- bbLnGb has gamma [1, 2] and beta [10, 10]. bbRsqrtTbl is 2^3 / sqrt(v) for v = 4, 1.
+def bbExpTbl : List (List Nat) := cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) (cons (cons 2 (cons 1 nil)) nil))
+def bbLnGb : List (List Nat) := cons (cons 1 (cons 2 nil)) (cons (cons 10 (cons 10 nil)) nil)
+def bbRsqrtTbl : List (List Nat) := cons (cons 4 (cons 4 nil)) (cons (cons 1 (cons 8 nil)) nil)
+def bbLookupHit : Path Nat (bbLookup bbExpTbl 0 1) 3 := refl
+def bbLookupMiss : Path Nat (bbLookup bbExpTbl 0 7) 0 := refl
+def bbLookupMem : bbTableMem bbExpTbl 2 := refl
+def bbLookupIn : bbTableIn bbExpTbl := pack 1 refl
+def bbRunLookup : Path (Tensor Nat (shape (cons 3 nil))) (bbRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons bbExpTbl nil) (cons 0 (cons 2 (cons 9 nil)))) (cons 8 (cons 1 (cons 0 nil))) := refl
+def costLookup : Path Resource (cost (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0))) (res 0 3 1) := refl
+-- softmax of [5, 4]: e = [8, 3], sum 11, q = [64 / 11, 24 / 11] = [5, 2].
+def bbRunSoftmax : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opSoftmax (shape (cons 2 nil)) 0 3)) (cons bbExpTbl nil) (cons 5 (cons 4 nil))) (cons 5 (cons 2 nil)) := refl
+def bbRunSoftmax2 : Path (Tensor Nat (shape (cons 2 (cons 2 nil)))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opSoftmax (shape (cons 2 (cons 2 nil))) 0 3)) (cons bbExpTbl nil) (cons (cons 5 (cons 4 nil)) (cons (cons 4 (cons 4 nil)) nil))) (cons (cons 5 (cons 2 nil)) (cons (cons 4 (cons 4 nil)) nil)) := refl
+def bbRunSoftmax0 : Path (Tensor Nat (shape nil)) (bbRun (shape nil) (shape nil) (circOp (shape nil) (shape nil) (opSoftmax (shape nil) 0 3)) (cons bbExpTbl nil) 7) 8 := refl
+def costSoftmax : Path Resource (cost (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opSoftmax (shape (cons 2 (cons 2 nil))) 0 3))) (res 10 12 2) := refl
+-- layerNorm of [2, 6]: mean 4, c = [p - 2, 2], variance 4, r = 4, [2, 26].
+def bbRunLayerNorm : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLayerNorm (shape (cons 2 nil)) 0 1)) (cons bbLnGb (cons bbRsqrtTbl nil)) (cons 2 (cons 6 nil))) (cons 2 (cons 26 nil)) := refl
+def costLayerNorm : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLayerNorm (shape (cons 2 nil)) 0 1))) (res 10 3 2) := refl
+def bbLookupSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0)) (cons bbExpTbl nil) (cons u (cons v nil)))
+def bbSoftmaxSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opSoftmax (shape (cons 2 nil)) 0 3)) (cons bbExpTbl nil) (cons u (cons v nil)))
+def bbLayerNormSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLayerNorm (shape (cons 2 nil)) 0 1)) (cons bbLnGb (cons bbRsqrtTbl nil)) (cons u (cons v nil)))

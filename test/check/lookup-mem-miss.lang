@@ -1,0 +1,4 @@
+-- The key 7 is not in bbExpTbl: bbTableHit gives 0, and refl is not a path
+-- from 0 to 1. Refused: TYPE_ENDPOINT.
+def bbExpTbl : List (List Nat) := cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) (cons (cons 2 (cons 1 nil)) nil))
+def badMem : bbTableMem bbExpTbl 7 := refl

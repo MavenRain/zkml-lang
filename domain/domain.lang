@@ -34,10 +34,15 @@ family Shape := shape (dims : List Nat)
 -- Operators (Z6e): Op a b is a primitive step from the shape a to the shape b,
 -- with one constructor for each operator. opQuantize s k divides each entry by
 -- 2^k. opMatMul n m k (Z6f) multiplies by the matrix k of the weights (O4):
--- bbRun reads the weights from the witness. layerNorm and attention come later.
+-- bbRun reads the weights from the witness. opLookup s t (Z6f) applies the
+-- table t of the weights to each entry. opSoftmax s t k and opLayerNorm s g t
+-- (Z6f) operate on each row of the last dim. attention comes later.
 family Op (a b : Shape) :=
     opQuantize (qzS : Shape) (qzK : Nat) : Op qzS qzS
   | opMatMul (mmN mmM mmK : Nat) : Op (shape (cons mmN nil)) (shape (cons mmM nil))
+  | opLookup (lkS : Shape) (lkT : Nat) : Op lkS lkS
+  | opSoftmax (smS : Shape) (smT smK : Nat) : Op smS smS
+  | opLayerNorm (lnS : Shape) (lnG lnT : Nat) : Op lnS lnS
 family Circuit (a b : Shape) :=
     circId (idA : Shape) : Circuit idA idA
   | circSeq (seqA seqB seqC : Shape) (seqF : Circuit seqA seqB) (seqG : Circuit seqB seqC) : Circuit seqA seqC
@@ -206,11 +211,19 @@ def isSetResource : isSet Resource :=
     (natIsSet (resDegree x) (resDegree y) (<k> resDegree (p @ k)) (<k> resDegree (q @ k)) @ i @ j)
 -- shapeSize s: the number of entries at the shape s (the product of the dims).
 def shapeSize : Shape -> Nat := fun s => fold (fun (d : Nat) (acc : Nat) => natMul d acc) 1 (dims s)
+-- shapeRows s: the number of rows of the last dim (the product of the other
+-- dims). The inner motive fold splits on the tail: the last dim counts 1.
+def shapeRows : Shape -> Nat := fun s => fold (fun (l : List Nat) => Nat) (fun (d : Nat) => fun (l : List Nat) => fun (r : Nat) => fold (fun (l2 : List Nat) => Nat) (fun (d2 : Nat) => fun (l2 : List Nat) => fun (r2 : Nat) => natMul d r) 1 l) 1 (dims s)
 -- opRes: the resources of an operator, by an Op fold. opQuantize s k uses one
 -- linear gate (x = q 2^k + r) and one range lookup (r < 2^k) for each entry.
 -- opMatMul n m k uses one multiplication gate for each product: n m gates, degree 2.
+-- opLookup uses one table lookup for each entry. opSoftmax uses 2 gates (m - x
+-- and e 2^k = q sum + r) and 3 lookups (m - x, the table, r < sum) for each
+-- entry, and 1 gate (the sum) for each row. opLayerNorm uses 4 gates (x - mean,
+-- the square, c r, gamma c r + beta) for each entry, and 2 gates (the mean and
+-- the variance divisions) and 3 lookups (2 remainders, the table) for each row.
 def opRes : (a b : Shape) -> Op a b -> Resource :=
-  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Resource) (fun qzS qzK => res (shapeSize qzS) (shapeSize qzS) 1) (fun mmN mmM mmK => res (natMul mmN mmM) 0 2) o
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Resource) (fun qzS qzK => res (shapeSize qzS) (shapeSize qzS) 1) (fun mmN mmM mmK => res (natMul mmN mmM) 0 2) (fun lkS lkT => res 0 (shapeSize lkS) 1) (fun smS smT smK => res (natAdd (natMul 2 (shapeSize smS)) (shapeRows smS)) (natMul 3 (shapeSize smS)) 2) (fun lnS lnG lnT => res (natAdd (natMul 4 (shapeSize lnS)) (natMul 2 (shapeRows lnS))) (natMul 3 (shapeRows lnS)) 2) o
 -- cost (N5): the resources of a circuit, by a Circuit fold. circId costs zeroR,
 -- circSeq adds and circOp costs opRes. circResidual adds one linear gate for each
 -- entry (the sum x + f x). The path cases are the Resource laws and isSetResource.
@@ -389,15 +402,72 @@ def listAt : (A : Type 0) -> A -> Nat -> List A -> A :=
 def bbDot : List Nat -> List Nat -> Nat := fun r x => fold (fun (h : Nat) (acc : Nat) => bbAdd h acc) 0 (listZipWith Nat Nat Nat bbMul r x)
 -- bbMatVec: one dot product for each row of the matrix.
 def bbMatVec : List (List Nat) -> List Nat -> List Nat := fun mt x => map (fun (r : List Nat) => bbDot r x) mt
+-- mapLastT A B z g s: the row function g on each row of the last dim. The step
+-- of the dims fold splits on the tail by a second motive fold: the last dim
+-- takes g, each other dim takes a List map. At rank 0 the entry is a row of
+-- length 1 and the result is the head of g (z when g gives nil).
+def mapLastT : (A B : Type 0) -> B -> (List A -> List B) -> (s : Shape) -> Tensor A s -> Tensor B s :=
+  fun A B z g s => fold (fun (l : List Nat) => TensorL A l -> TensorL B l) (fun (d : Nat) => fun (l : List Nat) => fun (ih : TensorL A l -> TensorL B l) => (fold (fun (l2 : List Nat) => (TensorL A l2 -> TensorL B l2) -> List (TensorL A l2) -> List (TensorL B l2)) (fun (d2 : Nat) => fun (l2 : List Nat) => fun (r2 : (TensorL A l2 -> TensorL B l2) -> List (TensorL A l2) -> List (TensorL B l2)) => fun (f2 : TensorL A (cons d2 l2) -> TensorL B (cons d2 l2)) => fun (x2 : List (TensorL A (cons d2 l2))) => map f2 x2) (fun (f0 : A -> B) => g) l) ih) (fun (a : A) => listAt B z 0 (g (cons a nil))) (dims s)
+-- listLen, listSumNat, listMaxNat: the length, the Nat sum and the Nat max.
+def listLen : (A : Type 0) -> List A -> Nat := fun A xs => fold (fun (h : A) (acc : Nat) => natAdd acc 1) 0 xs
+def listSumNat : List Nat -> Nat := fun xs => fold (fun (h : Nat) (acc : Nat) => natAdd h acc) 0 xs
+def listMaxNat : List Nat -> Nat := fun xs => fold (fun (h : Nat) (acc : Nat) => natMax h acc) 0 xs
+-- bbTableRow reads a key and value, ignoring rows with fewer than two entries.
+def bbTableRow : List Nat -> Option (Prod Nat Nat) :=
+  fun r => fold (fun (l : List Nat) => Option (Prod Nat Nat)) (fun (h : Nat) => fun (t : List Nat) => fun (ih : Option (Prod Nat Nat)) => fold (fun (e : Nat) (acc : Option (Prod Nat Nat)) => some (pair h e)) none t) none r
+-- bbLookup tb d v: the value of the first row [v, e] of the table tb, or d when
+-- no complete row has the key v. The fold gives data (flagIf on natEq).
+def bbLookup : List (List Nat) -> Nat -> Nat -> Nat :=
+  fun tb d v => fold (fun (r : List Nat) (acc : Nat) => option acc (fun (kv : Prod Nat Nat) => flagIf (natEq (first kv) v) (second kv) acc) (bbTableRow r)) d tb
+-- bbTableHit tb v: 1 when a row of tb has the key v, else 0. bbTableMem tb v:
+-- the membership of v in tb, a proposition (a path in Nat, flag 18 (i)).
+-- bbTableIn tb: the keys of tb with a membership proof. A lookup is complete
+-- only for these inputs (flag 18).
+def bbTableHit : List (List Nat) -> Nat -> Nat :=
+  fun tb v => fold (fun (r : List Nat) (acc : Nat) => option acc (fun (kv : Prod Nat Nat) => flagIf (natEq (first kv) v) 1 acc) (bbTableRow r)) 0 tb
+def bbTableMem : List (List Nat) -> Nat -> Type 0 := fun tb v => Path Nat (bbTableHit tb v) 1
+def bbTableIn : List (List Nat) -> Type 0 := fun tb => Sigma (v : Nat) (bbTableMem tb v)
+-- bbSoftmaxRow tb k x: m is the max of the row, e is tb at m - x for each entry
+-- (natSub, so the key is not negative), and q = floor(e 2^k / sum e). A sum of
+-- 0 reads as 1 (as in the Wasm writer), so q is 0 and there is no trap.
+-- Double a quotient and remainder without forming 2 r when it would overflow.
+-- For positive t, each step preserves q t + r = v 2^n and r < t. Only an
+-- unrepresentable quotient overflows; the intermediate product is never built.
+def bbSoftmaxDouble : Nat -> Prod Nat Nat -> Prod Nat Nat :=
+  fun t qr => pair (natAdd (natMul 2 (first qr)) (flagIf (natLe (natSub t (second qr)) (second qr)) 1 0)) (natAdd (natSub (second qr) (natSub t (second qr))) (natMul 2 (flagIf (natLe (natSub t (second qr)) (second qr)) 0 (second qr))))
+def bbSoftmaxScale : Nat -> Nat -> Nat -> Nat :=
+  fun k t v => first (fold (fun (n : Nat) => Prod Nat Nat) (fun (n : Nat) (qr : Prod Nat Nat) => bbSoftmaxDouble t qr) (pair (natDiv v t) (natMod v t)) k)
+def bbSoftmaxDiv : Nat -> Nat -> List Nat -> List Nat := fun k t e => map (fun (v : Nat) => bbSoftmaxScale k (natMax t 1) v) e
+def bbSoftmaxExp : List (List Nat) -> Nat -> List Nat -> List Nat := fun tb m x => map (fun (v : Nat) => bbLookup tb 0 (natSub m v)) x
+def bbSoftmaxNorm : Nat -> List Nat -> List Nat := fun k e => bbSoftmaxDiv k (listSumNat e) e
+def bbSoftmaxRow : List (List Nat) -> Nat -> List Nat -> List Nat := fun tb k x => bbSoftmaxNorm k (bbSoftmaxExp tb (listMaxNat x) x)
+-- bbLayerNormRow gb tb x: the mean of the row (natDiv), the centered entries
+-- c = x - mean in the field (bbSub), the variance (natDiv of the field sum of
+-- c^2), r = tb at the variance (the inverse square root table) and
+-- gamma c r + beta. gamma and beta are the rows 0 and 1 of gb. A length of 0
+-- reads as 1.
+def bbLnMean : List Nat -> Nat := fun x => natDiv (listSumNat x) (natMax (listLen Nat x) 1)
+def bbLnCenter : Nat -> List Nat -> List Nat := fun mu x => map (fun (v : Nat) => bbSub v mu) x
+def bbLnVar : List Nat -> Nat := fun c => natDiv (fold (fun (h : Nat) (acc : Nat) => bbAdd (bbMul h h) acc) 0 c) (natMax (listLen Nat c) 1)
+def bbLnAffine : List (List Nat) -> Nat -> List Nat -> List Nat :=
+  fun gb r c => listZipWith Nat Nat Nat bbAdd (listZipWith Nat Nat Nat bbMul (map (fun (v : Nat) => bbMul v r) c) (listAt (List Nat) nil 0 gb)) (listAt (List Nat) nil 1 gb)
+def bbLnScaled : List (List Nat) -> List (List Nat) -> List Nat -> List Nat := fun gb tb c => bbLnAffine gb (bbLookup tb 0 (bbLnVar c)) c
+def bbLayerNormRow : List (List Nat) -> List (List Nat) -> List Nat -> List Nat := fun gb tb x => bbLnScaled gb tb (bbLnCenter (bbLnMean x) x)
 -- bbOpRun: the function of an operator at the weights ws, by an Op fold.
 -- opQuantize s k divides each entry by 2^k and removes the remainder. Halve at
 -- most 64 times, since every Nat is below 2^64. This avoids constructing an
 -- overflowing divisor.
 -- opMatMul n m k multiplies x by the matrix k of ws (nil when k is out of range).
+-- opLookup s t reads the table t of ws (rows [key, value]) and gives 0 for a
+-- missing key. opSoftmax s t k reads the exp table t of ws. opLayerNorm s g t
+-- reads gamma and beta from the matrix g of ws and the table t of ws.
 def bbOpRun : (a b : Shape) -> Op a b -> BbWeights -> Tensor Nat a -> Tensor Nat b :=
   fun a b o => fold (fun (a : Shape) => fun (b : Shape) => BbWeights -> Tensor Nat a -> Tensor Nat b)
     (fun qzS qzK => fun (ws : BbWeights) => mapT Nat Nat (fun (v : Nat) => fold (fun (n : Nat) => Nat) (fun (n : Nat) (acc : Nat) => natDiv acc 2) v (natSub qzK (natSub qzK 64))) qzS)
-    (fun mmN mmM mmK => fun (ws : BbWeights) => bbMatVec (listAt (List (List Nat)) nil mmK ws)) o
+    (fun mmN mmM mmK => fun (ws : BbWeights) => bbMatVec (listAt (List (List Nat)) nil mmK ws))
+    (fun lkS lkT => fun (ws : BbWeights) => mapT Nat Nat (fun (v : Nat) => bbLookup (listAt (List (List Nat)) nil lkT ws) 0 v) lkS)
+    (fun smS smT smK => fun (ws : BbWeights) => mapLastT Nat Nat 0 (bbSoftmaxRow (listAt (List (List Nat)) nil smT ws) smK) smS)
+    (fun lnS lnG lnT => fun (ws : BbWeights) => mapLastT Nat Nat 0 (bbLayerNormRow (listAt (List (List Nat)) nil lnG ws) (listAt (List (List Nat)) nil lnT ws)) lnS) o
 -- bbRun: the function of a circuit, by a Circuit fold into the functions from
 -- Tensor Nat a to Tensor Nat b. The laws hold by refl. The squash case is
 -- isSetPi with bbInstTensorSet, because these functions are a set. circOp runs

@@ -1,0 +1,2 @@
+-- An empty row has no key or value. Refused: TYPE_ENDPOINT.
+def badMem : bbTableMem (cons nil nil) 0 := refl

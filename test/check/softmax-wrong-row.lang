@@ -1,0 +1,3 @@
+-- The softmax of [5, 4] at k = 3 is [5, 2], not [5, 3]. Refused: TYPE_ENDPOINT.
+def bbExpTbl : List (List Nat) := cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) (cons (cons 2 (cons 1 nil)) nil))
+def bbRunSoftmax : Path (Tensor Nat (shape (cons 2 nil))) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opSoftmax (shape (cons 2 nil)) 0 3)) (cons bbExpTbl nil) (cons 5 (cons 4 nil))) (cons 5 (cons 3 nil)) := refl

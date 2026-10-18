@@ -1,0 +1,2 @@
+-- opLayerNorm at [2] costs res 10 3 2, not res 10 2 2. Refused: TYPE_ENDPOINT.
+def costLayerNorm : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLayerNorm (shape (cons 2 nil)) 0 1))) (res 10 2 2) := refl

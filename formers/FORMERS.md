@@ -532,8 +532,9 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   with `DOMAIN_HIT`. The kit domain declares `Circuit` with the point
   constructors `circId`, `circSeq`, `circOp` and `circResidual` and the
   path constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`.
-  It declares `Op (a b : Shape)` with the point constructors `opQuantize`
-  and `opMatMul` (parts Z6e and Z6f).
+  It declares `Op (a b : Shape)` with the point constructors `opQuantize`,
+  `opMatMul`, `opLookup`, `opSoftmax` and `opLayerNorm` (parts Z6e and
+  Z6f).
 - Declaration (part Z4b, mutual blocks): `family Rose := ... and Kids :=
   ...` declares the sorts of a block together, in order. The headers of
   all the sorts bind before the check reads a constructor, so a

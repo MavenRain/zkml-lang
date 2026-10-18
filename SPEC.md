@@ -113,7 +113,13 @@ An instance is a top-level definition whose type is a data type (F14).
   `layerDen L ws`, and `tfId` and `tfSeq` hold by refl. Part Z6f: `bbRun
   a b f ws x` takes the weights `ws : BbWeights` before the input `x`. Thus
   `bbRun a b f ws` has the form of `layerDen L ws`, and `opMatMul` reads
-  its matrix from `ws`.
+  its matrix from `ws`. Flags 26 to 30 (part Z6f session 2) are open, and
+  the build uses the defaults: the table of `opLookup` is a matrix of the
+  weights, softmax reads its entries as `Nat` (no signed encoding),
+  layerNorm reads the inverse square root from a table, and `mapLastT` at
+  rank 0 reads the entry as a row of length 1. The circuit form of softmax
+  does not yet check that the max is an entry of the row (a soundness gap
+  to fix later).
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order

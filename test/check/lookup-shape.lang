@@ -1,0 +1,3 @@
+-- opLookup s t maps the shape s to the same shape s, not [2] to [3].
+-- Refused: TYPE_MISMATCH.
+def badLookup : Op (shape (cons 2 nil)) (shape (cons 3 nil)) := opLookup (shape (cons 2 nil)) 0

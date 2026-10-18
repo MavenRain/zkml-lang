@@ -97,3 +97,10 @@ matmul-shape.lang TYPE_MISMATCH
 bbrun-no-weights.lang TYPE_MISMATCH
 loop-cost-wrong.lang TYPE_ENDPOINT
 matmul-wrong-product.lang TYPE_ENDPOINT
+lookup-shape.lang TYPE_MISMATCH
+lookup-mem-miss.lang TYPE_ENDPOINT
+softmax-wrong-row.lang TYPE_ENDPOINT
+layernorm-cost-wrong.lang TYPE_ENDPOINT
+op-fold-arity.lang TYPE_MISMATCH
+lookup-empty-row.lang TYPE_ENDPOINT
+lookup-short-row.lang TYPE_ENDPOINT

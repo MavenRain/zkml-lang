@@ -1,0 +1,16 @@
+-- Incomplete rows cannot hide the first complete row for key 0.
+def incompleteTable : List (List Nat) := cons nil (cons (cons 0 nil) (cons (cons 0 (cons 8 nil)) nil))
+def lookupComplete : Path Nat (bbLookup incompleteTable 99 0) 8 := refl
+def lookupFirst : Path Nat (bbLookup (cons (cons 0 (cons 11 nil)) (cons (cons 0 (cons 22 nil)) nil)) 99 0) 11 := refl
+def lookupIncomplete : Nat -> Nat := fun v => bbLookup incompleteTable 99 v
+def lookupEmpty : Nat -> Nat := fun v => bbLookup (cons nil (cons (cons 7 nil) nil)) 99 v
+def incompleteHit : Nat -> Nat := fun v => bbTableHit (cons nil (cons (cons 7 nil) nil)) v
+
+-- Every table value and the result at k = 34 fit BabyBear. The product
+-- 2013265920 * 2^34 exceeds Nat, but floor(2^34 / 9) is 1908874353.
+def softmaxWide : Nat -> Nat := fun k => listAt Nat 0 0 (bbSoftmaxRow (cons (cons 0 (cons 2013265920 nil)) nil) k (listRep Nat 9 7))
+-- Exercise remainder doubling near the Nat limit and a zero table sum.
+def softmaxScaleMax : Nat -> Nat := fun k => bbSoftmaxScale k 18446744073709551615 18446744073709551614
+def softmaxZero : Nat -> Nat := fun k => listSumNat (bbSoftmaxRow nil k (cons 7 nil))
+-- Each innermost list is a row, including at rank 3.
+def softmaxRank3 : Nat -> Nat := fun v => sumT Nat bbAdd 0 (shape (cons 1 (cons 1 (cons 2 nil)))) (bbOpRun (shape (cons 1 (cons 1 (cons 2 nil)))) (shape (cons 1 (cons 1 (cons 2 nil)))) (opSoftmax (shape (cons 1 (cons 1 (cons 2 nil)))) 0 3) (cons (cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) nil)) nil) (cons (cons (cons v (cons 4 nil)) nil) nil))
