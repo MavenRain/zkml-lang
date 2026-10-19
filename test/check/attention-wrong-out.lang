@@ -1,0 +1,5 @@
+-- At bbAttnW and x = [[1, 0], [0, 1]] the attention output is [[10, 7], [8, 8]],
+-- not [[10, 7], [8, 9]]. Refused: TYPE_ENDPOINT.
+def bbExpTbl : List (List Nat) := cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) (cons (cons 2 (cons 1 nil)) nil))
+def bbAttnW : BbWeights := cons (cons (cons 1 (cons 1 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 2 (cons 0 nil)) (cons (cons 1 (cons 1 nil)) nil)) (cons bbExpTbl nil)))
+def bbRunAttention : Path (Tensor Nat (shape (cons 2 (cons 2 nil)))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil))) (cons (cons 10 (cons 7 nil)) (cons (cons 8 (cons 9 nil)) nil)) := refl

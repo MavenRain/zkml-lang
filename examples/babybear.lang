@@ -58,3 +58,26 @@ def costLayerNorm : Path Resource (cost (shape (cons 2 nil)) (shape (cons 2 nil)
 def bbLookupSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0)) (cons bbExpTbl nil) (cons u (cons v nil)))
 def bbSoftmaxSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opSoftmax (shape (cons 2 nil)) 0 3)) (cons bbExpTbl nil) (cons u (cons v nil)))
 def bbLayerNormSum : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 nil)) (bbRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLayerNorm (shape (cons 2 nil)) 0 1)) (cons bbLnGb (cons bbRsqrtTbl nil)) (cons u (cons v nil)))
+-- opAttention (Z6g): bbAttnW is [W_Q, W_K, W_V, bbExpTbl], W_Q = [[1, 1], [0, 1]],
+-- W_K = [[1, 0], [0, 1]], W_V = [[2, 0], [1, 1]]. At x = [[1, 0], [0, 1]]: Q = [[1, 0],
+-- [1, 1]], K = x, V = [[2, 1], [0, 1]], the scores [[1, 0], [1, 1]], the softmax
+-- [[5, 2], [4, 4]] (2^3) and the output [[10, 7], [8, 8]]. At x = [[p - 1, 0], [0, 1]]
+-- the scores of row 1 are [p - 1, 1]: the shift reads p - 1 as -1, so the softmax
+-- is [0, 7] and the output is [[p - 10, p - 3], [0, 7]].
+def bbAttnW : BbWeights := cons (cons (cons 1 (cons 1 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 2 (cons 0 nil)) (cons (cons 1 (cons 1 nil)) nil)) (cons bbExpTbl nil)))
+def bbRunAttention : Path (Tensor Nat (shape (cons 2 (cons 2 nil)))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil))) (cons (cons 10 (cons 7 nil)) (cons (cons 8 (cons 8 nil)) nil)) := refl
+def bbRunAttentionNeg : Path (Tensor Nat (shape (cons 2 (cons 2 nil)))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2013265920 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil))) (cons (cons 2013265911 (cons 2013265918 nil)) (cons (cons 0 (cons 7 nil)) nil)) := refl
+def costAttention : Path Resource (cost (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3))) (res 50 12 2) := refl
+-- At h = 1, d = 2 and x = [[1, 0]]: Q = K = [1, 0], V = [2, 1], the score is [1],
+-- the softmax is [8] (2^3) and the output is [[16, 8]]. The cost is 12 + 4 + 2 + 1
+-- gates and 3 lookups. Here h is not equal to d, so these rows find an exchange of h and d.
+def bbRunAttention1 : Path (Tensor Nat (shape (cons 1 (cons 2 nil)))) (bbRun (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (circOp (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (opAttention 1 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) nil)) (cons (cons 16 (cons 8 nil)) nil) := refl
+def costAttention1 : Path Resource (cost (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (circOp (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (opAttention 1 2 0 1 2 3 3))) (res 19 3 2) := refl
+-- bbAttentionSumUV is the sum of the output at x = [[u, 0], [0, v]]. These entries
+-- have no parameters: the lowering does not share values, and an entry on u and
+-- v exceeds the Wasm limit of locals per function (Z6g-1c, flag 36).
+def bbAttentionSum11 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
+def bbAttentionSum21 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
+def bbAttentionSumNeg : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2013265920 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
+def bbAttentionSum12 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 2 nil)) nil)))
+def bbAttentionSum00 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 0 (cons 0 nil)) (cons (cons 0 (cons 0 nil)) nil)))

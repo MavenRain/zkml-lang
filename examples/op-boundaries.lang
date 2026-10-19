@@ -14,3 +14,11 @@ def softmaxScaleMax : Nat -> Nat := fun k => bbSoftmaxScale k 184467440737095516
 def softmaxZero : Nat -> Nat := fun k => listSumNat (bbSoftmaxRow nil k (cons 7 nil))
 -- Each innermost list is a row, including at rank 3.
 def softmaxRank3 : Nat -> Nat := fun v => sumT Nat bbAdd 0 (shape (cons 1 (cons 1 (cons 2 nil)))) (bbOpRun (shape (cons 1 (cons 1 (cons 2 nil)))) (shape (cons 1 (cons 1 (cons 2 nil)))) (opSoftmax (shape (cons 1 (cons 1 (cons 2 nil)))) 0 3) (cons (cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) nil)) nil) (cons (cons (cons v (cons 4 nil)) nil) nil))
+
+-- Attention coefficients can exceed p. Reduce them before multiplying by V,
+-- so a representable field result does not overflow the intermediate Nat.
+def attentionMixWide : Nat -> Nat := fun v => listAt Nat 0 0 (bbAttnMix (cons 17179869184 nil) (cons (cons v nil) nil) 1)
+-- Zero Q and K give a single softmax coefficient 2^k. V is p - 1.
+def attentionWideWeights : BbWeights := cons (cons (cons 0 nil) nil) (cons (cons (cons 1 nil) nil) (cons (cons (cons 0 (cons 1 nil)) nil) nil))
+def attentionWide : Nat := listAt Nat 0 0 (listAt (List Nat) nil 0 (bbOpRun (shape (cons 1 (cons 1 nil))) (shape (cons 1 (cons 1 nil))) (opAttention 1 1 0 0 1 2 34) attentionWideWeights (cons (cons 2013265920 nil) nil)))
+def attentionScaleMax : Nat := listAt Nat 0 0 (listAt (List Nat) nil 0 (bbOpRun (shape (cons 1 (cons 1 nil))) (shape (cons 1 (cons 1 nil))) (opAttention 1 1 0 0 1 2 63) attentionWideWeights (cons (cons 2013265920 nil) nil)))

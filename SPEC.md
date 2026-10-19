@@ -120,6 +120,17 @@ An instance is a top-level definition whose type is a data type (F14).
   rank 0 reads the entry as a row of length 1. The circuit form of softmax
   does not yet check that the max is an entry of the row (a soundness gap
   to fix later).
+  Flags 31 to 35 (part Z6g session 1) are open, and the build uses the
+  defaults: `opAttention` reads W_Q, W_K, W_V and the exp table at
+  separate indices of the weights, and the softmax k is a field (flag 31);
+  the scale of the scores is part of the exp table (flag 32); each score
+  gets (p - 1) / 2 before the softmax, so a score in the field reads as a
+  signed score (flag 33); the output keeps the 2^k scale (flag 34); and the
+  cost is 3 h d d + 2 h h d + 2 h h + h gates and 3 h h lookups (flag 35).
+  Attention uses the softmax, so it has the same soundness gap of the max
+  (flag 27). An attention entry on its inputs is not lowered yet: the
+  lowering does not share values (flag 36), so babybear has 5 constant
+  entries.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order

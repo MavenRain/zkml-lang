@@ -1,0 +1,2 @@
+-- opAttention at [2, 2] costs res 50 12 2, not res 50 8 2. Refused: TYPE_ENDPOINT.
+def costAttention : Path Resource (cost (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3))) (res 50 8 2) := refl

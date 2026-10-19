@@ -104,3 +104,7 @@ layernorm-cost-wrong.lang TYPE_ENDPOINT
 op-fold-arity.lang TYPE_MISMATCH
 lookup-empty-row.lang TYPE_ENDPOINT
 lookup-short-row.lang TYPE_ENDPOINT
+attention-shape.lang TYPE_MISMATCH
+attention-wrong-out.lang TYPE_ENDPOINT
+attention-cost-wrong.lang TYPE_ENDPOINT
+attention-no-shift.lang TYPE_ENDPOINT

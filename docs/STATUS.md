@@ -113,7 +113,9 @@ Slices Z7 to Z11 are not started.
    `opLookup` (a table lookup for each entry), `opSoftmax` and
    `opLayerNorm` (on each row of the last dim), each with a cost in
    `opRes`. Flags 26 to 30 are open, and the build uses the defaults.
-   `attention` is part Z6g.
+   Part Z6g session 1 is DONE: the `Op` family also has `opAttention`
+   (one head that maps [h, d] to [h, d]), with a cost in `opRes`. Flags
+   31 to 35 are open, and the build uses the defaults.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

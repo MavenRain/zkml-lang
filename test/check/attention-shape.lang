@@ -1,0 +1,3 @@
+-- opAttention h d q k v t e maps [h, d] to [h, d], not [2, 3] to [3, 2].
+-- Refused: TYPE_MISMATCH.
+def badAttn : Op (shape (cons 2 (cons 3 nil))) (shape (cons 3 (cons 2 nil))) := opAttention 2 3 0 1 2 3 3

@@ -1,0 +1,6 @@
+-- Without the shift (flag 33) the score p - 1 is the max of row 1 and the output is
+-- [[p - 10, p - 3], [p - 16, p - 8]]. With the shift the output is [[p - 10, p - 3],
+-- [0, 7]]. Refused: TYPE_ENDPOINT.
+def bbExpTbl : List (List Nat) := cons (cons 0 (cons 8 nil)) (cons (cons 1 (cons 3 nil)) (cons (cons 2 (cons 1 nil)) nil))
+def bbAttnW : BbWeights := cons (cons (cons 1 (cons 1 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)) (cons (cons (cons 2 (cons 0 nil)) (cons (cons 1 (cons 1 nil)) nil)) (cons bbExpTbl nil)))
+def bbRunAttentionNeg : Path (Tensor Nat (shape (cons 2 (cons 2 nil)))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2013265920 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil))) (cons (cons 2013265911 (cons 2013265918 nil)) (cons (cons 2013265905 (cons 2013265913 nil)) nil)) := refl

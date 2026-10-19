@@ -123,6 +123,7 @@ static const char circuit_domain[] =
   "  | opLookup (lkS : Shape) (lkT : Nat) : Op lkS lkS\n"
   "  | opSoftmax (smS : Shape) (smT smK : Nat) : Op smS smS\n"
   "  | opLayerNorm (lnS : Shape) (lnG lnT : Nat) : Op lnS lnS\n"
+  "  | opAttention (atH atD atQ atK atV atT atE : Nat) : Op (shape (cons atH (cons atD nil))) (shape (cons atH (cons atD nil)))\n"
   "family Circuit (a b : Shape) :=\n"
   "    circId (idA : Shape) : Circuit idA idA\n"
   "  | circSeq (seqA seqB seqC : Shape) (seqF : Circuit seqA seqB) (seqG : Circuit seqB seqC) : Circuit seqA seqC\n"
@@ -221,7 +222,7 @@ int main(void) {
   ok &= roundtrip_in(circuit_domain, "(a : Shape) -> (b : Shape) -> Circuit a b -> Circuit b a",
                      "fun a b x => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA)"
                      " (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF)"
-                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) (fun mmN mmM mmK => opMatMul mmM mmN mmK) (fun lkS lkT => opLookup lkS lkT) (fun smS smT smK => opSoftmax smS smT smK) (fun lnS lnG lnT => opLayerNorm lnS lnG lnT) opO))"
+                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) (fun mmN mmM mmK => opMatMul mmM mmN mmK) (fun lkS lkT => opLookup lkS lkT) (fun smS smT smK => opSoftmax smS smT smK) (fun lnS lnG lnT => opLayerNorm lnS lnG lnT) (fun atH atD atQ atK atV atT atE => opAttention atH atD atQ atK atV atT atE) opO))"
                      " (fun rsS rsF => circResidual rsS rsF)"
                      " (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF)"
                      " (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF))"
@@ -229,7 +230,7 @@ int main(void) {
   ok &= roundtrip_in(circuit_domain, "(i : I) -> Circuit (shape nil) (shape nil)",
                      "fun i => fold (fun (a : Shape) => fun (b : Shape) => Circuit b a) (fun idA => circId idA)"
                      " (fun seqA seqB seqC seqF seqG => circSeq seqC seqB seqA seqG seqF)"
-                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) (fun mmN mmM mmK => opMatMul mmM mmN mmK) (fun lkS lkT => opLookup lkS lkT) (fun smS smT smK => opSoftmax smS smT smK) (fun lnS lnG lnT => opLayerNorm lnS lnG lnT) opO))"
+                     " (fun opA opB opO => circOp opB opA (fold (fun (a : Shape) => fun (b : Shape) => Op b a) (fun qzS qzK => opQuantize qzS qzK) (fun mmN mmM mmK => opMatMul mmM mmN mmK) (fun lkS lkT => opLookup lkS lkT) (fun smS smT smK => opSoftmax smS smT smK) (fun lnS lnG lnT => opLayerNorm lnS lnG lnT) (fun atH atD atQ atK atV atT atE => opAttention atH atD atQ atK atV atT atE) opO))"
                      " (fun rsS rsF => circResidual rsS rsF)"
                      " (fun idlA idlB idlF => circIdr idlB idlA idlF) (fun idrA idrB idrF => circIdl idrB idrA idrF)"
                      " (fun asA asB asC asD asF asG asH => symm (circAssoc asD asC asB asA asH asG asF))"
