@@ -131,6 +131,20 @@ An instance is a top-level definition whose type is a data type (F14).
   (flag 27). An attention entry on its inputs is not lowered yet: the
   lowering does not share values (flag 36), so babybear has 5 constant
   entries.
+  Flags 37 to 42 (part Z6h) are RULED: the bn254 entries are constant
+  (flag 37); `Fr` is a record of 8 `Nat` limbs below 2^32 (flag 38);
+  `frMul` is Montgomery CIOS in the plain form, with a second `frMont`
+  by 2^512 mod r (flag 39); the canonical predicate is `frBad`,
+  `frCanonB` and `frCanon` as domain defs, with rows and a `Flag` entry
+  in `examples/bn254.lang` (flag 40); `frInst` is the `Inst` over `Fr`
+  in the form of `bbInst`, and `frRun` has the structural cases of
+  `bbRun` with `zeroT Fr frZero` at an operator (flags 41 and 42).
+  `frInstSat` has no `frCanon` clause: the `Inst` family quantifies
+  `instInputSat` over every x, and `instInputEval` forces the read of
+  the input witness to be x, so a clause on x is not provable there. A
+  clause on the output (`frCanon x -> frCanon` of the read) needs a
+  theorem that `frRun` keeps `frCanon`, which is not built. That clause
+  is flag 43. The BN254 operators (an `Op` run over `Fr`) are open.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order

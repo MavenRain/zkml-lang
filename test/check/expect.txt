@@ -108,3 +108,8 @@ attention-shape.lang TYPE_MISMATCH
 attention-wrong-out.lang TYPE_ENDPOINT
 attention-cost-wrong.lang TYPE_ENDPOINT
 attention-no-shift.lang TYPE_ENDPOINT
+fr-canon-r.lang TYPE_ENDPOINT
+fr-canon-limb.lang TYPE_ENDPOINT
+fr-mul-bad.lang TYPE_ENDPOINT
+fr-run-residual-wrong.lang TYPE_ENDPOINT
+fr-run-op-nonzero.lang TYPE_ENDPOINT

@@ -140,7 +140,9 @@ type does not check as written, and the default for each.
   2026-10-17. Part Z6f session 1 (`opMatMul`, the weights in `bbRun`,
   `circResidualLoop` and `costResidualLoop`) DONE 2026-10-18. Part Z6f
   session 2 (`opLookup`, `opSoftmax` and `opLayerNorm`) DONE 2026-10-18.
-  Part Z6g session 1 (`opAttention`, one head) DONE 2026-10-18.
+  Part Z6g session 1 (`opAttention`, one head) DONE 2026-10-18. Part
+  Z6h session 1b (the BN254 scalar field `Fr`, `frCanon` and `frInst`)
+  DONE 2026-10-19.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.

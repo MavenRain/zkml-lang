@@ -1,0 +1,4 @@
+-- frCanon holds below r. frR is r, so frBad frR is 1 and frCanonB frR is flagNo,
+-- not flagYes. Refused: TYPE_ENDPOINT.
+def frR : Fr := frMk 4026531841 1138881939 2042196113 674490440 2172737629 3092268470 3778125865 811880050
+def rowCanonR : frCanon frR := refl

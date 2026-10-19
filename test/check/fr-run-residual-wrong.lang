@@ -1,0 +1,4 @@
+-- frRun at circResidual of circId adds x to itself: [1, 1] gives [2, 2], not
+-- [1, 2]. Refused: TYPE_ENDPOINT.
+def frTwo : Fr := frMk 2 0 0 0 0 0 0 0
+def rowRunResidual : Path (Tensor Fr (shape (cons 2 nil))) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circId (shape (cons 2 nil)))) nil (cons frOne (cons frOne nil))) (cons frOne (cons frTwo nil)) := refl

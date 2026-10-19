@@ -97,6 +97,21 @@ tests use these names, so keep them when you replace the sample.
 | `listAt` | the entry k of a list, or a default when the list is too short; a `Nat` fold drops k entries and a `List` fold takes the head | `bbOpRun` |
 | `bbDot`, `bbMatVec` | the BabyBear dot product of two lists (it stops at the shorter list), and one dot product for each row of a matrix | `bbOpRun` |
 | `bbNoWeights` | the reader that gives no matrices, for a weights type without `opMatMul` (flag 23) | `examples/babybear.lang` |
+| `Fr`, `frMk`, `fr0` to `fr7` | the BN254 scalar field (part Z6h, flag 38): a record of 8 `Nat` limbs below 2^32, little-endian, and its projections. r = 21888242871839275222246405745257275088548364400416034343698204186575808495617 | `frToL`, `isSetFr` |
+| `frToL`, `frOfL` | the limb list of an element and the element of a limb list; `listAt` reads 0 past the end | `frAdd`, `frSub`, `frMul`, `frBad` |
+| `frMacRow` | ts + u * xs + c, limb by limb, in CPS: the result is the carry-out and the limbs | `frAddL`, `frMont` |
+| `frSubRow` | xs - ys with a borrow chain: the result is the borrow-out (1 when xs < ys) and the limbs | `frReduce`, `frSubL` |
+| `frReduce` | t - r when t >= r (the borrow of `frSubRow` is 0), else t | `frAddL`, `frMulL` |
+| `frMont` | Montgomery CIOS (flag 39): a * b * 2^-256 mod r in 8 rounds, each `frMacRow`, then `frMontRed`, then `frMontShift`; `frMulL` applies it twice, the second time with 2^512 mod r (`frR2L`), for the plain form | `frMulL` |
+| `frAdd`, `frSub`, `frMul`, `frNeg`, `frZero`, `frOne` | the field operators on `Fr`, for canonical inputs (flag 40); `frNeg a` is 0 - a | `frRun`, `examples/bn254.lang` |
+| `frAtLeastR` | 1 when the limbs compare at or above r, otherwise 0; compares from the most significant end and accepts full-width `Nat` limbs without overflow | `frBad` |
+| `frBad`, `frCanonB`, `frCanon` | the count of the limbs at 2^32 or above, plus `frAtLeastR`; the `Flag` that the count is 0; the type of a proof of it (flag 40). `frInstSat` has no `frCanon` clause: the `Inst` family quantifies `instInputSat` over every x | `examples/bn254.lang`, `test/check/fr-canon-r.lang` |
+| `isSetFr` | `Fr` is a set: a square in `Fr` is a record of squares in `Nat` (`natIsSet`) | `frTensorSet` |
+| `frTensorSet` | the `instTensorSet` of `frInst` | `frInst` |
+| `FrWeights` | the weights of `frRun`: a list of matrices over `Fr` (the `BbWeights` form) | `frRun`, `frInst` |
+| `frRun` | the structural cases of `bbRun` over `Fr` (flag 41): `circResidual` adds x with `frAdd`, and an operator gives `zeroT Fr frZero` (the BN254 operators come later) | `frInstSat`, `examples/bn254.lang` |
+| `frInst`, `frInstSat`, `frInstEval`, `frInstInputWit`, `frInstSeqWit`, the other `frInst` fields | the BN254 `Inst` at a weights type `W` and a reader `rd : W -> FrWeights`, in the form of `bbInst` (flag 42) | `examples/bn254.lang` |
+| `frNoWeights` | the reader that gives no matrices over `Fr` | `examples/bn254.lang` |
 | `circResidualLoop` | n residual steps of a circuit after `circId`, by `Nat` induction | `costResidualLoop`, `examples/babybear.lang` |
 | `resScale` | n copies of a resource under `resAdd`, from `zeroR` | `costResidualLoop` |
 | `costResidualLoop` | the path from the cost of n residual steps to `resScale n` of the cost of one step, for each n, by `Nat` induction | `examples/babybear.lang` |

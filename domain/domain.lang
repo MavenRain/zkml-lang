@@ -537,6 +537,135 @@ def bbInstSeqSat : (W : Type 0) -> (rd : W -> BbWeights) -> (a b c : Shape) -> (
 def bbInst : (W : Type 0) -> (W -> BbWeights) -> Inst := fun W rd => mkInst Nat (Prod W (List (Stage Nat))) W (bbInstWeightsOf W) (bbInstSat W rd) (bbInstEval W) (bbInstInputWit W) (bbInstInputWeights W) (bbInstInputSat W rd) (bbInstInputEval W) (bbInstIdSound W rd) (bbInstSeqWit W) (bbInstSeqSat W rd) (bbInstSeqWitWeights W) (bbInstSeqWitSat W rd) (bbInstSeqWitEval W) bbInstTensorSet
 -- bbNoWeights: the reader with no matrices, for the circuits without opMatMul.
 def bbNoWeights : (W : Type 0) -> W -> BbWeights := fun W w => nil
+-- BN254 scalar field Fr (Z6h). r = 21888242871839275222246405745257275088548364400416034343698204186575808495617.
+-- An element is 8 little-endian limbs below 2^32 (flag 38). The field operators
+-- take canonical inputs (flag 40): limbs below 2^32 and a value below r.
+family Fr := frMk (fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7 : Nat)
+-- frB is the limb base 2^32. frNP is -r^-1 mod 2^32. frRL is r and frR2L is
+-- 2^512 mod r, as limb lists.
+def frB : Nat := 4294967296
+def frNP : Nat := 4026531839
+def frRL : List Nat := cons 4026531841 (cons 1138881939 (cons 2042196113 (cons 674490440 (cons 2172737629 (cons 3092268470 (cons 3778125865 (cons 811880050 (nil))))))))
+def frR2L : List Nat := cons 2921426343 (cons 465102405 (cons 3814480355 (cons 1409170097 (cons 1404797061 (cons 2353627965 (cons 2135835813 (cons 35049649 (nil))))))))
+-- frToL and frOfL go between Fr and the limb list. listAt reads 0 past the end.
+def frToL : Fr -> List Nat := fun a => cons (fr0 a) (cons (fr1 a) (cons (fr2 a) (cons (fr3 a) (cons (fr4 a) (cons (fr5 a) (cons (fr6 a) (cons (fr7 a) (nil))))))))
+def frOfL : List Nat -> Fr := fun l => frMk (listAt Nat 0 0 l) (listAt Nat 0 1 l) (listAt Nat 0 2 l) (listAt Nat 0 3 l) (listAt Nat 0 4 l) (listAt Nat 0 5 l) (listAt Nat 0 6 l) (listAt Nat 0 7 l)
+-- The row folds are in CPS: a step takes the continuation k and the carry.
+-- frMacRow u xs ts c is ts + u * xs + c, limb by limb; the result is the
+-- carry-out and the limbs. frSubRow xs ys is xs - ys with a borrow chain; the
+-- result is the borrow-out (1 when xs < ys) and the limbs.
+def frNilK : Nat -> Prod Nat (List Nat) := fun c => pair c nil
+def frNil2 : Prod (List Nat) (List Nat) := pair nil nil
+def frCons : Nat -> Prod Nat (List Nat) -> Prod Nat (List Nat) := fun l r => pair (first r) (cons l (second r))
+def frMacStep : (Nat -> Prod Nat (List Nat)) -> Nat -> Prod Nat (List Nat) := fun k s => frCons (natMod s frB) (k (natDiv s frB))
+def frMacRow : Nat -> List Nat -> List Nat -> Nat -> Prod Nat (List Nat) :=
+  fun u xs ts => fold (fun (p : Prod Nat Nat) (k : Nat -> Prod Nat (List Nat)) => fun (c : Nat) => frMacStep k (natAdd (natAdd (first p) (natMul u (second p))) c)) frNilK (listZipWith Nat Nat (Prod Nat Nat) (fun (t : Nat) (x : Nat) => pair t x) ts xs)
+def frSubStep : (Nat -> Prod Nat (List Nat)) -> Nat -> Prod Nat (List Nat) := fun k s => frCons (natMod s frB) (k (natSub 1 (natDiv s frB)))
+def frSubRow : List Nat -> List Nat -> Prod Nat (List Nat) :=
+  fun xs ys => fold (fun (p : Prod Nat Nat) (k : Nat -> Prod Nat (List Nat)) => fun (c : Nat) => frSubStep k (natSub (natAdd (first p) frB) (natAdd (second p) c))) frNilK (listZipWith Nat Nat (Prod Nat Nat) (fun (x : Nat) (y : Nat) => pair x y) xs ys) 0
+-- frTail drops the first limb, frSnoc appends one, frRev reverses.
+def frTail : List Nat -> List Nat := fun xs => second (fold (fun (h : Nat) (acc : Prod (List Nat) (List Nat)) => pair (cons h (first acc)) (first acc)) frNil2 xs)
+def frSnoc : List Nat -> Nat -> List Nat := fun xs x => fold (fun (h : Nat) (acc : List Nat) => cons h acc) (cons x nil) xs
+def frRev : List Nat -> List Nat := fun xs => fold (fun (h : Nat) (acc : List Nat) => frSnoc acc h) nil xs
+-- frReduce t is t - r when t >= r (the borrow of frSubRow is 0), else t.
+def frPick : Prod Nat (List Nat) -> List Nat -> List Nat := fun d t => listZipWith Nat Nat Nat (fun (x : Nat) (y : Nat) => flagIf (natEq (first d) 0) x y) (second d) t
+def frReduce : List Nat -> List Nat := fun t => frPick (frSubRow t frRL) t
+-- Montgomery CIOS (flag 39): frMont a b = a * b * 2^-256 mod r in 8 rounds. A
+-- round adds b_i * a (frMacRow), then m * r with m = t_0 * frNP mod 2^32
+-- (frMontRed), and drops one limb (frMontShift). The carry rides in the first
+-- component.
+def frMontShift : Nat -> Nat -> Prod Nat (List Nat) -> Prod Nat (List Nat) :=
+  fun tN1 tN r2 => pair (natAdd tN1 (natDiv (natAdd tN (first r2)) frB)) (frSnoc (frTail (second r2)) (natMod (natAdd tN (first r2)) frB))
+def frMontRed : Prod (Prod Nat Nat) (List Nat) -> Prod Nat (List Nat) :=
+  fun u => frMontShift (first (first u)) (second (first u)) (frMacRow (natMod (natMul (listAt Nat 0 0 (second u)) frNP) frB) frRL (second u) 0)
+def frMontAdd : Prod Nat (List Nat) -> Nat -> Prod (Prod Nat Nat) (List Nat) :=
+  fun r tN => pair (pair (natDiv (natAdd tN (first r)) frB) (natMod (natAdd tN (first r)) frB)) (second r)
+def frMontStep : List Nat -> Nat -> Prod Nat (List Nat) -> Prod Nat (List Nat) :=
+  fun a bi t => frMontRed (frMontAdd (frMacRow bi a (second t) 0) (first t))
+def frMont : List Nat -> List Nat -> Prod Nat (List Nat) :=
+  fun a b => fold (fun (bi : Nat) (t : Prod Nat (List Nat)) => frMontStep a bi t) (pair 0 (listRep Nat 8 0)) (frRev b)
+-- frMulL a b = frMont (frMont a b) R^2 brings the product back to the plain form.
+def frAddL : List Nat -> List Nat -> List Nat := fun a b => frReduce (second (frMacRow 1 b a 0))
+def frSubL : List Nat -> List Nat -> List Nat := fun a b => frAddL a (second (frSubRow frRL b))
+def frMulL : List Nat -> List Nat -> List Nat := fun a b => frReduce (second (frMont (frReduce (second (frMont a b))) frR2L))
+-- The field operators on Fr. frNeg a = 0 - a.
+def frAdd : Fr -> Fr -> Fr := fun a b => frOfL (frAddL (frToL a) (frToL b))
+def frSub : Fr -> Fr -> Fr := fun a b => frOfL (frSubL (frToL a) (frToL b))
+def frMul : Fr -> Fr -> Fr := fun a b => frOfL (frMulL (frToL a) (frToL b))
+def frZero : Fr := frMk 0 0 0 0 0 0 0 0
+def frOne : Fr := frMk 1 0 0 0 0 0 0 0
+def frNeg : Fr -> Fr := fun a => frSub frZero a
+-- isSetFr: a square in Fr is a record of squares in Nat (natIsSet).
+def isSetFr : isSet Fr :=
+  fun x y p q => <i> <j> frMk (natIsSet (fr0 x) (fr0 y) (<k> fr0 (p @ k)) (<k> fr0 (q @ k)) @ i @ j)
+    (natIsSet (fr1 x) (fr1 y) (<k> fr1 (p @ k)) (<k> fr1 (q @ k)) @ i @ j)
+    (natIsSet (fr2 x) (fr2 y) (<k> fr2 (p @ k)) (<k> fr2 (q @ k)) @ i @ j)
+    (natIsSet (fr3 x) (fr3 y) (<k> fr3 (p @ k)) (<k> fr3 (q @ k)) @ i @ j)
+    (natIsSet (fr4 x) (fr4 y) (<k> fr4 (p @ k)) (<k> fr4 (q @ k)) @ i @ j)
+    (natIsSet (fr5 x) (fr5 y) (<k> fr5 (p @ k)) (<k> fr5 (q @ k)) @ i @ j)
+    (natIsSet (fr6 x) (fr6 y) (<k> fr6 (p @ k)) (<k> fr6 (q @ k)) @ i @ j)
+    (natIsSet (fr7 x) (fr7 y) (<k> fr7 (p @ k)) (<k> fr7 (q @ k)) @ i @ j)
+-- frTensorSet is the instTensorSet of frInst.
+def frTensorSet : (s : Shape) -> isSet (Tensor Fr s) := fun s => isSetTensor Fr isSetFr s
+-- frAtLeastR compares limbs from the most significant end. It uses comparisons
+-- rather than subtraction so that full-width Nat limbs cannot overflow.
+def frAtLeastR : Fr -> Nat := fun a => fold (fun (p : Prod Nat Nat) (acc : Nat) => flagIf (natEq (first p) (second p)) acc (flagIf (natLe (first p) (second p)) 0 1)) 1 (listZipWith Nat Nat (Prod Nat Nat) (fun (x : Nat) (y : Nat) => pair x y) (frRev (frToL a)) (frRev frRL))
+-- frBad a counts the limbs of a at 2^32 or above, plus frAtLeastR a.
+-- frCanonB a is the Flag frBad a = 0 and frCanon a
+-- is the type of a proof of it (flag 40). frInstSat has no frCanon clause: the
+-- Inst family quantifies instInputSat over every x, canonical or not.
+def frBad : Fr -> Nat := fun a => natAdd (fold (fun (x : Nat) (acc : Nat) => natAdd acc (flagIf (natLe x 4294967295) 0 1)) 0 (frToL a)) (frAtLeastR a)
+def frCanonB : Fr -> Flag := fun a => natEq (frBad a) 0
+def frCanon : Fr -> Type 0 := fun a => Path Flag (frCanonB a) (natEq 0 0)
+-- The BN254 Inst fields (Z6h), in the form of the BabyBear Inst. The weights
+-- type W is an argument. A witness is the weights and a trace of stages over Fr.
+def frInstInputWit : (W : Type 0) -> (s : Shape) -> W -> Tensor Fr s -> Prod W (List (Stage Fr)) :=
+  fun W s ws x => pair ws (cons (stageEnc Fr s x) nil)
+-- frInstEval reads the last stage at the shape b. The empty trace gives zeroT Fr frZero.
+def frInstEval : (W : Type 0) -> (a b : Shape) -> Circuit a b -> Prod W (List (Stage Fr)) -> Tensor Fr b :=
+  fun W a b f w => option (zeroT Fr frZero b) (fun (st : Stage Fr) => stageDec Fr frZero b st) (stageLast Fr (second w))
+-- frInstInputEval: the input witness has one stage, so the read is the round trip.
+def frInstInputEval : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Fr s) -> Path (Tensor Fr s) (frInstEval W s s (circId s) (frInstInputWit W s ws x)) x :=
+  fun W s ws x => stageDecEnc Fr frZero s x
+-- FrWeights: the weights of frRun, a list of matrices over Fr (the BbWeights form).
+def FrWeights : Type 0 := List (List (List Fr))
+-- frRun: the structural cases of bbRun over Fr (flag 41). circResidual adds x
+-- with frAdd. An operator gives zeroT Fr frZero; the BN254 operators come later.
+def frRun : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> Tensor Fr b :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => FrWeights -> Tensor Fr a -> Tensor Fr b)
+    (fun idA => fun (ws : FrWeights) => fun (x : Tensor Fr idA) => x)
+    (fun seqA seqB seqC seqF seqG => fun (ws : FrWeights) => fun (x : Tensor Fr seqA) => seqG ws (seqF ws x))
+    (fun opA opB opO => fun (ws : FrWeights) => fun (x : Tensor Fr opA) => zeroT Fr frZero opB)
+    (fun rsS rsF => fun (ws : FrWeights) => fun (x : Tensor Fr rsS) => zipWithT Fr Fr Fr frAdd rsS x (rsF ws x))
+    (fun idlA idlB idlF => <i> idlF)
+    (fun idrA idrB idrF => <i> idrF)
+    (fun asA asB asC asD asF asG asH => <i> fun (ws : FrWeights) => fun (x : Tensor Fr asA) => asH ws (asG ws (asF ws x)))
+    (fun sqA sqB sqF sqG sqP sqQ => isSetPi FrWeights (fun (v : FrWeights) => Tensor Fr sqA -> Tensor Fr sqB) (fun (v : FrWeights) => isSetPi (Tensor Fr sqA) (fun (y : Tensor Fr sqA) => Tensor Fr sqB) (fun (y : Tensor Fr sqA) => frTensorSet sqB)) sqF sqG sqP sqQ) f
+-- frInstSat: the last stage of w gives frRun at the weights of w (no frCanon clause, flag 40).
+def frInstSat : (W : Type 0) -> (W -> FrWeights) -> (a b : Shape) -> Circuit a b -> Tensor Fr a -> Prod W (List (Stage Fr)) -> Type 0 :=
+  fun W rd a b f x w => Path (Tensor Fr b) (frRun a b f (rd (first w)) x) (frInstEval W a b f w)
+def frInstWeightsOf : (W : Type 0) -> Prod W (List (Stage Fr)) -> W := fun W w => first w
+def frInstInputWeights : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Fr s) -> Path W (frInstWeightsOf W (frInstInputWit W s ws x)) ws := fun W s ws x => refl
+-- The input witness satisfies circId by the round trip of its stage.
+def frInstInputSat : (W : Type 0) -> (rd : W -> FrWeights) -> (s : Shape) -> (ws : W) -> (x : Tensor Fr s) -> frInstSat W rd s s (circId s) x (frInstInputWit W s ws x) := fun W rd s ws x => symm (frInstInputEval W s ws x)
+def frInstIdSound : (W : Type 0) -> (rd : W -> FrWeights) -> (s : Shape) -> (x : Tensor Fr s) -> (w : Prod W (List (Stage Fr))) -> frInstSat W rd s s (circId s) x w -> Path (Tensor Fr s) x (frInstEval W s s (circId s) w) := fun W rd s x w h => h
+-- frInstSeqWit keeps the weights of u and the trace of v, as bbInstSeqWit.
+def frInstSeqWit : (W : Type 0) -> (a b c : Shape) -> Circuit a b -> Circuit b c -> Prod W (List (Stage Fr)) -> Prod W (List (Stage Fr)) -> Prod W (List (Stage Fr)) :=
+  fun W a b c f g u v => pair (first u) (second v)
+def frInstSeqWitWeights : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : Prod W (List (Stage Fr))) -> Path W (frInstWeightsOf W u) (frInstWeightsOf W v) -> Path W (frInstWeightsOf W (frInstSeqWit W a b c f g u v)) (frInstWeightsOf W u) :=
+  fun W a b c f g u v p => refl
+def frInstSeqWitEval : (W : Type 0) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (u v : Prod W (List (Stage Fr))) -> Path (Tensor Fr c) (frInstEval W a c (circSeq a b c f g) (frInstSeqWit W a b c f g u v)) (frInstEval W b c g v) :=
+  fun W a b c f g u v => refl
+def frInstSeqWitSat : (W : Type 0) -> (rd : W -> FrWeights) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor Fr a) -> (u v : Prod W (List (Stage Fr))) -> Path W (frInstWeightsOf W u) (frInstWeightsOf W v) -> frInstSat W rd a b f x u -> frInstSat W rd b c g (frInstEval W a b f u) v -> frInstSat W rd a c (circSeq a b c f g) x (frInstSeqWit W a b c f g u v) :=
+  fun W rd a b c f g x u v p hu hv => trans (cong (fun (y : Tensor Fr b) => frRun b c g (rd (first u)) y) hu) (trans (cong (fun (z : W) => frRun b c g (rd z) (frInstEval W a b f u)) p) hv)
+-- frInstSeqSat: u is the weights of w and one stage with the result of f at x. v is w.
+def frInstSeqSat : (W : Type 0) -> (rd : W -> FrWeights) -> (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (x : Tensor Fr a) -> (w : Prod W (List (Stage Fr))) -> frInstSat W rd a c (circSeq a b c f g) x w -> Trunc (Sigma (u : Prod W (List (Stage Fr))) (Sigma (v : Prod W (List (Stage Fr))) (Prod (Path (Prod W (List (Stage Fr))) w (frInstSeqWit W a b c f g u v)) (Prod (Path W (frInstWeightsOf W u) (frInstWeightsOf W v)) (Prod (frInstSat W rd a b f x u) (frInstSat W rd b c g (frInstEval W a b f u) v)))))) :=
+  fun W rd a b c f g x w h => truncIn (Sigma (u : Prod W (List (Stage Fr))) (Sigma (v : Prod W (List (Stage Fr))) (Prod (Path (Prod W (List (Stage Fr))) w (frInstSeqWit W a b c f g u v)) (Prod (Path W (frInstWeightsOf W u) (frInstWeightsOf W v)) (Prod (frInstSat W rd a b f x u) (frInstSat W rd b c g (frInstEval W a b f u) v))))))
+    (pack (pair (first w) (cons (stageEnc Fr b (frRun a b f (rd (first w)) x)) nil)) (pack w (pair refl (pair refl (pair (symm (stageDecEnc Fr frZero b (frRun a b f (rd (first w)) x))) (trans (cong (fun (y : Tensor Fr b) => frRun b c g (rd (first w)) y) (stageDecEnc Fr frZero b (frRun a b f (rd (first w)) x))) h))))))
+-- frInst: the BN254 Inst at the weights type W. rd reads the matrices from W.
+def frInst : (W : Type 0) -> (W -> FrWeights) -> Inst := fun W rd => mkInst Fr (Prod W (List (Stage Fr))) W (frInstWeightsOf W) (frInstSat W rd) (frInstEval W) (frInstInputWit W) (frInstInputWeights W) (frInstInputSat W rd) (frInstInputEval W) (frInstIdSound W rd) (frInstSeqWit W) (frInstSeqSat W rd) (frInstSeqWitWeights W) (frInstSeqWitSat W rd) (frInstSeqWitEval W) frTensorSet
+-- frNoWeights: the reader with no matrices.
+def frNoWeights : (W : Type 0) -> W -> FrWeights := fun W w => nil
 -- isPropSquareP: a square of propositions has a filler for any four sides.
 -- The base is a transp of the corner b00. Each side is a path of the proposition from the base.
 def isPropSquareP : (B : I -> I -> Type 0) -> ((j : I) -> (i : I) -> isProp (B j i)) -> (b00 : B i0 i0) -> (b01 : B i0 i1) -> (b10 : B i1 i0) -> (b11 : B i1 i1) -> (t : PathP (fun (i : I) => B i0 i) b00 b01) -> (u : PathP (fun (i : I) => B i1 i) b10 b11) -> (r : PathP (fun (j : I) => B j i0) b00 b10) -> (s : PathP (fun (j : I) => B j i1) b01 b11) -> PathP (fun (j : I) => PathP (fun (i : I) => B j i) (r @ j) (s @ j)) t u :=

@@ -1,0 +1,55 @@
+-- BN254 Fr arithmetic, the canonical predicate and the read of a BN254 witness (Z6h).
+-- frDigest a is the sum of (i + 1) * limb i: one Nat per element for the entries.
+def frDigest : Fr -> Nat := fun a => natAdd (natMul 1 (fr0 a)) (natAdd (natMul 2 (fr1 a)) (natAdd (natMul 3 (fr2 a)) (natAdd (natMul 4 (fr3 a)) (natAdd (natMul 5 (fr4 a)) (natAdd (natMul 6 (fr5 a)) (natAdd (natMul 7 (fr6 a)) (natMul 8 (fr7 a))))))))
+-- frRm1 is r - 1. frA and frC are two canonical values; frAC is A * C mod r.
+def frRm1 : Fr := frMk 4026531840 1138881939 2042196113 674490440 2172737629 3092268470 3778125865 811880050
+def frA : Fr := frMk 2168603850 4275329250 2252771851 3620476855 2122229666 1202698825 516841430 261861773
+def frC : Fr := frMk 2372778113 1178919833 2665366350 3036223068 3652951060 877989475 550934216 810366961
+def frAC : Fr := frMk 3407090481 1978225017 924897918 2907542707 4056131156 868425 2349975110 404776753
+def frTwo : Fr := frMk 2 0 0 0 0 0 0 0
+-- The field rows: r - 1 + 1 = 0, 0 - 1 = r - 1, -1 = r - 1, A * C = frAC and (r - 1)^2 = 1.
+def rowAddWrap : Path Fr (frAdd frRm1 frOne) frZero := refl
+def rowSubWrap : Path Fr (frSub frZero frOne) frRm1 := refl
+def rowNegOne : Path Fr (frNeg frOne) frRm1 := refl
+def rowMulBig : Path Fr (frMul frA frC) frAC := refl
+def rowMulNeg : Path Fr (frMul frRm1 frRm1) frOne := refl
+-- Constant entries (flag 37): the digests of the row values. An entry with Fr
+-- parameters exceeds the Wasm limit of locals per function (flag 36).
+def frAddWrap : Nat := frDigest (frAdd frRm1 frOne)
+def frSubWrap : Nat := frDigest (frSub frZero frOne)
+def frMulBig : Nat := frDigest (frMul frA frC)
+def frMulNeg : Nat := frDigest (frMul frRm1 frRm1)
+def frSubSelf : Nat := frDigest (frSub frA frA)
+-- Canonical values (flag 40): frCanon holds at 0, r - 1 and A by refl. frBad counts
+-- the violations: 1 at r (frR) and 1 at a limb 2^32 (frBigLimb).
+def frR : Fr := frMk 4026531841 1138881939 2042196113 674490440 2172737629 3092268470 3778125865 811880050
+def frBigLimb : Fr := frMk 4294967296 0 0 0 0 0 0 0
+def rowCanonZero : frCanon frZero := refl
+def rowCanonRm1 : frCanon frRm1 := refl
+def rowCanonA : frCanon frA := refl
+def frBadRm1 : Nat := frBad frRm1
+def frBadR : Nat := frBad frR
+def frBadLimb : Nat := frBad frBigLimb
+def frCanonRm1 : Flag := frCanonB frRm1
+-- The canonical predicate must reject full-width Nat limbs without a trap.
+def frMaxLimbLow : Fr := frMk 18446744073709551615 0 0 0 0 0 0 0
+def frMaxLimbHigh : Fr := frMk 0 0 0 0 0 0 0 18446744073709551615
+def rowCanonMaxLow : Path Flag (frCanonB frMaxLimbLow) flagNo := refl
+def rowCanonMaxHigh : Path Flag (frCanonB frMaxLimbHigh) flagNo := refl
+def frBadMaxLow : Nat := frBad frMaxLimbLow
+def frBadMaxHigh : Nat := frBad frMaxLimbHigh
+def frCanonMaxLow : Flag := frCanonB frMaxLimbLow
+def frCanonMaxHigh : Flag := frCanonB frMaxLimbHigh
+-- The read of a BN254 witness at the shape [2]: the input stage, the empty trace
+-- (zeroT), the identity layer of frInst and the instEval field.
+def frEvalSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frInstEval Nat (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (frInstInputWit Nat (shape (cons 2 nil)) 5 (cons frOne (cons frOne nil)))))
+def frEvalEmpty : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 3 nil)) (frInstEval Nat (shape (cons 3 nil)) (shape (cons 3 nil)) (circId (shape (cons 3 nil))) (pair 7 nil)))
+def frLayerIdSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (layerDen (idL (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil))) 5 (cons frA (cons frZero nil))))
+def frInstEvalSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (instEval (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil)) 5 (cons frA (cons frOne nil)))))
+-- frRun at closed circuits (flag 41): a sequence of identities, a residual of the
+-- identity (x + x) and an operator (zeroT Fr frZero).
+def rowRunResidual : Path (Tensor Fr (shape (cons 2 nil))) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circId (shape (cons 2 nil)))) nil (cons frOne (cons frOne nil))) (cons frTwo (cons frTwo nil)) := refl
+def rowRunOp : Path (Tensor Fr (shape (cons 2 nil))) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) nil (cons frA (cons frC nil))) (cons frZero (cons frZero nil)) := refl
+def frRunSeqSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) nil (cons frA (cons frC nil))))
+def frRunResidualSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circId (shape (cons 2 nil)))) nil (cons frA (cons frOne nil))))
+def frRunOpSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) nil (cons frA (cons frC nil))))

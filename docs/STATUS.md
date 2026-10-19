@@ -116,6 +116,11 @@ Slices Z7 to Z11 are not started.
    Part Z6g session 1 is DONE: the `Op` family also has `opAttention`
    (one head that maps [h, d] to [h, d]), with a cost in `opRes`. Flags
    31 to 35 are open, and the build uses the defaults.
+   Part Z6h session 1b is DONE: the domain has the BN254 scalar field
+   `Fr` (8 `Nat` limbs, Montgomery CIOS), the canonical predicate
+   `frCanon` and the `Inst` `frInst`, with `examples/bn254.lang`. Flags
+   38 to 42 are RULED. The BN254 operators (an `Op` run over `Fr`) and
+   the kit sharing slice (flags 36 and 37) are OPEN.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

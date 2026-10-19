@@ -534,7 +534,10 @@ not have them (PLAN item O1). Slice Z1 adds C1 and C2.
   path constructors `circIdl`, `circIdr`, `circAssoc` and `circSquash`.
   It declares `Op (a b : Shape)` with the point constructors `opQuantize`,
   `opMatMul`, `opLookup`, `opSoftmax`, `opLayerNorm` and `opAttention`
-  (parts Z6e, Z6f and Z6g).
+  (parts Z6e, Z6f and Z6g). The family `Fr` is the BN254 scalar field
+  (part Z6h): a record of 8 `Nat` limbs below 2^32, in little-endian
+  order. `isSetFr` is a record of `Nat` squares, by the eta rule of
+  records.
 - Declaration (part Z4b, mutual blocks): `family Rose := ... and Kids :=
   ...` declares the sorts of a block together, in order. The headers of
   all the sorts bind before the check reads a constructor, so a
