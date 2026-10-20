@@ -123,8 +123,9 @@ Slices Z7 to Z11 are not started.
    lookup operator over `Fr` in `frRun`, and `frDot` and `frMatVec` are
    the matrix operators, which `examples/bn254.lang` tests directly.
    Flags 44 to 50 are RULED (flag 50 keeps the matmul case of `frOpRun`
-   at `zeroT Fr frZero` until the checker is lazier). The kit sharing
-   slice (flags 36 and 37) is OPEN.
+   at `zeroT Fr frZero` until the checker is lazier). Part Z6j session
+   1b (the kit sharing slice, flags 36 and 37) is DONE: the lowering
+   shares the values in each block (flags 51 to 55).
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

@@ -128,11 +128,12 @@ An instance is a top-level definition whose type is a data type (F14).
   signed score (flag 33); the output keeps the 2^k scale (flag 34); and the
   cost is 3 h d d + 2 h h d + 2 h h + h gates and 3 h h lookups (flag 35).
   Attention uses the softmax, so it has the same soundness gap of the max
-  (flag 27). An attention entry on its inputs is not lowered yet: the
-  lowering does not share values (flag 36), so babybear has 5 constant
-  entries.
+  (flag 27). The lowering shares the values in each block (flags 51 to
+  55), so babybear has the attention entry `bbAttentionSumUV` on its
+  inputs and the 5 constant entries (flag 36).
   Flags 37 to 42 (part Z6h) are RULED: the bn254 entries are constant
-  (flag 37); `Fr` is a record of 8 `Nat` limbs below 2^32 (flag 38);
+  (flag 37), and `frMatVecSumUV` is an entry on its inputs (flags 51 to
+  55); `Fr` is a record of 8 `Nat` limbs below 2^32 (flag 38);
   `frMul` is Montgomery CIOS in the plain form, with a second `frMont`
   by 2^512 mod r (flag 39); the canonical predicate is `frBad`,
   `frCanonB` and `frCanon` as domain defs, with rows and a `Flag` entry
@@ -157,6 +158,16 @@ An instance is a top-level definition whose type is a data type (F14).
   the 1 GiB arena (flag 49, measured in part Z6i session 1c). `frDot`
   and `frMatVec` stay defined, and `examples/bn254.lang` tests them
   directly.
+  Flags 51 to 55 (part Z6j) are RULED: the lowering keeps a memo of the
+  lowered values in each block. The key is the `Value` pointer (flag
+  51): `apply_value` and the cache of the defs give one pointer to one
+  value. The scope is the block and the blocks that it is in (flag 52),
+  so one arm of a `flagIf` or a switch never reads a local of another
+  arm. The memo gives the `Operand` as the lowering returned it (flag
+  53), with no new statement. Only `VAL_OP` and `VAL_STUCK` values go in
+  the memo (flag 54): the other kinds lower to a constant or a level, or
+  the lowering refuses them. The tables grow in the arena until the
+  arena is freed (flag 55); the peak memory of a check does not change.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order

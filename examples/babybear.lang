@@ -73,11 +73,15 @@ def costAttention : Path Resource (cost (shape (cons 2 (cons 2 nil))) (shape (co
 -- gates and 3 lookups. Here h is not equal to d, so these rows find an exchange of h and d.
 def bbRunAttention1 : Path (Tensor Nat (shape (cons 1 (cons 2 nil)))) (bbRun (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (circOp (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (opAttention 1 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) nil)) (cons (cons 16 (cons 8 nil)) nil) := refl
 def costAttention1 : Path Resource (cost (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (circOp (shape (cons 1 (cons 2 nil))) (shape (cons 1 (cons 2 nil))) (opAttention 1 2 0 1 2 3 3))) (res 19 3 2) := refl
--- bbAttentionSumUV is the sum of the output at x = [[u, 0], [0, v]]. These entries
--- have no parameters: the lowering does not share values, and an entry on u and
--- v exceeds the Wasm limit of locals per function (Z6g-1c, flag 36).
+-- bbAttentionSumUV is the sum of the output at x = [[u, 0], [0, v]]. The entries
+-- below it are fixed cases. The entry on u and v lowers because the lowering
+-- shares the values in each block (flags 51 to 55).
 def bbAttentionSum11 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
 def bbAttentionSum21 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
 def bbAttentionSumNeg : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 2013265920 (cons 0 nil)) (cons (cons 0 (cons 1 nil)) nil)))
 def bbAttentionSum12 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 1 (cons 0 nil)) (cons (cons 0 (cons 2 nil)) nil)))
 def bbAttentionSum00 : Nat := sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons 0 (cons 0 nil)) (cons (cons 0 (cons 0 nil)) nil)))
+def bbAttentionSumUV : (u : Nat) -> (v : Nat) -> Nat := fun u v => sumT Nat bbAdd 0 (shape (cons 2 (cons 2 nil))) (bbRun (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (circOp (shape (cons 2 (cons 2 nil))) (shape (cons 2 (cons 2 nil))) (opAttention 2 2 0 1 2 3 3)) bbAttnW (cons (cons u (cons 0 nil)) (cons (cons 0 (cons v nil)) nil)))
+-- bbShareArms uses one bound value in the two arms of a flagIf, and the condition
+-- is on the other input. One arm must not read a local of the other arm (flag 52).
+def bbShareArms : (u : Nat) -> (v : Nat) -> Nat := fun u v => (fun (t : Nat) => flagIf (natEq u 0) t (natAdd t 1)) (bbMul v v)

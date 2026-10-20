@@ -144,7 +144,9 @@ type does not check as written, and the default for each.
   Z6h session 1b (the BN254 scalar field `Fr`, `frCanon` and `frInst`)
   DONE 2026-10-19. Part Z6i session 1b (the BN254 operators: `frOpRun`
   in `frRun`, the lookup operator real, the matmul case `zeroT Fr
-  frZero` under flag 50) DONE 2026-10-19.
+  frZero` under flag 50) DONE 2026-10-19. Part Z6j session 1b (the
+  lowering shares the values in each block, flags 51 to 55) DONE
+  2026-10-20.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
   and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.

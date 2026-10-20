@@ -68,4 +68,6 @@ def rowRunLookup : Path (Tensor Fr (shape (cons 3 nil))) (frRun (shape (cons 3 n
 def rowEqAC : Path Flag (frEqB frA frC) flagNo := refl
 def rowEqAA : Path Flag (frEqB frA frA) (natEq 0 0) := refl
 def frMatVecSum : Nat := frDigest (fold (fun (h : Fr) (acc : Fr) => frAdd h acc) frZero (frMatVec frMatM (cons frA (cons frC (cons frOne nil)))))
+-- frMatVecSumUV is the sum of frMatVec frMatM [u, v, 1]: the oracle is 5u + 7v + 9.
+def frMatVecSumUV : (u : Nat) -> (v : Nat) -> Nat := fun u v => frDigest (fold (fun (h : Fr) (acc : Fr) => frAdd h acc) frZero (frMatVec frMatM (cons (frN u) (cons (frN v) (cons frOne nil)))))
 def frRunLookupSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 3 nil)) (frRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons frBigTbl nil) (cons frA (cons frOne (cons frC nil)))))
