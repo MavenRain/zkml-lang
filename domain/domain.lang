@@ -629,13 +629,41 @@ def frInstInputEval : (W : Type 0) -> (s : Shape) -> (ws : W) -> (x : Tensor Fr 
   fun W s ws x => stageDecEnc Fr frZero s x
 -- FrWeights: the weights of frRun, a list of matrices over Fr (the BbWeights form).
 def FrWeights : Type 0 := List (List (List Fr))
--- frRun: the structural cases of bbRun over Fr (flag 41). circResidual adds x
--- with frAdd. An operator gives zeroT Fr frZero; the BN254 operators come later.
+-- frDot, frMatVec (Z6i): the bbDot and bbMatVec forms over Fr. frDot stops at
+-- the shorter list.
+def frDot : List Fr -> List Fr -> Fr := fun r x => fold (fun (h : Fr) (acc : Fr) => frAdd h acc) frZero (listZipWith Fr Fr Fr frMul r x)
+def frMatVec : List (List Fr) -> List Fr -> List Fr := fun mt x => map (fun (r : List Fr) => frDot r x) mt
+-- frDiff a b counts the limbs where a and b differ. frEqB a b is the Flag that
+-- the count is 0: two canonical values are equal when their limbs are (flag 45).
+def frDiff : Fr -> Fr -> Nat := fun a b => fold (fun (p : Prod Nat Nat) (acc : Nat) => natAdd acc (flagIf (natEq (first p) (second p)) 0 1)) 0 (listZipWith Nat Nat (Prod Nat Nat) (fun (x : Nat) (y : Nat) => pair x y) (frToL a) (frToL b))
+def frEqB : Fr -> Fr -> Flag := fun a b => natEq (frDiff a b) 0
+-- frTableRow and frLookup: the bbTableRow and bbLookup forms over Fr. frLookup
+-- tb d v is the value of the first row [v, e] of tb (frEqB on the key), or d.
+def frTableRow : List Fr -> Option (Prod Fr Fr) :=
+  fun r => fold (fun (l : List Fr) => Option (Prod Fr Fr)) (fun (h : Fr) => fun (t : List Fr) => fun (ih : Option (Prod Fr Fr)) => fold (fun (e : Fr) (acc : Option (Prod Fr Fr)) => some (pair h e)) none t) none r
+def frLookup : List (List Fr) -> Fr -> Fr -> Fr :=
+  fun tb d v => fold (fun (r : List Fr) (acc : Fr) => option acc (fun (kv : Prod Fr Fr) => flagIf (frEqB (first kv) v) (second kv) acc) (frTableRow r)) d tb
+-- frOpRun: the function of an operator at the weights ws over Fr, by an Op fold
+-- (Z6i). opMatMul gives zeroT Fr frZero until the checker is lazier (flag 50).
+-- opLookup s t reads the table t of ws and gives frZero for a missing
+-- key. opQuantize, opSoftmax, opLayerNorm and opAttention need a Nat division
+-- or a Nat order, which Fr does not have, and give zeroT Fr frZero (flags 44,
+-- 46, 47, 48).
+def frOpRun : (a b : Shape) -> Op a b -> FrWeights -> Tensor Fr a -> Tensor Fr b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => FrWeights -> Tensor Fr a -> Tensor Fr b)
+    (fun qzS qzK => fun (ws : FrWeights) => fun (x : Tensor Fr qzS) => zeroT Fr frZero qzS)
+    (fun mmN mmM mmK => fun (ws : FrWeights) => fun (x : Tensor Fr (shape (cons mmN nil))) => zeroT Fr frZero (shape (cons mmM nil)))
+    (fun lkS lkT => fun (ws : FrWeights) => mapT Fr Fr (fun (v : Fr) => frLookup (listAt (List (List Fr)) nil lkT ws) frZero v) lkS)
+    (fun smS smT smK => fun (ws : FrWeights) => fun (x : Tensor Fr smS) => zeroT Fr frZero smS)
+    (fun lnS lnG lnT => fun (ws : FrWeights) => fun (x : Tensor Fr lnS) => zeroT Fr frZero lnS)
+    (fun atH atD atQ atK atV atT atE => fun (ws : FrWeights) => fun (x : Tensor Fr (shape (cons atH (cons atD nil)))) => zeroT Fr frZero (shape (cons atH (cons atD nil)))) o
+-- frRun: the cases of bbRun over Fr (flag 41). circResidual adds x with frAdd.
+-- circOp runs frOpRun (Z6i).
 def frRun : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> Tensor Fr b :=
   fun a b f => fold (fun (a : Shape) => fun (b : Shape) => FrWeights -> Tensor Fr a -> Tensor Fr b)
     (fun idA => fun (ws : FrWeights) => fun (x : Tensor Fr idA) => x)
     (fun seqA seqB seqC seqF seqG => fun (ws : FrWeights) => fun (x : Tensor Fr seqA) => seqG ws (seqF ws x))
-    (fun opA opB opO => fun (ws : FrWeights) => fun (x : Tensor Fr opA) => zeroT Fr frZero opB)
+    (fun opA opB opO => frOpRun opA opB opO)
     (fun rsS rsF => fun (ws : FrWeights) => fun (x : Tensor Fr rsS) => zipWithT Fr Fr Fr frAdd rsS x (rsF ws x))
     (fun idlA idlB idlF => <i> idlF)
     (fun idrA idrB idrF => <i> idrF)

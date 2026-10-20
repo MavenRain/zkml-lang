@@ -1,0 +1,5 @@
+-- frMatVec at the rows [1, 2, 3] and [4, 5, 6] at [1, 1, 1] gives [6, 15], not
+-- [6, 16]. Refused: TYPE_ENDPOINT.
+def frN : Nat -> Fr := fun n => frMk n 0 0 0 0 0 0 0
+def frMatM : List (List Fr) := cons (cons (frN 1) (cons (frN 2) (cons (frN 3) nil))) (cons (cons (frN 4) (cons (frN 5) (cons (frN 6) nil))) nil)
+def rowMatVec : Path (List Fr) (frMatVec frMatM (cons frOne (cons frOne (cons frOne nil)))) (cons (frN 6) (cons (frN 16) nil)) := refl

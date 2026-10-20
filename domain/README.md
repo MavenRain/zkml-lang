@@ -109,7 +109,14 @@ tests use these names, so keep them when you replace the sample.
 | `isSetFr` | `Fr` is a set: a square in `Fr` is a record of squares in `Nat` (`natIsSet`) | `frTensorSet` |
 | `frTensorSet` | the `instTensorSet` of `frInst` | `frInst` |
 | `FrWeights` | the weights of `frRun`: a list of matrices over `Fr` (the `BbWeights` form) | `frRun`, `frInst` |
-| `frRun` | the structural cases of `bbRun` over `Fr` (flag 41): `circResidual` adds x with `frAdd`, and an operator gives `zeroT Fr frZero` (the BN254 operators come later) | `frInstSat`, `examples/bn254.lang` |
+| `frDot` | the `bbDot` form over `Fr`: the sum of the products of two lists, which stops at the shorter list | `frMatVec` |
+| `frMatVec` | the `bbMatVec` form: `frDot` of each matrix row with the vector; the matmul case of `frOpRun` does not call it (flag 50) | `examples/bn254.lang` |
+| `frDiff` | the count of the limbs where two elements differ | `frEqB` |
+| `frEqB` | the `Flag` that `frDiff` is 0, exact on canonical values (flag 45) | `frLookup`, `examples/bn254.lang` |
+| `frTableRow` | the `bbTableRow` form: the key and the value of a table row, or none for a row of fewer than two elements | `frLookup` |
+| `frLookup` | the `bbLookup` form: the value of the first row whose key is `frEqB` to the input, or the default | `frOpRun` |
+| `frOpRun` | the function of an operator at the weights over `Fr`, by an `Op` fold (part Z6i): `opLookup s t` reads table t with `frLookup` and gives `frZero` for a missing key; `opMatMul` gives `zeroT Fr frZero` until the checker is lazier (flag 50); `opQuantize`, `opSoftmax`, `opLayerNorm` and `opAttention` give `zeroT Fr frZero` (flags 44, 46, 47 and 48) | `frRun` |
+| `frRun` | the cases of `bbRun` over `Fr` (flag 41): `circResidual` adds x with `frAdd`, and `circOp` runs `frOpRun` (part Z6i) | `frInstSat`, `examples/bn254.lang` |
 | `frInst`, `frInstSat`, `frInstEval`, `frInstInputWit`, `frInstSeqWit`, the other `frInst` fields | the BN254 `Inst` at a weights type `W` and a reader `rd : W -> FrWeights`, in the form of `bbInst` (flag 42) | `examples/bn254.lang` |
 | `frNoWeights` | the reader that gives no matrices over `Fr` | `examples/bn254.lang` |
 | `circResidualLoop` | n residual steps of a circuit after `circId`, by `Nat` induction | `costResidualLoop`, `examples/babybear.lang` |

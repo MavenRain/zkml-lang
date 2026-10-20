@@ -119,8 +119,12 @@ Slices Z7 to Z11 are not started.
    Part Z6h session 1b is DONE: the domain has the BN254 scalar field
    `Fr` (8 `Nat` limbs, Montgomery CIOS), the canonical predicate
    `frCanon` and the `Inst` `frInst`, with `examples/bn254.lang`. Flags
-   38 to 42 are RULED. The BN254 operators (an `Op` run over `Fr`) and
-   the kit sharing slice (flags 36 and 37) are OPEN.
+   38 to 42 are RULED. Part Z6i session 1b is DONE: `frOpRun` runs the
+   lookup operator over `Fr` in `frRun`, and `frDot` and `frMatVec` are
+   the matrix operators, which `examples/bn254.lang` tests directly.
+   Flags 44 to 50 are RULED (flag 50 keeps the matmul case of `frOpRun`
+   at `zeroT Fr frZero` until the checker is lazier). The kit sharing
+   slice (flags 36 and 37) is OPEN.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

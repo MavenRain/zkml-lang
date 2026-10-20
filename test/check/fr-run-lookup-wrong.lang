@@ -1,0 +1,5 @@
+-- frRun at opLookup gives frZero for the missing key 9, not the key. Refused:
+-- TYPE_ENDPOINT.
+def frN : Nat -> Fr := fun n => frMk n 0 0 0 0 0 0 0
+def frExpTbl : List (List Fr) := cons (cons (frN 0) (cons (frN 8) nil)) (cons (cons (frN 1) (cons (frN 3) nil)) (cons (cons (frN 2) (cons (frN 1) nil)) nil))
+def rowRunLookup : Path (Tensor Fr (shape (cons 3 nil))) (frRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons frExpTbl nil) (cons (frN 0) (cons (frN 2) (cons (frN 9) nil)))) (cons (frN 8) (cons (frN 1) (cons (frN 9) nil))) := refl

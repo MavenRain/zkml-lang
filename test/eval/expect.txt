@@ -161,3 +161,5 @@ bn254 frBadMaxLow => 1
 bn254 frBadMaxHigh => 2
 bn254 frCanonMaxLow => 0
 bn254 frCanonMaxHigh => 0
+bn254 frMatVecSum => 55915057369
+bn254 frRunLookupSum => 66820092075

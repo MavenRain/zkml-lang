@@ -1,4 +1,4 @@
--- frRun at an operator gives zeroT Fr frZero (flag 41), not the input.
+-- frRun at opQuantize gives zeroT Fr frZero (flag 44), not the input.
 -- Refused: TYPE_ENDPOINT.
 def frA : Fr := frMk 2168603850 4275329250 2252771851 3620476855 2122229666 1202698825 516841430 261861773
 def frC : Fr := frMk 2372778113 1178919833 2665366350 3036223068 3652951060 877989475 550934216 810366961

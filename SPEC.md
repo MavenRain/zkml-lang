@@ -144,7 +144,19 @@ An instance is a top-level definition whose type is a data type (F14).
   the input witness to be x, so a clause on x is not provable there. A
   clause on the output (`frCanon x -> frCanon` of the read) needs a
   theorem that `frRun` keeps `frCanon`, which is not built. That clause
-  is flag 43. The BN254 operators (an `Op` run over `Fr`) are open.
+  is flag 43.
+  Flags 44 to 50 (part Z6i) are RULED: `frOpRun` is the `Op` run over
+  `Fr` in `frRun`. The lookup operator is real: `frLookup` reads the
+  table, and `frEqB` compares the limbs, which is exact on canonical
+  values (flag 45). `opQuantize`, `opSoftmax`, `opLayerNorm` and
+  `opAttention` need a `Nat` division or a `Nat` order, which `Fr` does
+  not have, and give `zeroT Fr frZero` (flags 44, 46, 47 and 48). The
+  matmul case of `frOpRun` is `zeroT Fr frZero` until the checker is
+  lazier (flag 50): the real case puts the symbolic `frMul` chain under
+  the stuck `Op` fold, and the check of `frInstSeqWitSat` then exhausts
+  the 1 GiB arena (flag 49, measured in part Z6i session 1c). `frDot`
+  and `frMatVec` stay defined, and `examples/bn254.lang` tests them
+  directly.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order

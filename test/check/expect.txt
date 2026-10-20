@@ -113,3 +113,5 @@ fr-canon-limb.lang TYPE_ENDPOINT
 fr-mul-bad.lang TYPE_ENDPOINT
 fr-run-residual-wrong.lang TYPE_ENDPOINT
 fr-run-op-nonzero.lang TYPE_ENDPOINT
+fr-matvec-wrong.lang TYPE_ENDPOINT
+fr-run-lookup-wrong.lang TYPE_ENDPOINT

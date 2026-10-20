@@ -47,9 +47,25 @@ def frEvalEmpty : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 3 nil)) (fr
 def frLayerIdSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (layerDen (idL (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil))) 5 (cons frA (cons frZero nil))))
 def frInstEvalSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (instEval (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (instInputWit (frInst Nat (frNoWeights Nat)) (shape (cons 2 nil)) 5 (cons frA (cons frOne nil)))))
 -- frRun at closed circuits (flag 41): a sequence of identities, a residual of the
--- identity (x + x) and an operator (zeroT Fr frZero).
+-- identity (x + x) and opQuantize (zeroT Fr frZero, flag 44).
 def rowRunResidual : Path (Tensor Fr (shape (cons 2 nil))) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circId (shape (cons 2 nil)))) nil (cons frOne (cons frOne nil))) (cons frTwo (cons frTwo nil)) := refl
 def rowRunOp : Path (Tensor Fr (shape (cons 2 nil))) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) nil (cons frA (cons frC nil))) (cons frZero (cons frZero nil)) := refl
 def frRunSeqSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circId (shape (cons 2 nil))) (circId (shape (cons 2 nil)))) nil (cons frA (cons frC nil))))
 def frRunResidualSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circId (shape (cons 2 nil)))) nil (cons frA (cons frOne nil))))
 def frRunOpSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 3)) nil (cons frA (cons frC nil))))
+-- The BN254 operators (Z6i): frMatVec at the matrix with the rows [1, 2, 3] and
+-- [4, 5, 6] and at no matrix, frRun at opLookup over the table with the rows
+-- [0, 8], [1, 3] and [2, 1] (the key 9 is missing and gives frZero), and frEqB
+-- on the limbs (flag 45). The frOpRun matmul case is zeroT Fr frZero (flag 50),
+-- so the examples test frMatVec directly. frN n is the element n below 2^32.
+def frN : Nat -> Fr := fun n => frMk n 0 0 0 0 0 0 0
+def frMatM : List (List Fr) := cons (cons (frN 1) (cons (frN 2) (cons (frN 3) nil))) (cons (cons (frN 4) (cons (frN 5) (cons (frN 6) nil))) nil)
+def frExpTbl : List (List Fr) := cons (cons (frN 0) (cons (frN 8) nil)) (cons (cons (frN 1) (cons (frN 3) nil)) (cons (cons (frN 2) (cons (frN 1) nil)) nil))
+def frBigTbl : List (List Fr) := cons (cons frA (cons frC nil)) (cons (cons frOne (cons frA nil)) nil)
+def rowMatVec : Path (List Fr) (frMatVec frMatM (cons frOne (cons frOne (cons frOne nil)))) (cons (frN 6) (cons (frN 15) nil)) := refl
+def rowMatVecNil : Path (List Fr) (frMatVec nil (cons frOne (cons frOne (cons frOne nil)))) nil := refl
+def rowRunLookup : Path (Tensor Fr (shape (cons 3 nil))) (frRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons frExpTbl nil) (cons (frN 0) (cons (frN 2) (cons (frN 9) nil)))) (cons (frN 8) (cons (frN 1) (cons frZero nil))) := refl
+def rowEqAC : Path Flag (frEqB frA frC) flagNo := refl
+def rowEqAA : Path Flag (frEqB frA frA) (natEq 0 0) := refl
+def frMatVecSum : Nat := frDigest (fold (fun (h : Fr) (acc : Fr) => frAdd h acc) frZero (frMatVec frMatM (cons frA (cons frC (cons frOne nil)))))
+def frRunLookupSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 3 nil)) (frRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons frBigTbl nil) (cons frA (cons frOne (cons frC nil)))))
