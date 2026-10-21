@@ -16,8 +16,10 @@ category `LayerCat` and the functor `denote`. Slice Z5 is DONE. It
 implements part Z6a: the `List` motive fold (C7), part Z6b: the
 split witness of `instSeqSat` (flag 16), and part Z6c: the tensor
 library (`isSetList`, `isSetTensor`, `zeroT`, `mapT`, `zipWithT`,
-`sumT` and the stage round trip). Slice Z6 is in progress.
-Slices Z7 to Z11 are not started.
+`sumT` and the stage round trip). Slice Z6 is in progress. It
+implements part Z7a: an entry with a `List Nat` result gives a words
+block (flag 56 (a)). Slice Z7 is in progress. Slices Z8 to Z11 are
+not started.
 
 ## Implemented
 
@@ -101,6 +103,26 @@ Slices Z7 to Z11 are not started.
   `cat-idl-swap`, `tfun-seq-order`, `isset-hom-square`, `denote-hom`
   and `isprop-isset-side`.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
+- Part Z7a (flag 56 (a)): an entry with a `List Nat` result is a words
+  entry. The lowering makes a words block [n, w0 .. w(n-1)], with one
+  word for each element, and the entry returns the address of the
+  block. `langc abi` gives the line `NAME words` for a words entry. The
+  Wasm module exports memory 0 as `$memory`, and `test/run-wasm.mjs`
+  reads the block from this export. `langc eval` and
+  `test/run-wasm.mjs` print the n words with one space between them,
+  or `nil` for the empty list. `examples/witness.lang` gives the accept
+  cases. The gate compares `langc eval` and the Wasm module on each
+  words entry of the examples.
+- Flag 61 (RULED (a) 2026-10-21): the name `$memory` has a `$`, and a
+  guest name cannot have a `$` (`src/front/lexer.c`). Thus no entry
+  export has the name of the memory export. With the name `memory`, an
+  entry named `memory` gave two exports with one name, and the module
+  did not validate.
+- The refusal `REFUSE_LOCALS` in the lowering (HOST-LIMIT): an entry
+  that needs more than `LOWER_LOCALS_MAX` (50000) locals. 50000 is the
+  V8 limit for the locals of one Wasm function. The count includes the
+  3 scratch locals of the Wasm target. `test/ir/locals.lang` gives the
+  cases.
 
 ## Remaining work
 
@@ -125,7 +147,8 @@ Slices Z7 to Z11 are not started.
    Flags 44 to 50 are RULED (flag 50 keeps the matmul case of `frOpRun`
    at `zeroT Fr frZero` until the checker is lazier). Part Z6j session
    1b (the kit sharing slice, flags 36 and 37) is DONE: the lowering
-   shares the values in each block (flags 51 to 55).
+   shares the values in each block (flags 51 to 55). Part Z7a (words
+   entries, flag 56 (a)) is DONE. Flag 61 is RULED (a).
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

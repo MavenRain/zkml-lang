@@ -1,0 +1,21 @@
+-- The check accepts this program, but the entry big lowers to more locals
+-- than LOWER_LOCALS_MAX (50000): a tree of 2^15 natAdd leaves, each with
+-- its own constant. `langc ir` must refuse it with REFUSE_LOCALS. The
+-- helpers take a function, so they are not entries.
+def t0 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => f k
+def t1 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t0 f (natMul k 2)) (t0 f (natAdd (natMul k 2) 1))
+def t2 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t1 f (natMul k 2)) (t1 f (natAdd (natMul k 2) 1))
+def t3 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t2 f (natMul k 2)) (t2 f (natAdd (natMul k 2) 1))
+def t4 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t3 f (natMul k 2)) (t3 f (natAdd (natMul k 2) 1))
+def t5 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t4 f (natMul k 2)) (t4 f (natAdd (natMul k 2) 1))
+def t6 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t5 f (natMul k 2)) (t5 f (natAdd (natMul k 2) 1))
+def t7 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t6 f (natMul k 2)) (t6 f (natAdd (natMul k 2) 1))
+def t8 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t7 f (natMul k 2)) (t7 f (natAdd (natMul k 2) 1))
+def t9 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t8 f (natMul k 2)) (t8 f (natAdd (natMul k 2) 1))
+def t10 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t9 f (natMul k 2)) (t9 f (natAdd (natMul k 2) 1))
+def t11 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t10 f (natMul k 2)) (t10 f (natAdd (natMul k 2) 1))
+def t12 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t11 f (natMul k 2)) (t11 f (natAdd (natMul k 2) 1))
+def t13 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t12 f (natMul k 2)) (t12 f (natAdd (natMul k 2) 1))
+def t14 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t13 f (natMul k 2)) (t13 f (natAdd (natMul k 2) 1))
+def t15 : (f : Nat -> Nat) -> (k : Nat) -> Nat := fun (f : Nat -> Nat) (k : Nat) => natAdd (t14 f (natMul k 2)) (t14 f (natAdd (natMul k 2) 1))
+def big : (n : Nat) -> Nat := fun (n : Nat) => t15 (fun (x : Nat) => natAdd n x) 0

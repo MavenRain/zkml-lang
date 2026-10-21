@@ -359,14 +359,16 @@ static int part_global(Sink *s, const void *arg) {
   return put_uleb(s, 1) && put_byte(s, TYPE_I64) && put_byte(s, 1) && i64_const(s, 0) && put_byte(s, OP_END);
 }
 
+/* The entries, then memory 0 as `$memory` (a words result is an address in it).
+   A guest name cannot contain `$` (lexer.c is_ident_char), so no entry has this name. */
 static int part_exports(Sink *s, const void *arg) {
   const IrProgram *prog = arg;
   size_t i;
-  int ok = put_uleb(s, prog->func_count);
+  int ok = put_uleb(s, prog->func_count + 1u);
   for (i = 0; i < prog->func_count && ok; i++) {
     ok = put_name(s, prog->funcs[i].name) && put_byte(s, 0) && put_uleb(s, 1u + i);
   }
-  return ok;
+  return ok && put_name(s, "$memory") && put_byte(s, 2) && put_uleb(s, 0);
 }
 
 static int part_code(Sink *s, const void *arg) {
@@ -379,7 +381,7 @@ static int part_code(Sink *s, const void *arg) {
 
 int target_abi_line(const IrFunc *fn, FILE *out, FILE *err) {
   (void)err;
-  fprintf(out, "%s\n", fn->name);
+  fprintf(out, "%s%s\n", fn->name, fn->result == IR_SCALAR_WORDS ? " words" : "");
   return 1;
 }
 

@@ -3171,7 +3171,8 @@ static int entry_of_inner(Machine *m, const Value *type, Entry *out) {
     out->param_count++;
   }
   out->result_flag = val_is(t, OP_FLAG);
-  return val_is(t, OP_NAT) || val_is(t, OP_FLAG);
+  out->result_words = val_is(t, OP_LIST) && val_is(t->args[0], OP_NAT);
+  return val_is(t, OP_NAT) || val_is(t, OP_FLAG) || out->result_words;
 }
 
 int entry_of(Machine *m, const Value *type, Entry *out) {
@@ -3208,6 +3209,29 @@ static const Value *entry_arg(Machine *m, const char *text, int is_flag) {
   return is_flag ? val_make(m, n == 1u ? OP_FLAG_YES : OP_FLAG_NO, 0, 0, NULL, NULL, NULL) : val_nat(m, n);
 }
 
+/* A List Nat result: the words with one space between them, or `nil` for the
+   empty list. A trap in a head or in a tail prints `trap`, as for a Nat. */
+static int print_words(Machine *m, const char *name, const Value *v, FILE *out, FILE *err) {
+  const Value *p = v;
+  while (val_is(p, OP_CONS) && p->args[0]->kind == VAL_NAT)
+    p = p->args[1];
+  if (p->kind == VAL_TRAP || (val_is(p, OP_CONS) && p->args[0]->kind == VAL_TRAP)) {
+    fputs("trap\n", out);
+    fprintf(err, "langc: EVAL_OVERFLOW: %s: a Nat operation overflowed past 2^64-1\n", name);
+    return 0;
+  }
+  if (!val_is(p, OP_NIL)) {
+    diag_fail(m->diag, "EVAL_ENTRY", name, "the entry did not compute a list of numbers");
+    return 1;
+  }
+  if (val_is(v, OP_NIL))
+    fputs("nil", out);
+  for (p = v; val_is(p, OP_CONS); p = p->args[1])
+    fprintf(out, "%s%llu", p == v ? "" : " ", (unsigned long long)p->args[0]->nat);
+  fputc('\n', out);
+  return 0;
+}
+
 static int print_result(Machine *m, const char *name, const Value *v, FILE *out, FILE *err) {
   switch (v->kind) {
   case VAL_NAT:
@@ -3222,6 +3246,8 @@ static int print_result(Machine *m, const char *name, const Value *v, FILE *out,
       fprintf(out, "%d\n", val_is(v, OP_FLAG_YES));
       return 0;
     }
+    if (val_is(v, OP_NIL) || val_is(v, OP_CONS))
+      return print_words(m, name, v, out, err);
     break;
   case VAL_UNIV:
   case VAL_LAM:

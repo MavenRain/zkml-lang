@@ -1,0 +1,8 @@
+-- Witness entries: a List Nat result is a words block in the Wasm memory
+-- (flag 56 (a)). The gate compares `langc eval` and run-wasm.mjs on each.
+def wordsRange : (n : Nat) -> List Nat := fun (n : Nat) => unfold (fun (k : Nat) => some (pair k (natAdd k 1))) n 0
+def wordsRev : (n : Nat) -> List Nat := fun (n : Nat) => unfold (fun (k : Nat) => some (pair k (natSub k 1))) n (natSub n 1)
+def wordsEmpty : List Nat := nil
+def wordsBig : List Nat := cons 18446744073709551615 nil
+def wordsTrap : (n : Nat) -> List Nat := fun (n : Nat) => cons 1 (cons (natMul n 6148914691236517206) (cons 2 nil))
+def wordsPick : (f : Flag) -> (n : Nat) -> List Nat := fun (f : Flag) (n : Nat) => wordsRange (flagIf f n 0)

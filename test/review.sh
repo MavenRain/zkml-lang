@@ -50,7 +50,8 @@ EOF
 test "$(build/langc eval "$tmp/sum.lang" output)" = 'inl 7'
 test "$(build/langc eval "$tmp/sum.lang" mapped)" = 'inr flagYes'
 # A truncated normal form must not be reported as successful evaluation.
-printf 'def value : List Nat := fold (fun xs => cons 0 xs) nil 10000\n' >"$tmp/large.lang"
+# A List Nat result is an entry and prints in full, thus the check uses List Flag.
+printf 'def value : List Flag := fold (fun xs => cons flagYes xs) nil 10000\n' >"$tmp/large.lang"
 status=0
 build/langc eval "$tmp/large.lang" value >"$tmp/got" 2>"$tmp/err" || status=$?
 test "$status" = 1

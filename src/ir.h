@@ -12,7 +12,12 @@
    wrap; ADD_CARRY and MUL_CARRY give the flag of an overflow. A heap block
    is word 0 = the tag, then for field K the word at 1 + 2K and its flag at
    2 + 2K. Only an entry result is a strict position at run time: when its
-   flag is 1, the entry runs TRAP. */
+   flag is 1, the entry runs TRAP.
+
+   A WORDS result is the address of a block [n, w0 .. w(n-1)] with no
+   flags. The lowering writes it with an ALLOC of n, then a one-word ALLOC
+   for each word. Thus a target must put the blocks of ALLOCs that run one
+   after the other next to each other in memory (Wasm: the bump allocator). */
 #ifndef LANG_IR_H
 #define LANG_IR_H
 
@@ -21,7 +26,8 @@
 
 typedef enum {
   IR_SCALAR_NAT,
-  IR_SCALAR_FLAG
+  IR_SCALAR_FLAG,
+  IR_SCALAR_WORDS /* a result only: the address of a words block */
 } IrScalar;
 
 typedef enum {

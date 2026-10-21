@@ -151,6 +151,15 @@ case "$status:$first" in
   "1:langc: REFUSE_RUNTIME_TREE: bad: a fold over the mutual block of Rose "*) ;;
   *) echo "FAIL rose-tree.lang: want exit 1 and the mutual block refusal, got exit $status: $first"; fail=$((fail + 1)) ;;
 esac
+status=0
+build/langc check test/ir/locals.lang > /dev/null || status=$?
+[ "$status" -eq 0 ] || { echo "FAIL locals.lang: check exit $status"; fail=$((fail + 1)); }
+status=0
+first=$(build/langc ir test/ir/locals.lang 2>&1 > /dev/null) || status=$?
+case "$status:$first" in
+  "1:langc: REFUSE_LOCALS: big: "*) ;;
+  *) echo "FAIL locals.lang: want exit 1 and REFUSE_LOCALS, got exit $status: $first"; fail=$((fail + 1)) ;;
+esac
 got=$(build/langc eval test/ir/lazy.lang lazy 3 2>&1) || true
 [ "$got" = "3" ] || { echo "FAIL lazy.lang: want 3, got $got"; fail=$((fail + 1)); }
 build/langc ir test/ir/lazy.lang > /dev/null || { echo "FAIL lazy.lang: ir"; fail=$((fail + 1)); }
@@ -192,6 +201,7 @@ for f in examples/*.lang test/ir/spine.lang test/ir/lazy.lang test/ir/proof-trap
     continue
   fi
   build/langc ir "$f" | awk -f test/grid.awk >"$tmp/cases.txt"
+  build/langc abi "$f" >"$tmp/abi.txt"
   : >"$tmp/want.txt"
   while read -r call; do
     status=0
@@ -199,7 +209,7 @@ for f in examples/*.lang test/ir/spine.lang test/ir/lazy.lang test/ir/proof-trap
     [ "$status" -eq 0 ] || want="eval-exit-$status"
     echo "$want" >>"$tmp/want.txt"
   done <"$tmp/cases.txt"
-  if ! node test/run-wasm.mjs "$w" - <"$tmp/cases.txt" >"$tmp/got.txt" 2>"$tmp/w.err"; then
+  if ! node test/run-wasm.mjs "$w" - "$tmp/abi.txt" <"$tmp/cases.txt" >"$tmp/got.txt" 2>"$tmp/w.err"; then
     echo "FAIL node $f: $(head -n 1 "$tmp/w.err")"
     fail=$((fail + 1))
     continue

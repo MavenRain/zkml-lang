@@ -57,6 +57,11 @@ typedef struct {
   uint32_t level_cap;
 } Low;
 
+/* The most locals of one entry, with the 3 scratch locals of the Wasm target
+   (wasm.c part_entry). V8 does not compile a function with more than 50000
+   locals. */
+#define LOWER_LOCALS_MAX 50000u
+
 static int oom(Low *l) {
   return diag_fail(l->m->diag, "OOM", l->m->def, "out of memory");
 }
@@ -557,6 +562,8 @@ static const char *scalar_word(IrScalar s) {
     return "nat";
   case IR_SCALAR_FLAG:
     return "flag";
+  case IR_SCALAR_WORDS:
+    return "words";
   }
   return "?";
 }
@@ -1403,6 +1410,51 @@ static int lower(Low *l, Buf *b, const Value *v, Operand *out) {
   return ok && (!memo_kind(v) || memo_put(l, b, v, *out));
 }
 
+/* LOCAL := the address of a new one-word block [E]. */
+static int alloc_word(Low *l, Buf *b, uint32_t local, const IrExpr *e) {
+  const IrExpr **fields = arena_alloc(l->m->arena, sizeof *fields);
+  IrStmt *s = stmt_new(l, IR_STMT_ALLOC);
+  if (fields == NULL || s == NULL)
+    return fields == NULL ? oom(l) : 0;
+  fields[0] = e;
+  s->local = local;
+  s->fields = fields;
+  s->field_count = 1u;
+  return e != NULL && emit(l, b, s);
+}
+
+/* The words block [n, w0 .. w(n-1)] of the List Nat at the word of R, in two
+   WHILE passes over the cons blocks [1, head word, head flag, tail word, tail
+   flag]. Pass 1 counts the nodes, and runs TRAP when a head flag or a tail
+   flag is 1. Then an ALLOC of n. Pass 2 writes a one-word ALLOC for each head
+   word, so the words come after n (ir.h). R becomes the address of n. The
+   WHILE count 2^32 is more than the nodes that fit in memory. */
+static int words_block(Low *l, Buf *b, Operand *r) {
+  uint32_t p = local_new(l);
+  uint32_t more = local_new(l);
+  uint32_t n = local_new(l);
+  uint32_t a = local_new(l);
+  uint32_t w = local_new(l);
+  Buf count = buf_under(b);
+  Buf trap = buf_under(&count);
+  Buf none = buf_under(&count);
+  Buf copy = buf_under(b);
+  const IrExpr *at = ex_local(l, p);
+  const IrExpr *bound = ex_const(l, (uint64_t)1 << 32);
+  if (!set(l, b, p, r->w) || !set(l, b, more, ex_load(l, at, 0u)) || !set(l, b, n, ex_const(l, 0)) ||
+      !emit(l, &trap, stmt_new(l, IR_STMT_TRAP)) ||
+      !if_flag(l, &count, ex_or(l, ex_load(l, at, 2u), ex_load(l, at, 4u)), &trap, &none) ||
+      !set(l, &count, n, ex_bin(l, IR_OP_ADD, ex_local(l, n), ex_const(l, 1))) ||
+      !set(l, &count, p, ex_load(l, at, 3u)) || !set(l, &count, more, ex_load(l, at, 0u)) ||
+      !st_while(l, b, bound, more, &count) || !alloc_word(l, b, a, ex_local(l, n)) ||
+      !set(l, b, p, r->w) || !set(l, b, more, ex_load(l, at, 0u)) ||
+      !alloc_word(l, &copy, w, ex_load(l, at, 1u)) || !set(l, &copy, p, ex_load(l, at, 3u)) ||
+      !set(l, &copy, more, ex_load(l, at, 0u)) || !st_while(l, b, bound, more, &copy))
+    return 0;
+  *r = operand(ex_local(l, a), ex_const(l, 0));
+  return 1;
+}
+
 /* The entry INDEX, applied to a variable for each parameter. Only the
    result is strict: its flag runs TRAP. */
 static int lower_entry(Machine *m, uint32_t index, const Entry *e, IrFunc *fn) {
@@ -1429,12 +1481,16 @@ static int lower_entry(Machine *m, uint32_t index, const Entry *e, IrFunc *fn) {
     v = x == NULL ? NULL : apply_value(m, v, x);
   }
   if (!got(&l, v) || !lower(&l, &body, v, &r) || !emit(&l, &trap, stmt_new(&l, IR_STMT_TRAP)) ||
-      !if_flag(&l, &body, r.f, &trap, &none) || !emit(&l, &body, stmt_expr(&l, IR_STMT_RETURN, r.w)))
+      !if_flag(&l, &body, r.f, &trap, &none) || (e->result_words && !words_block(&l, &body, &r)) ||
+      !emit(&l, &body, stmt_expr(&l, IR_STMT_RETURN, r.w)))
     return 0;
+  if (l.local_count + 3u > LOWER_LOCALS_MAX)
+    return diag_fail(m->diag, "REFUSE_LOCALS", m->def, "the entry needs %u locals, more than %u (HOST-LIMIT)",
+                     (unsigned)l.local_count + 3u, LOWER_LOCALS_MAX);
   fn->name = m->defs[index].name;
   fn->params = params;
   fn->param_count = e->param_count;
-  fn->result = e->result_flag ? IR_SCALAR_FLAG : IR_SCALAR_NAT;
+  fn->result = e->result_words ? IR_SCALAR_WORDS : e->result_flag ? IR_SCALAR_FLAG : IR_SCALAR_NAT;
   fn->local_count = l.local_count;
   fn->body = block_of(&body);
   return 1;
