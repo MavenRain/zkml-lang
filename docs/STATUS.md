@@ -18,9 +18,9 @@ split witness of `instSeqSat` (flag 16), and part Z6c: the tensor
 library (`isSetList`, `isSetTensor`, `zeroT`, `mapT`, `zipWithT`,
 `sumT` and the stage round trip). Slice Z6 is in progress. It
 implements part Z7a: an entry with a `List Nat` result gives a words
-block (flag 56 (a)), and part Z7b: the BabyBear trace and its witness
-words (flag 62 (a)). Slice Z7 is in progress. Slices Z8 to Z11 are
-not started.
+block (flag 56 (a)), part Z7b: the BabyBear trace and its witness
+words (flag 62 (a)), and part Z7c: the BN254 trace and its witness
+words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
 
 ## Implemented
 
@@ -143,6 +143,22 @@ not started.
   entry at p - 1 or p. The eval row `bbWitResidual 2013265920 1` gives
   the p - 1 case in `langc eval` only. A gate row makes sure that the
   grid gives p - 1 and p to an entry with no loop.
+- Part Z7c: the domain has the BN254 trace and its witness words.
+  `frTrace` gives the stage words of each op and each residual of a
+  circuit over `Fr`, in run order, as a `List (List Nat)`. `frWords`
+  gives the 8 limbs of each element, low limb first. `frWitnessWords`
+  gives the header words 1, 2 and 8 (the version, the field id 2 for
+  BN254 and 8 words for each element), the matrix count, the words of
+  each matrix, the stage count, then the words of each stage.
+  `examples/witness.lang` gives the words entries `frWitLookup`,
+  `frWitResidual` and `frWitWrap`, and the law `frTraceLast`: the last
+  stage of the trace is the stage of the `frRun` result. `frWitWrap`
+  has no parameter, and its input is r - 1 and 2^32 - 1. Thus the
+  differential runs these boundary values one time. Size: the
+  `frWit` entries use 102 to 558 locals (the limit is 50000) and 4958
+  to 16616 code bytes. The largest `bbWit` entry uses 61 locals and
+  1734 code bytes. The module `witness.wasm` has 40066 bytes. Thus
+  slice Z7 does not need a `frMul` jet.
 - The refusal `REFUSE_LOCALS` in the lowering (HOST-LIMIT): an entry
   that needs more than `LOWER_LOCALS_MAX` (50000) locals. 50000 is the
   V8 limit for the locals of one Wasm function. The count includes the
@@ -175,7 +191,8 @@ not started.
    shares the values in each block (flags 51 to 55). Part Z7a (words
    entries, flag 56 (a)) is DONE. Flag 61 is RULED (a). Part Z7b (the
    BabyBear trace and its witness words, flag 62 (a)) is DONE. Flag 63
-   is RULED (a).
+   is RULED (a). Part Z7c (the BN254 trace and its witness words) is
+   DONE. Part Z7d (the docs and the final gate of slice Z7) is next.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

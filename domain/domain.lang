@@ -710,6 +710,37 @@ def frRun : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> Tensor F
     (fun idrA idrB idrF => <i> idrF)
     (fun asA asB asC asD asF asG asH => <i> fun (ws : FrWeights) => fun (x : Tensor Fr asA) => asH ws (asG ws (asF ws x)))
     (fun sqA sqB sqF sqG sqP sqQ => isSetPi FrWeights (fun (v : FrWeights) => Tensor Fr sqA -> Tensor Fr sqB) (fun (v : FrWeights) => isSetPi (Tensor Fr sqA) (fun (y : Tensor Fr sqA) => Tensor Fr sqB) (fun (y : Tensor Fr sqA) => frTensorSet sqB)) sqF sqG sqP sqQ) f
+-- The BN254 trace and its witness words (Z7c: D4, D5 (a)). An Fr element
+-- gives 8 words: the limbs fr0 .. fr7, low first (D4).
+-- frWords: the limbs of each element of xs, low first.
+def frWords : List Fr -> List Nat := fun xs => listConcat Nat (map (fun (v : Fr) => frToL v) xs)
+-- frStageWords: the words of one Fr stage: the rank, the dims, the aux word 0,
+-- then the limbs of the entries in row-major order.
+def frStageWords : (s : Shape) -> Tensor Fr s -> List Nat :=
+  fun s x => cons (listLen Nat (dims s)) (listAppend Nat (dims s) (cons 0 (frWords (flatT Fr s x))))
+-- frTraceK: the bbTraceK fold over Fr. It runs the ops of frRun (flag 59 (a)).
+def frTraceK : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> (Tensor Fr b -> List (List Nat)) -> List (List Nat) :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => FrWeights -> Tensor Fr a -> (Tensor Fr b -> List (List Nat)) -> List (List Nat))
+    (fun idA => fun (ws : FrWeights) => fun (x : Tensor Fr idA) => fun (k : Tensor Fr idA -> List (List Nat)) => k x)
+    (fun seqA seqB seqC seqF seqG => fun (ws : FrWeights) => fun (x : Tensor Fr seqA) => fun (k : Tensor Fr seqC -> List (List Nat)) => seqF ws x (fun (y : Tensor Fr seqB) => seqG ws y k))
+    (fun opA opB opO => fun (ws : FrWeights) => fun (x : Tensor Fr opA) => fun (k : Tensor Fr opB -> List (List Nat)) => (fun (y : Tensor Fr opB) => cons (frStageWords opB y) (k y)) (frOpRun opA opB opO ws x))
+    (fun rsS rsF => fun (ws : FrWeights) => fun (x : Tensor Fr rsS) => fun (k : Tensor Fr rsS -> List (List Nat)) => rsF ws x (fun (y : Tensor Fr rsS) => (fun (r : Tensor Fr rsS) => cons (frStageWords rsS r) (k r)) (zipWithT Fr Fr Fr frAdd rsS x y)))
+    (fun idlA idlB idlF => <i> idlF)
+    (fun idrA idrB idrF => <i> idrF)
+    (fun asA asB asC asD asF asG asH => <i> fun (ws : FrWeights) => fun (x : Tensor Fr asA) => fun (k : Tensor Fr asD -> List (List Nat)) => asF ws x (fun (y : Tensor Fr asB) => asG ws y (fun (z : Tensor Fr asC) => asH ws z k)))
+    (fun sqA sqB sqF sqG sqP sqQ => isSetPi FrWeights (fun (v : FrWeights) => Tensor Fr sqA -> (Tensor Fr sqB -> List (List Nat)) -> List (List Nat)) (fun (v : FrWeights) => isSetPi (Tensor Fr sqA) (fun (y : Tensor Fr sqA) => (Tensor Fr sqB -> List (List Nat)) -> List (List Nat)) (fun (y : Tensor Fr sqA) => isSetPi (Tensor Fr sqB -> List (List Nat)) (fun (k : Tensor Fr sqB -> List (List Nat)) => List (List Nat)) (fun (k : Tensor Fr sqB -> List (List Nat)) => isSetList (List Nat) (isSetList Nat natIsSet)))) sqF sqG sqP sqQ) f
+-- frTrace: the stage words of each op and each residual of f at x, in run order.
+def frTrace : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> List (List Nat) :=
+  fun a b f ws x => frTraceK a b f ws x (fun (y : Tensor Fr b) => nil)
+-- frMatWords: the words of one Fr matrix: the rank 2, the row count, the column
+-- count, then the limbs of the entries in row-major order.
+def frMatWords : List (List Fr) -> List Nat :=
+  fun m => cons 2 (cons (listLen (List Fr) m) (cons (listLen Fr (listAt (List Fr) nil 0 m)) (frWords (listConcat Fr m))))
+-- frWitnessWords: the header words (D4: version 1, field id 2 for BN254, 8 words
+-- for each element), the matrix count, the words of each matrix, the stage
+-- count, then the words of each stage.
+def frWitnessWords : FrWeights -> List (List Nat) -> List Nat :=
+  fun ws tr => cons 1 (cons 2 (cons 8 (cons (listLen (List (List Fr)) ws) (listAppend Nat (listConcat Nat (map (fun (m : List (List Fr)) => frMatWords m) ws)) (cons (listLen (List Nat) tr) (listConcat Nat tr))))))
 -- frInstSat: the last stage of w gives frRun at the weights of w (no frCanon clause, flag 40).
 def frInstSat : (W : Type 0) -> (W -> FrWeights) -> (a b : Shape) -> Circuit a b -> Tensor Fr a -> Prod W (List (Stage Fr)) -> Type 0 :=
   fun W rd a b f x w => Path (Tensor Fr b) (frRun a b f (rd (first w)) x) (frInstEval W a b f w)
