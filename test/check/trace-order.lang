@@ -1,0 +1,5 @@
+-- The trace gives the stages in run order. This law gives the stages of the
+-- bbWitSeq circuit at [8, 16] in the reverse order. Refused: TYPE_ENDPOINT.
+def traceSeq : Circuit (shape (cons 2 nil)) (shape (cons 2 nil)) := circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 1)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 1)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opQuantize (shape (cons 2 nil)) 1))))
+def traceStage : Nat -> Nat -> List Nat := fun u v => cons 1 (cons 2 (cons 0 (cons u (cons v nil))))
+def traceOrder : Path (List (List Nat)) (bbTrace (shape (cons 2 nil)) (shape (cons 2 nil)) traceSeq nil (cons 8 (cons 16 nil))) (cons (traceStage 3 6) (cons (traceStage 1 2) (cons (traceStage 2 4) (cons (traceStage 4 8) nil)))) := refl

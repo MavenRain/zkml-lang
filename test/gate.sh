@@ -222,6 +222,11 @@ for f in examples/*.lang test/ir/spine.lang test/ir/lazy.lang test/ir/proof-trap
 done
 echo "wasm: $wasms modules valid"
 echo "differential: $cases cases, $mismatches mismatches"
+# The grid gives the BabyBear p - 1 and p values (D8) to a Nat parameter of an
+# entry with no loop.
+printf 'func f (nat)\n' | awk -f test/grid.awk >"$tmp/grid.txt"
+[ "$(rg -c -x 'f (2013265920|2013265921)' "$tmp/grid.txt")" = 2 ] ||
+  { echo "FAIL grid p values"; fail=$((fail + 1)); }
 # A Flag argument larger than 1 traps (langc eval refuses it with EVAL_ARGS).
 got=$(node test/run-wasm.mjs "$tmp/entries.wasm" pick 2 4 9 2>&1) || true
 [ "$got" = "trap" ] || { echo "FAIL wasm pick 2 4 9: want trap, got $got"; fail=$((fail + 1)); }

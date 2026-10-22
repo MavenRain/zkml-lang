@@ -537,6 +537,47 @@ def bbInstSeqSat : (W : Type 0) -> (rd : W -> BbWeights) -> (a b c : Shape) -> (
 def bbInst : (W : Type 0) -> (W -> BbWeights) -> Inst := fun W rd => mkInst Nat (Prod W (List (Stage Nat))) W (bbInstWeightsOf W) (bbInstSat W rd) (bbInstEval W) (bbInstInputWit W) (bbInstInputWeights W) (bbInstInputSat W rd) (bbInstInputEval W) (bbInstIdSound W rd) (bbInstSeqWit W) (bbInstSeqSat W rd) (bbInstSeqWitWeights W) (bbInstSeqWitSat W rd) (bbInstSeqWitEval W) bbInstTensorSet
 -- bbNoWeights: the reader with no matrices, for the circuits without opMatMul.
 def bbNoWeights : (W : Type 0) -> W -> BbWeights := fun W w => nil
+-- The BabyBear trace and its witness words (Z7b: D3 (a), D4, flag 62 (a)).
+-- listAppend: the elements of xs, then the elements of ys.
+def listAppend : (A : Type 0) -> List A -> List A -> List A := fun A xs ys => fold (fun (h : A) (acc : List A) => cons h acc) ys xs
+-- listConcat: the lists of xss, one after the other.
+def listConcat : (A : Type 0) -> List (List A) -> List A := fun A xss => fold (fun (h : List A) (acc : List A) => listAppend A h acc) nil xss
+-- flatT: the entries of a tensor in row-major order.
+def flatT : (A : Type 0) -> (s : Shape) -> Tensor A s -> List A :=
+  fun A s => fold (fun (l : List Nat) => TensorL A l -> List A) (fun (d : Nat) => fun (l : List Nat) => fun (ih : TensorL A l -> List A) => fun (x : List (TensorL A l)) => fold (fun (t : TensorL A l) (acc : List A) => listAppend A (ih t) acc) nil x) (fun (a : A) => cons a nil) (dims s)
+-- stageWords: the words of one stage (D4): the rank, the dims, the aux word 0,
+-- then the entries in row-major order.
+def stageWords : (s : Shape) -> Tensor Nat s -> List Nat :=
+  fun s x => cons (listLen Nat (dims s)) (listAppend Nat (dims s) (cons 0 (flatT Nat s x)))
+-- bbTraceK: the trace fold in continuation-passing style (flag 62 (a)). An op
+-- or a residual puts its stage words in front of the words that the
+-- continuation k gives. The seq case gives seqF a continuation that runs seqG.
+-- The idl, idr and assoc ends are equal by beta and eta. The squash case uses
+-- isSetPi three times and isSetList.
+def bbTraceK : (a b : Shape) -> Circuit a b -> BbWeights -> Tensor Nat a -> (Tensor Nat b -> List (List Nat)) -> List (List Nat) :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => BbWeights -> Tensor Nat a -> (Tensor Nat b -> List (List Nat)) -> List (List Nat))
+    (fun idA => fun (ws : BbWeights) => fun (x : Tensor Nat idA) => fun (k : Tensor Nat idA -> List (List Nat)) => k x)
+    (fun seqA seqB seqC seqF seqG => fun (ws : BbWeights) => fun (x : Tensor Nat seqA) => fun (k : Tensor Nat seqC -> List (List Nat)) => seqF ws x (fun (y : Tensor Nat seqB) => seqG ws y k))
+    (fun opA opB opO => fun (ws : BbWeights) => fun (x : Tensor Nat opA) => fun (k : Tensor Nat opB -> List (List Nat)) => (fun (y : Tensor Nat opB) => cons (stageWords opB y) (k y)) (bbOpRun opA opB opO ws x))
+    (fun rsS rsF => fun (ws : BbWeights) => fun (x : Tensor Nat rsS) => fun (k : Tensor Nat rsS -> List (List Nat)) => rsF ws x (fun (y : Tensor Nat rsS) => (fun (r : Tensor Nat rsS) => cons (stageWords rsS r) (k r)) (zipWithT Nat Nat Nat bbAdd rsS x y)))
+    (fun idlA idlB idlF => <i> idlF)
+    (fun idrA idrB idrF => <i> idrF)
+    (fun asA asB asC asD asF asG asH => <i> fun (ws : BbWeights) => fun (x : Tensor Nat asA) => fun (k : Tensor Nat asD -> List (List Nat)) => asF ws x (fun (y : Tensor Nat asB) => asG ws y (fun (z : Tensor Nat asC) => asH ws z k)))
+    (fun sqA sqB sqF sqG sqP sqQ => isSetPi BbWeights (fun (v : BbWeights) => Tensor Nat sqA -> (Tensor Nat sqB -> List (List Nat)) -> List (List Nat)) (fun (v : BbWeights) => isSetPi (Tensor Nat sqA) (fun (y : Tensor Nat sqA) => (Tensor Nat sqB -> List (List Nat)) -> List (List Nat)) (fun (y : Tensor Nat sqA) => isSetPi (Tensor Nat sqB -> List (List Nat)) (fun (k : Tensor Nat sqB -> List (List Nat)) => List (List Nat)) (fun (k : Tensor Nat sqB -> List (List Nat)) => isSetList (List Nat) (isSetList Nat natIsSet)))) sqF sqG sqP sqQ) f
+-- bbTrace: the stage words of each op and each residual of f at x, in run order.
+def bbTrace : (a b : Shape) -> Circuit a b -> BbWeights -> Tensor Nat a -> List (List Nat) :=
+  fun a b f ws x => bbTraceK a b f ws x (fun (y : Tensor Nat b) => nil)
+-- matWords: the words of one matrix: the rank 2, the row count, the column
+-- count, then the entries in row-major order.
+def matWords : List (List Nat) -> List Nat :=
+  fun m => cons 2 (cons (listLen (List Nat) m) (cons (listLen Nat (listAt (List Nat) nil 0 m)) (listConcat Nat m)))
+-- bbWitnessWords: the three header words (D4), the matrix count, the words of
+-- each matrix, the stage count, then the words of each stage.
+def bbWitnessWords : BbWeights -> List (List Nat) -> List Nat :=
+  fun ws tr => cons 1 (cons 1 (cons 1 (cons (listLen (List (List Nat)) ws) (listAppend Nat (listConcat Nat (map (fun (m : List (List Nat)) => matWords m) ws)) (cons (listLen (List Nat) tr) (listConcat Nat tr))))))
+-- listLast: the last element of xs, or none if xs is nil.
+def listLast : (A : Type 0) -> List A -> Option A :=
+  fun A xs => fold (fun (h : A) (acc : Option A) => option (some h) (fun (t : A) => some t) acc) none xs
 -- BN254 scalar field Fr (Z6h). r = 21888242871839275222246405745257275088548364400416034343698204186575808495617.
 -- An element is 8 little-endian limbs below 2^32 (flag 38). The field operators
 -- take canonical inputs (flag 40): limbs below 2^32 and a value below r.

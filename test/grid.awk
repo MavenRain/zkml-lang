@@ -1,11 +1,12 @@
 # Reads a `langc ir` dump and prints one `NAME [ARGS...]` line for each case of
 # the differential grid. A Flag parameter takes 0 and 1. A Nat parameter takes
-# small values, and, when the entry has no loop, also the values at the 2^32
-# and 2^64 limits (ADD_CARRY and MUL_CARRY cases). An entry with a loop gets
-# only small values, because a large count runs past the evaluator fuel.
+# small values, and, when the entry has no loop, also the BabyBear p - 1 and p
+# values (D8) and the values at the 2^32 and 2^64 limits (ADD_CARRY and
+# MUL_CARRY cases). An entry with a loop gets only small values, because a
+# large count runs past the evaluator fuel.
 BEGIN {
   small = "0 1 2 3 5 7"
-  big = small " 4294967295 4294967296 4294967297 18446744073709551615"
+  big = small " 2013265920 2013265921 4294967295 4294967296 4294967297 18446744073709551615"
   n = 0
 }
 /^func / {

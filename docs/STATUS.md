@@ -18,7 +18,8 @@ split witness of `instSeqSat` (flag 16), and part Z6c: the tensor
 library (`isSetList`, `isSetTensor`, `zeroT`, `mapT`, `zipWithT`,
 `sumT` and the stage round trip). Slice Z6 is in progress. It
 implements part Z7a: an entry with a `List Nat` result gives a words
-block (flag 56 (a)). Slice Z7 is in progress. Slices Z8 to Z11 are
+block (flag 56 (a)), and part Z7b: the BabyBear trace and its witness
+words (flag 62 (a)). Slice Z7 is in progress. Slices Z8 to Z11 are
 not started.
 
 ## Implemented
@@ -118,6 +119,30 @@ not started.
   export has the name of the memory export. With the name `memory`, an
   entry named `memory` gave two exports with one name, and the module
   did not validate.
+- Part Z7b (flag 62 (a)): the domain has the BabyBear trace and its
+  witness words. `bbTrace` gives the stage words of each op and each
+  residual of a circuit, in run order, as a `List (List Nat)`.
+  `stageWords` gives the words of one stage: the rank, the dims, the
+  aux word 0, then the entries in row-major order. `bbWitnessWords`
+  gives the three header words, the matrix count, the words of each
+  matrix, the stage count, then the words of each stage.
+  `examples/witness.lang` gives the words entries `bbWitQuant`,
+  `bbWitResidual`, `bbWitSeq`, `bbWitWide`, `bbWitMatMul` and
+  `bbWitLookup`, and the law `bbTraceLast`: the last stage of the trace
+  is the stage of the `bbRun` result. The check row `trace-order`
+  refuses a law that puts the stages in the reverse order.
+  `test/grid.awk` gives the BabyBear p - 1 and p values to a `Nat`
+  parameter of an entry with no loop.
+- Flag 62 (RULED (a) 2026-10-21): `bbTraceK` folds the circuit in
+  continuation-passing style. An op or a residual puts its stage words
+  in front of the words that the continuation gives. With this form,
+  the `idl`, `idr` and `assoc` cases of the fold hold by beta and eta.
+- Flag 63 (RULED (a) 2026-10-21): each words entry of
+  `examples/witness.lang` has a loop in `langc ir`. Thus the grid gives
+  it only small values, and the differential does not run a `bbWit`
+  entry at p - 1 or p. The eval row `bbWitResidual 2013265920 1` gives
+  the p - 1 case in `langc eval` only. A gate row makes sure that the
+  grid gives p - 1 and p to an entry with no loop.
 - The refusal `REFUSE_LOCALS` in the lowering (HOST-LIMIT): an entry
   that needs more than `LOWER_LOCALS_MAX` (50000) locals. 50000 is the
   V8 limit for the locals of one Wasm function. The count includes the
@@ -148,7 +173,9 @@ not started.
    at `zeroT Fr frZero` until the checker is lazier). Part Z6j session
    1b (the kit sharing slice, flags 36 and 37) is DONE: the lowering
    shares the values in each block (flags 51 to 55). Part Z7a (words
-   entries, flag 56 (a)) is DONE. Flag 61 is RULED (a).
+   entries, flag 56 (a)) is DONE. Flag 61 is RULED (a). Part Z7b (the
+   BabyBear trace and its witness words, flag 62 (a)) is DONE. Flag 63
+   is RULED (a).
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
