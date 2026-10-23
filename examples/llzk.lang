@@ -10,3 +10,20 @@ def matmul2Export : Path (LlzkMod (shape (cons 2 nil)) (shape (cons 2 nil))) (ex
 def lookupRefused : (s : Shape) -> (t : Nat) -> Path (LlzkOp s s) (opLlzk s s (opLookup s t)) (llLookup s t) := fun s t => refl
 def softmaxZero : (s : Shape) -> (t k : Nat) -> Path (LlzkOp s s) (opLlzk s s (opSoftmax s t k)) (llZero s) := fun s t k => refl
 def matmul2Gates : Nat := resGates (cost (shape (cons 2 nil)) (shape (cons 2 nil)) matmul2)
+-- The LLZK words of the examples (slice Z8c, D10). wordsIdl and wordsAssoc: the
+-- words of the two ends of llIdl and llAssoc are equal by refl.
+def wordsIdl : (a b : Shape) -> (f : LlzkMod a b) -> Path (List Nat) (llzkWords a b (llSeq a a b (llId a) f)) (llzkWords a b f) := fun a b f => refl
+def wordsAssoc : (a b c d : Shape) -> (f : LlzkMod a b) -> (g : LlzkMod b c) -> (h : LlzkMod c d) -> Path (List Nat) (llzkWords a d (llSeq a c d (llSeq a b c f g) h)) (llzkWords a d (llSeq a b d f (llSeq b c d g h))) := fun a b c d f g h => refl
+-- matmul2Words: 4 mul, 2 add, 2 out and 2 eq (the form of W/probes/z8/matmul2.mlir).
+def matmul2Words : List Nat := llzkWords (shape (cons 2 nil)) (shape (cons 2 nil)) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) matmul2)
+-- residual2Words: matmul2, then one add for each entry.
+def residual2Words : List Nat := llzkWords (shape (cons 2 nil)) (shape (cons 2 nil)) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) matmul2))
+-- seq2Words: matmul2, then matmul2 again: the second op reads the weights 6 .. 9.
+def seq2Words : List Nat := llzkWords (shape (cons 2 nil)) (shape (cons 2 nil)) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) matmul2 matmul2))
+-- zeroWords: softmax gives one const 0 for the two outputs (flag 69 (a), zero ops).
+def zeroWords : List Nat := llzkWords (shape (cons 2 nil)) (shape (cons 2 nil)) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opSoftmax (shape (cons 2 nil)) 0 0)))
+-- lookupWords: the lookup refusal refuse 1 (flag 69 (a)).
+def lookupWords : List Nat := llzkWords (shape (cons 2 nil)) (shape (cons 2 nil)) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0)))
+-- andWords: the words of the AND sample (W/probes/z8/and.mlir) over BN254: two
+-- inputs, no weight, one output; mul 0 1, out 0 2, eq 3 2.
+def andWords : List Nat := listAppend Nat (cons 1 (cons 2 (cons 8 (cons 2 (cons 0 (cons 1 (cons 3 nil))))))) (listConcat Nat (cons (llzkIns 4 0 1) (cons (llzkIns 5 0 2) (cons (llzkIns 6 3 2) nil))))

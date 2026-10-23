@@ -11,7 +11,7 @@ HEADERS = $(wildcard src/*.h src/front/*.h)
 
 .PHONY: build check check-clang clean
 
-build: build/langc build/fronttool
+build: build/langc build/fronttool build/llzkprint
 
 build/domain.c: domain/domain.lang gen/embed.c
 	mkdir -p build
@@ -28,11 +28,18 @@ build/fronttool: $(FRONT_TOOL) $(HEADERS)
 	mkdir -p build
 	$(TCC) $(CFLAGS) -o build/fronttool $(FRONT_TOOL)
 
+# The LLZK printer (slice Z8c, flag 68 (c)): the `langc eval` words of a module
+# to LLZK text. src/main.c does not use it.
+build/llzkprint: src/llzk.c
+	mkdir -p build
+	$(TCC) $(CFLAGS) -o build/llzkprint src/llzk.c
+
 check-clang: build/domain.c
 	$(CC) $(CLANG_FLAGS) $(SRC) build/domain.c
 	$(CC) $(CLANG_FLAGS) $(FRONT_TOOL)
+	$(CC) $(CLANG_FLAGS) src/llzk.c
 
-check: build/langc build/langc-256 build/fronttool check-clang
+check: build/langc build/langc-256 build/fronttool build/llzkprint check-clang
 	sh test/gate.sh
 	sh test/review.sh
 	build/fronttool

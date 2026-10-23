@@ -113,6 +113,56 @@ eval_refused 2 EVAL_ARGS addPrice 18446744073709551616 1
 eval_refused 2 EVAL_ARGS pick 2 4 9
 eval_refused 1 EVAL_ENTRY nope
 
+# The LLZK printer rows (slice Z8c). The words of a row are test/llzk/CASE.words,
+# or else the `langc eval` output of the entry CASEWords of examples/llzk.lang.
+llzk_words() {
+  if [ -f "test/llzk/$1.words" ]; then
+    cp "test/llzk/$1.words" "$tmp/words"
+  else
+    build/langc eval examples/llzk.lang "${1}Words" >"$tmp/words" 2>/dev/null || true
+  fi
+}
+# llzk_golden CASE: build/llzkprint prints the module test/llzk/CASE.mlir.
+llzks=0
+llzk_golden() {
+  llzk_words "$1"
+  status=0
+  build/llzkprint <"$tmp/words" >"$tmp/llzk.mlir" 2>/dev/null || status=$?
+  llzks=$((llzks + 1))
+  if [ "$status" -ne 0 ] || ! cmp -s "$tmp/llzk.mlir" "test/llzk/$1.mlir"; then
+    echo "FAIL llzk $1: exit $status or a different module"
+    fail=$((fail + 1))
+  fi
+}
+# llzk_refused CASE MESSAGE: build/llzkprint exits 1, prints the one line
+# `llzkprint: MESSAGE` on stderr and prints nothing on stdout.
+llzk_refusals=0
+llzk_refused() {
+  llzk_words "$1"
+  status=0
+  build/llzkprint <"$tmp/words" >"$tmp/llzk.mlir" 2>"$tmp/err" || status=$?
+  llzk_refusals=$((llzk_refusals + 1))
+  case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/llzk.mlir" | tr -d ' ')" in
+    "1|llzkprint: $2|0") ;;
+    *) echo "FAIL llzk refusal $1: want exit 1 and $2, got exit $status"; fail=$((fail + 1)) ;;
+  esac
+}
+# decimal.words has the consts 0, 1, r - 1 and 2^32 (D4); r.words has r.
+for name in matmul2 residual2 seq2 zero and decimal; do
+  llzk_golden "$name"
+done
+echo "llzk: $llzks checked"
+llzk_refused lookup 'lookup is refused (flag 69 (a))'
+llzk_refused version 'the version is not 1'
+llzk_refused field 'the field id is not 1 or 2'
+llzk_refused count 'the block has extra words'
+llzk_refused short 'the block is short'
+llzk_refused forward 'a value number is not defined yet'
+llzk_refused outadd 'an out value is an operand of an op that is not eq'
+llzk_refused twice 'an output is written twice'
+llzk_refused r 'a const is not below the field modulus'
+echo "llzk refusals: $llzk_refusals checked"
+
 status=0
 build/langc 2>/dev/null || status=$?
 [ "$status" -eq 2 ] || { echo "FAIL usage: want exit 2, got $status"; fail=$((fail + 1)); }

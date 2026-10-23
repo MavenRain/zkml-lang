@@ -149,6 +149,16 @@ tests use these names, so keep them when you replace the sample.
 | `exportHom` | the hom map of the export: the module of `layerCircuit L` and the resources `layerRes L` | `exportLLZK` |
 | `exportLLZK` | `(I : Inst) -> Functor (LayerCat I) LLZKIRCat`: the identity on the shapes, `exportHom I` on the layers; `funId` and `funSeq` by `refl` | `examples/llzk.lang` |
 | `resourcesExport` | the resources of the export of a layer `L` are `layerRes L`, by `refl` | `examples/llzk.lang` |
+| `llzkIns` | one LLZK instruction of three words: a tag and two operands (slice Z8c, D10) | `llzkAddK`, `llzkRowK` |
+| `llzkRange` | `llzkRange b n`: the `n` numbers `b` .. `b + n - 1`, by a `Nat` fold | `llzkRowK`, `llzkWords` |
+| `llzkAddK` | the `felt.add` chain of a value and a list of values, in continuation-passing style: each add gives the next value number | `llzkRowK` |
+| `llzkRowK` | one output entry of `llMatMul`: one `felt.mul` of a weight and an input entry for each product (weight first), then the add chain; a row with no products is `const 0` | `llzkMatK` |
+| `llzkMatK` | the rows of `llMatMul n m`: the row `i` reads the weights `w + i n` .. `w + i n + n - 1` | `llzkOpK` |
+| `llzkOpK` | the instructions of one `LlzkOp` block, by a `LlzkOp` fold: `llMatMul` to `llzkMatK`, `llLookup` to `refuse 1` (flag 69 (a)), `llZero` to one `const 0` for all the output entries | `llzkK` |
+| `llzkOpW` | the weight count of one `LlzkOp` block: `m n` for `llMatMul n m`, else 0 | `llzkWeightsK` |
+| `llzkWeightsK` | the weight count of a module, by a `LlzkMod` fold with an accumulator; each `llMatMul` in run order takes the next weight numbers | `llzkWords` |
+| `llzkK` | the instructions of a module, by a `LlzkMod` fold in continuation-passing style (the `bbTraceK` form, flag 62 (a)); `llResidual` adds one `felt.add` for each entry | `llzkWords` |
+| `llzkWords` | the LLZK words of a module (D10): version 1, field id 2 (BN254), element size 8, the input, weight, output and instruction counts, then the instructions; at the end one `out` and one `eq` for each output entry. `build/llzkprint` (src/llzk.c) prints the module | `examples/llzk.lang` |
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.

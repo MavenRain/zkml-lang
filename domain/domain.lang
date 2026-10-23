@@ -873,3 +873,81 @@ def exportLLZK : (I : Inst) -> Functor (LayerCat I) LLZKIRCat :=
 -- resourcesExport (design resources-export): the export keeps the resources of a layer.
 def resourcesExport : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path Resource (llzkRes (funHom (exportLLZK I) a b L)) (layerRes L) :=
   fun I a b L => refl
+-- The LLZK words (slice Z8c, D10). An instruction is a list of words: a tag and
+-- its operands. The tags: 1 const k (8 limbs), 2 add i j, 3 sub i j, 4 mul i j,
+-- 5 out o i, 6 eq i j, 7 refuse r. A const, add, sub, mul or out gives the next
+-- value number (out gives the value of the output member o). An eq and a refuse
+-- give no value. The refuse code 1 is the lookup refusal of flag 69 (a).
+def llzkIns : Nat -> Nat -> Nat -> List Nat := fun t i j => cons t (cons i (cons j nil))
+-- llzkRange b n: the n numbers b, b + 1, ..., b + n - 1.
+def llzkRange : Nat -> Nat -> List Nat :=
+  fun b n => (fun (g : Nat -> List Nat) => g b) (fold (fun (c : Nat) => Nat -> List Nat) (fun (c : Nat) (r : Nat -> List Nat) => fun (d : Nat) => cons d (r (natAdd d 1))) (fun (d : Nat) => nil) n)
+-- llzkAddK ps acc v k: the felt.add chain of acc and the values ps. The adds
+-- give the values v, v + 1, ... in order; k takes the next value and the sum.
+def llzkAddK : List Nat -> Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat) :=
+  fun ps => fold (fun (l : List Nat) => Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat))
+    (fun (h : Nat) => fun (t : List Nat) => fun (r : Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat)) => fun (acc : Nat) => fun (v : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => cons (llzkIns 2 acc h) (r v (natAdd v 1) k))
+    (fun (acc : Nat) => fun (v : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => k v acc) ps
+-- llzkRowK x w n v k: one output entry of llMatMul. A felt.mul of the weight
+-- w + j and the input entry j for each j (the values v .. v + n - 1), then the
+-- felt.add chain of the products. A row with no products is const 0. k takes
+-- the next value and the value of the sum.
+def llzkRowK : List Nat -> Nat -> Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat) :=
+  fun x w n v k => listAppend (List Nat) (listZipWith Nat Nat (List Nat) (fun (wj : Nat) (xj : Nat) => llzkIns 4 wj xj) (llzkRange w n) x)
+    (fold (fun (l : List Nat) => List (List Nat)) (fun (h : Nat) => fun (t : List Nat) => fun (r : List (List Nat)) => llzkAddK t h (natAdd v n) k) (cons (cons 1 (listRep Nat 8 0)) (k (natAdd v 1) v)) (llzkRange v n))
+-- llzkMatK n m w v x k: the m rows of llMatMul n m. The row i reads the weights
+-- w + i n .. w + i n + n - 1. k takes the next weight, the next value and the
+-- values of the output entries.
+def llzkMatK : Nat -> Nat -> Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat) :=
+  fun n m => fold (fun (c : Nat) => Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat))
+    (fun (c : Nat) (r : Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat)) => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => llzkRowK x w n v (fun (v2 : Nat) => fun (s : Nat) => r (natAdd w n) v2 x (fun (w3 : Nat) => fun (v3 : Nat) => fun (ys : List Nat) => k w3 v3 (cons s ys))))
+    (fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => k w v nil) m
+-- llzkOpK: the instructions of one LlzkOp block, by a LlzkOp fold. llLookup
+-- gives refuse 1 (flag 69 (a)). llZero gives one const 0, the value of each
+-- output entry (flags 44 and 46 to 48).
+def llzkOpK : (a b : Shape) -> LlzkOp a b -> Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat) :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat))
+    (fun lmN lmM lmK => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => llzkMatK lmN lmM w v x k)
+    (fun llkS llkT => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => cons (cons 7 (cons 1 nil)) (k w v x))
+    (fun lzS => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => cons (cons 1 (listRep Nat 8 0)) (k w (natAdd v 1) (map (fun (h : Nat) => v) x)))
+    o
+-- llzkOpW: the weight count of one LlzkOp block: m n for llMatMul n m.
+def llzkOpW : (a b : Shape) -> LlzkOp a b -> Nat :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Nat) (fun lmN lmM lmK => natMul lmM lmN) (fun llkS llkT => 0) (fun lzS => 0) o
+-- llzkWeightsK f c: c plus the weight count of the module f, by a LlzkMod fold
+-- in accumulator form. The idl, idr and assoc ends are equal by beta and eta.
+def llzkWeightsK : (a b : Shape) -> LlzkMod a b -> Nat -> Nat :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Nat -> Nat)
+    (fun lidA => fun (c : Nat) => c)
+    (fun lseA lseB lseC lseF lseG => fun (c : Nat) => lseG (lseF c))
+    (fun lopA lopB lopO => fun (c : Nat) => natAdd c (llzkOpW lopA lopB lopO))
+    (fun lrsS lrsF => lrsF)
+    (fun lilA lilB lilF => <i> lilF)
+    (fun lirA lirB lirF => <i> lirF)
+    (fun lasA lasB lasC lasD lasF lasG lasH => <i> fun (c : Nat) => lasH (lasG (lasF c)))
+    (fun lsqA lsqB lsqF lsqG lsqP lsqQ => isSetPi Nat (fun (c : Nat) => Nat) (fun (c : Nat) => natIsSet) lsqF lsqG lsqP lsqQ) f
+-- llzkK: the instructions of a module, by a LlzkMod fold in continuation-passing
+-- style (the bbTraceK form, flag 62 (a)). w is the next weight, v the next value
+-- and x the values of the input entries in row-major order. k takes the next
+-- weight, the next value and the values of the output entries. llResidual adds
+-- x and the values of f x (one felt.add for each entry). The idl, idr and assoc
+-- ends are equal by beta and eta. The squash case uses isSetPi four times and
+-- isSetList.
+def llzkK : (a b : Shape) -> LlzkMod a b -> Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat) :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Nat -> Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat))
+    (fun lidA => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => k w v x)
+    (fun lseA lseB lseC lseF lseG => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => lseF w v x (fun (w2 : Nat) => fun (v2 : Nat) => fun (y : List Nat) => lseG w2 v2 y k))
+    (fun lopA lopB lopO => llzkOpK lopA lopB lopO)
+    (fun lrsS lrsF => fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => lrsF w v x (fun (w2 : Nat) => fun (v2 : Nat) => fun (y : List Nat) => listAppend (List Nat) (listZipWith Nat Nat (List Nat) (fun (xi : Nat) (yi : Nat) => llzkIns 2 xi yi) x y) (k w2 (natAdd v2 (listLen Nat x)) (llzkRange v2 (listLen Nat x)))))
+    (fun lilA lilB lilF => <i> lilF)
+    (fun lirA lirB lirF => <i> lirF)
+    (fun lasA lasB lasC lasD lasF lasG lasH => <i> fun (w : Nat) => fun (v : Nat) => fun (x : List Nat) => fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => lasF w v x (fun (w2 : Nat) => fun (v2 : Nat) => fun (y : List Nat) => lasG w2 v2 y (fun (w3 : Nat) => fun (v3 : Nat) => fun (z : List Nat) => lasH w3 v3 z k)))
+    (fun lsqA lsqB lsqF lsqG lsqP lsqQ => isSetPi Nat (fun (w : Nat) => Nat -> List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat)) (fun (w : Nat) => isSetPi Nat (fun (v : Nat) => List Nat -> (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat)) (fun (v : Nat) => isSetPi (List Nat) (fun (x : List Nat) => (Nat -> Nat -> List Nat -> List (List Nat)) -> List (List Nat)) (fun (x : List Nat) => isSetPi (Nat -> Nat -> List Nat -> List (List Nat)) (fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => List (List Nat)) (fun (k : Nat -> Nat -> List Nat -> List (List Nat)) => isSetList (List Nat) (isSetList Nat natIsSet))))) lsqF lsqG lsqP lsqQ) f
+-- llzkWords a b f: the words of the module f (D10): version 1, field id 2
+-- (BN254), 8 words for each element, the input count n, the weight count m, the
+-- output count p and the instruction count, then the instructions. The inputs
+-- are the values 0 .. n - 1 and the weights n .. n + m - 1. At the end, one out
+-- and one eq for each output entry o: out o writes the member @o and gives its
+-- value, and eq constrains that value to the value of the entry.
+def llzkWords : (a b : Shape) -> LlzkMod a b -> List Nat :=
+  fun a b f => (fun (n : Nat) => (fun (m : Nat) => (fun (p : Nat) => (fun (ins : List (List Nat)) => cons 1 (cons 2 (cons 8 (cons n (cons m (cons p (cons (listLen (List Nat) ins) (listConcat Nat ins)))))))) (llzkK a b f n (natAdd n m) (llzkRange 0 n) (fun (w : Nat) => fun (v : Nat) => fun (y : List Nat) => listAppend (List Nat) (listZipWith Nat Nat (List Nat) (fun (o : Nat) (yo : Nat) => llzkIns 5 o yo) (llzkRange 0 p) y) (listZipWith Nat Nat (List Nat) (fun (vo : Nat) (yo : Nat) => llzkIns 6 vo yo) (llzkRange v p) y)))) (shapeSize b)) (llzkWeightsK a b f 0)) (shapeSize a)
