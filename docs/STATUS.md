@@ -21,7 +21,7 @@ implements part Z7a: an entry with a `List Nat` result gives a words
 block (flag 56 (a)), part Z7b: the BabyBear trace and its witness
 words (flag 62 (a)), and part Z7c: the BN254 trace and its witness
 words. It implements part Z7d: the witness format in `SPEC.md`.
-Slice Z7 is DONE. Slices Z8 to Z11 are not started.
+Slices Z7 and Z8 are DONE. Slices Z9 to Z11 are not started.
 
 ## Implemented
 
@@ -201,9 +201,13 @@ Slice Z7 is DONE. Slices Z8 to Z11 are not started.
    DONE. Part Z7d (the docs and the final gate of slice Z7) is DONE.
    Slice Z7 is DONE. Slice ZL (the lazier checker, `quote_lazy` and
    `same_closure`) is DONE. Flag 64 is RULED (a): the gate checks the
-   examples with `build/langc-256` (a 256 MiB arena).
-2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
-   and the toolchain is not installed yet.
+   examples with `build/langc-256` (a 256 MiB arena). Slice Z8 (the
+   LLZK target) is DONE.
+2. The LLZK target is DONE in slice Z8. `make check` checks the LLZK
+   words and the printer, and needs no LLVM tool. `make zk-check` needs
+   `llzk-opt` from llzk-lib v2.1.2 (LLVM 20.1.8, a nix build in part
+   Z8a), because llzk-lib main needs LLVM 23.1.3. Set `LLZK_OPT` to its
+   path. The lookup op is refused (flag 73 (a)).
 
 ## Known limits
 

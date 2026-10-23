@@ -136,6 +136,73 @@ stage words, and copy field limbs without validating these constraints.
   `bbTraceLast` and `frTraceLast` in `examples/witness.lang` check this
   for their concrete residual circuits.
 
+### LLZK words
+
+An LLZK entry (slice Z8, D10) is a words entry that `llzkWords` in
+`domain/domain.lang` gives. Its words are the LLZK words of one module.
+`build/llzkprint` (`src/llzk.c`) reads the words on stdin, as the one
+line that `langc eval` prints. It writes the module as LLZK text on
+stdout.
+
+| Part | Words | Value |
+|---|---|---|
+| Version | 1 | 1. |
+| Field id | 1 | 1 for BabyBear, 2 for BN254. `llzkWords` gives 2. |
+| Element size e | 1 | 1 for BabyBear, 8 for BN254. |
+| Input count n | 1 | The count of the inputs. |
+| Weight count m | 1 | The count of the weights. |
+| Output count q | 1 | The count of the outputs. |
+| Instruction count | 1 | The count of the instructions. |
+| Instructions | 1 block each | A tag, then its operands. |
+
+| Tag | Instruction | Operands |
+|---|---|---|
+| 1 | const | k: e words, low limb first. |
+| 2 | add | i j |
+| 3 | sub | i j |
+| 4 | mul | i j |
+| 5 | out | o i: the output o gets the value i. |
+| 6 | eq | i j |
+| 7 | refuse | r: the refusal code. Code 1 is lookup (flag 69 (a)). |
+
+- The value numbers 0 .. n - 1 are the inputs, and n .. n + m - 1 are
+  the weights. Each const, add, sub, mul and out gives the next value
+  number. The value of an out is the member `@o` of the output o.
+- The module (flag 70) has one struct `@Main` with a public member `@o`
+  for each output. `@compute` writes the members. `@constrain` reads
+  them and has the `constrain.eq` constraints. The inputs are public
+  arguments, and the weights are private arguments (O4).
+- `llzkWords` puts one out and one eq for each output entry at the end.
+  The lookup op gives `refuse 1` (flags 69 (a) and 73 (a)). The zero op
+  gives one const 0 for all the output entries.
+
+The printer checks all of the words before it prints. Each word is a
+decimal number below 2^32. The version is 1. The field id is 1 with
+element size 1, or 2 with element size 8. Each const is below the field
+modulus: p = 2013265921 for BabyBear, the BN254 scalar modulus r for
+BN254. The output count is not more than the instruction count. Each
+tag is known, and each instruction has all of its operands. Each
+operand is a value number that an earlier instruction gives. Only an eq
+can read the value of an out. Each output number is below the output
+count, and the words write each output one time. No word follows the
+last instruction.
+
+A refusal exits 1, writes the one line `llzkprint: MESSAGE` on stderr
+and writes nothing on stdout. The messages are: `the block is short`,
+`the version is not 1`, `the field id is not 1 or 2`, `the element size
+does not agree with the field id`, `the tag is not known`, `a const is
+not below the field modulus`, `a value number is not defined yet`, `an
+out value is an operand of an op that is not eq`, `an output number is
+not below the output count`, `an output is written twice`, `an output
+is not written`, `lookup is refused (flag 69 (a))`, `the refuse code is
+not known`, `the block has extra words`, `a word is not a decimal
+number below 2^32` and `no memory`.
+
+`make check` compares the printer output of 6 cases with
+`test/llzk/*.mlir` and checks 9 refusals. It needs no LLVM tool.
+`make zk-check` runs `llzk-opt` (LLZK 2.1.2) on the modules (see
+`docs/VALIDATION.md`).
+
 ## 8. Host and target
 
 > Write here: the host, its pinned commit (`PIN`), the facts from
@@ -287,6 +354,14 @@ stage words, and copy field limbs without validating these constraints.
   row `bbWitResidual 2013265920 1` gives the p - 1 case in `langc eval`
   only (flag 63). Status: built in slice Z7. Section 7 (`Witness
   format`) gives the witness words.
+- O12. The LLZK target (slice Z8, flags 65 to 75). RULED 2026-10-22 and
+  2026-10-23 (USER). The guest model `LlzkMod` and the functor
+  `exportLLZK` give the words, and the host printer `build/llzkprint`
+  writes the text (flag 68 (c)). The lookup op is refused (flags 69 (a)
+  and 73 (a)). `constrain.in` is the route for a later slice.
+  `llzkWords` gives BN254 words only. The printer also takes BabyBear
+  words. Status: built in slice Z8. Section 7 (`LLZK words`) gives the
+  format.
 
 ## 10. Milestones
 

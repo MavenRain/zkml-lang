@@ -41,14 +41,21 @@ make -C hosts/tcc-wasm check-clang
 ```
 
 `build` runs `tcc -run gen/embed.c` to copy `domain/domain.lang` into
-`build/domain.c`. Then it builds `build/langc` with
-`tcc -std=c99 -Wall -Werror`. The domain is part of the executable.
+`build/domain.c`. Then it builds `build/langc` and the LLZK printer
+`build/llzkprint` (`src/llzk.c`) with `tcc -std=c99 -Wall -Werror`. The domain is part of the executable.
 `check-clang` compiles the same sources with
 `cc -std=c99 -Wall -Wextra -Wswitch-enum -Werror -fsyntax-only`.
 `check` does both steps, then runs `test/gate.sh`.
 The gate needs `node`, `wasm-validate` and `wasm-objdump` on the `PATH`.
 `PIN` records the tool versions of the last GREEN gate.
 The build and the gate need no network access.
+
+`make zk-check` runs `llzk-opt` on the LLZK modules. Each
+`test/llzk/*.mlir` file and the fresh printer output of the 6 LLZK
+cases must pass. The 2 mutants in `test/llzk/reject/` must fail with
+the expected parser error. When it is GREEN, it prints
+`zk-check: 12 accepted, 2 rejected`. It needs `llzk-opt` from
+LLZK 2.1.2. Set `LLZK_OPT` to its path. `make check` does not run it.
 
 ## Source language
 
@@ -166,9 +173,11 @@ how to replace the sample domain.
 | `parse refusals: 9 checked` | each `test/parse` file fails with the code in `test/parse/expect.txt`; one file has 1100 nested parentheses |
 | `check refusals: 19 checked` | each `test/check` mutant fails with the code in `test/check/expect.txt`; the `TYPE_REFL` message shows both normal forms |
 | `evals: 25 checked` | `langc eval` gives each result in `test/eval/expect.txt` |
+| `llzk: 6 checked` | `build/llzkprint` prints each LLZK case: the words of `test/llzk/CASE.words`, or the `langc eval` output of the entry `CASEWords` of `examples/llzk.lang`; the module is equal to `test/llzk/CASE.mlir` |
+| `llzk refusals: 9 checked` | `build/llzkprint` refuses each bad words block with exit 1, the one line `llzkprint: MESSAGE` on stderr and no stdout |
 | `ir: 10 lowered` | `langc ir` lowers each example, with one `func` for each `abi` line |
 | `wasm: 13 modules valid` | `langc build` writes a module for each example and for `test/ir/spine.lang`, `test/ir/lazy.lang` and `test/ir/proof-trap.lang`; `wasm-validate` and `wasm-objdump -x` accept it |
-| `differential: 683 cases, 0 mismatches` | node runs each entry on the grid of `test/grid.awk`; each result is equal to the `langc eval` result, and a trap is equal to a trap |
+| `differential: 5008 cases, 0 mismatches` | node runs each entry on the grid of `test/grid.awk`; each result is equal to the `langc eval` result, and a trap is equal to a trap |
 | `gate: 0 failures` | the sum of all failures |
 
 The gate also checks the usage and IO exit codes, five `eval` refusals,

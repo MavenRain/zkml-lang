@@ -169,8 +169,13 @@ type does not check as written, and the default for each.
   matmul case and flag 64) DONE 2026-10-22. Part ZLc (the docs) DONE
   2026-10-22. Slice ZL DONE 2026-10-22.
 - Z8: LLZK. `LLZKIRCat`, `exportLLZK` with F-id, F-seq, resources-export.
-  The writer prints LLZK MLIR text. Gate: `llzk-opt` accepts each module
-  (O6).
+  The writer prints LLZK MLIR text. Gate: `make zk-check`: `llzk-opt`
+  accepts each module and rejects 2 mutated modules (O6). Status: part
+  Z8a (the LLZK tools and the sample modules) DONE 2026-10-23. Part Z8b
+  (the guest model and the export functor) DONE 2026-10-23. Part Z8c
+  (the LLZK words and the printer) DONE 2026-10-23. Part Z8d
+  (`make zk-check` and the docs) DONE 2026-10-23. Slice Z8 DONE
+  2026-10-23.
 - Z9: Halo2. `Halo2CircuitCat`, `exportHalo2`. The writer prints a Rust
   crate for each entry. Gate: MockProver accepts the Z7 witness and
   rejects a mutated witness.
@@ -197,7 +202,8 @@ type does not check as written, and the default for each.
   and the weights W_Q, W_K and W_V (d by d) in the witness (O4).
 - O6: LLZK tools. `llzk-opt` needs an LLVM and MLIR build. Install
   APPROVED 2026-10-15 (USER). The build stays under 4 GB, or uses a release
-  binary.
+  binary. Status: part Z8a built llzk-lib v2.1.2 (LLVM 20.1.8) with nix.
+  `LLZK_OPT` in the `Makefile` gives the path of its `llzk-opt`.
 - O7: Circuit as a QIIT (N2). The other option: `seq` pattern matches on
   `id`, so one unit law is `refl` and the others are proofs.
 - O8: QIIT schema. Default: finitary QIITs (sorts indexed by earlier sorts,

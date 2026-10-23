@@ -21,6 +21,11 @@ on 2026-10-08 on AArch64 Darwin.
   function, memory, global, export and code sections, with LEB128
   numbers. It needs no library. The gate validates each module with
   `wasm-validate` and `wasm-objdump -x`, and runs it in node.
+- `src/llzk.c` is the LLZK printer `build/llzkprint` (slice Z8c). It
+  reads the LLZK words that `langc eval` prints and writes LLZK text.
+  It needs no library, and `make check-clang` checks it too.
+  `make zk-check` runs `llzk-opt` (LLZK 2.1.2) on its output.
+  `make check` does not need `llzk-opt`.
 
 ## Values
 
@@ -72,8 +77,11 @@ on 2026-10-08 on AArch64 Darwin.
 
 ## Measured numbers
 
-- `make check` runs 683 differential cases on 13 modules, with
+- `make check` runs 5008 differential cases on 32 modules, with
   0 mismatches.
+- `make zk-check` runs `llzk-opt` 14 times in about 1.3 s: 12 modules
+  pass and 2 mutants fail. One `llzk-opt` run has a peak RSS of about
+  25 MB (part Z8a).
 - `langc build examples/entries.lang` writes a module of 492 bytes for six
   entries.
 
