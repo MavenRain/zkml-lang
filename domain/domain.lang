@@ -803,3 +803,73 @@ family TypeFunctor (C : Category) := mkTFun (tfOb : catOb C -> Type 0)
 -- denotation at ws. tfId and tfSeq hold by refl.
 def denote : (I : Inst) -> instWeights I -> TypeFunctor (LayerCat I) :=
   fun I ws => mkTFun (LayerCat I) (fun (s : Shape) => Tensor (instF I) s) (fun (a b : Shape) (L : Layer I a b) => layerDen L ws) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
+-- A functor between two categories (slice Z8b): an object map, a hom map and the
+-- two laws. funSeq takes the order g after f, as catSeq (flag 7).
+family Functor (C D : Category) := mkFun (funOb : catOb C -> catOb D)
+  (funHom : (a b : catOb C) -> catHom C a b -> catHom D (funOb a) (funOb b))
+  (funId : (a : catOb C) -> Path (catHom D (funOb a) (funOb a)) (funHom a a (catId C a)) (catId D (funOb a)))
+  (funSeq : (a b c : catOb C) -> (g : catHom C b c) -> (f : catHom C a b) -> Path (catHom D (funOb a) (funOb c)) (funHom a c (catSeq C a b c g f)) (catSeq D (funOb a) (funOb b) (funOb c) (funHom b c g) (funHom a b f)))
+-- LLZK (slice Z8b, flags 66, 69 and 75): a guest model of an LLZK module.
+-- LlzkOp a b is one block of felt ops (D9). llMatMul n m k: one felt.mul for each
+-- product, a felt.add chain for each sum and one constrain.eq for each output.
+-- llLookup s t: the export refuses a lookup (flag 69 (a)). llZero s: each output
+-- is constrained to 0, the frRun value of quantize, softmax, layerNorm and
+-- attention (flags 44 and 46 to 48).
+family LlzkOp (a b : Shape) :=
+    llMatMul (lmN lmM lmK : Nat) : LlzkOp (shape (cons lmN nil)) (shape (cons lmM nil))
+  | llLookup (llkS : Shape) (llkT : Nat) : LlzkOp llkS llkS
+  | llZero (lzS : Shape) : LlzkOp lzS lzS
+-- LlzkMod a b: an LLZK module from a to b, a QIIT with the constructors of Circuit
+-- (D2 (a)). llResidual f is x + f x: one felt.add and one constrain.eq for each entry.
+family LlzkMod (a b : Shape) :=
+    llId (lidA : Shape) : LlzkMod lidA lidA
+  | llSeq (lseA lseB lseC : Shape) (lseF : LlzkMod lseA lseB) (lseG : LlzkMod lseB lseC) : LlzkMod lseA lseC
+  | llOp (lopA lopB : Shape) (lopO : LlzkOp lopA lopB) : LlzkMod lopA lopB
+  | llResidual (lrsS : Shape) (lrsF : LlzkMod lrsS lrsS) : LlzkMod lrsS lrsS
+  | llIdl (lilA lilB : Shape) (lilF : LlzkMod lilA lilB)
+      : Path (LlzkMod lilA lilB) (llSeq lilA lilA lilB (llId lilA) lilF) lilF
+  | llIdr (lirA lirB : Shape) (lirF : LlzkMod lirA lirB)
+      : Path (LlzkMod lirA lirB) (llSeq lirA lirB lirB lirF (llId lirB)) lirF
+  | llAssoc (lasA lasB lasC lasD : Shape) (lasF : LlzkMod lasA lasB) (lasG : LlzkMod lasB lasC) (lasH : LlzkMod lasC lasD)
+      : Path (LlzkMod lasA lasD) (llSeq lasA lasC lasD (llSeq lasA lasB lasC lasF lasG) lasH) (llSeq lasA lasB lasD lasF (llSeq lasB lasC lasD lasG lasH))
+  | llSquash (lsqA lsqB : Shape) (lsqF lsqG : LlzkMod lsqA lsqB) (lsqP lsqQ : Path (LlzkMod lsqA lsqB) lsqF lsqG)
+      : Path (Path (LlzkMod lsqA lsqB) lsqF lsqG) lsqP lsqQ
+-- opLlzk: the LLZK block of an operator, by an Op fold (flag 69 (a)).
+def opLlzk : (a b : Shape) -> Op a b -> LlzkOp a b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => LlzkOp a b) (fun qzS qzK => llZero qzS) (fun mmN mmM mmK => llMatMul mmN mmM mmK) (fun lkS lkT => llLookup lkS lkT) (fun smS smT smK => llZero smS) (fun lnS lnG lnT => llZero lnS) (fun atH atD atQ atK atV atT atE => llZero (shape (cons atH (cons atD nil)))) o
+-- exportMod: the LLZK module of a circuit, by a Circuit fold. Each constructor goes to
+-- the LlzkMod constructor of the same name, thus the export of circSeq is llSeq (iota).
+def exportMod : (a b : Shape) -> Circuit a b -> LlzkMod a b :=
+  fun a b x => fold (fun (a : Shape) => fun (b : Shape) => LlzkMod a b) (fun idA => llId idA) (fun seqA seqB seqC seqF seqG => llSeq seqA seqB seqC seqF seqG) (fun opA opB opO => llOp opA opB (opLlzk opA opB opO)) (fun rsS rsF => llResidual rsS rsF) (fun idlA idlB idlF => llIdl idlA idlB idlF) (fun idrA idrB idrF => llIdr idrA idrB idrF) (fun asA asB asC asD asF asG asH => llAssoc asA asB asC asD asF asG asH) (fun sqA sqB sqF sqG sqP sqQ => llSquash sqA sqB sqF sqG sqP sqQ) x
+-- An LLZK hom (flag 75 (a)): a module and its resources, as Layer has layerRes.
+family LlzkHom (a b : Shape) := llzkHom (llzkMod : LlzkMod a b) (llzkRes : Resource)
+def llzkIdH : (s : Shape) -> LlzkHom s s := fun s => llzkHom s s (llId s) zeroR
+def llzkSeqH : (a b c : Shape) -> LlzkHom b c -> LlzkHom a b -> LlzkHom a c :=
+  fun a b c g f => llzkHom a c (llSeq a b c (llzkMod f) (llzkMod g)) (resAdd (llzkRes g) (llzkRes f))
+-- llzkExt and llzkExt2: paths and squares on the module and the resources give a path
+-- and a square in LlzkHom (record eta, D5), as layerExt and layerExt2.
+def llzkExt : (a b : Shape) -> (h1 h2 : LlzkHom a b) -> Path (LlzkMod a b) (llzkMod h1) (llzkMod h2) -> Path Resource (llzkRes h1) (llzkRes h2) -> Path (LlzkHom a b) h1 h2 :=
+  fun a b h1 h2 pm pr => <i> llzkHom a b (pm @ i) (pr @ i)
+def llzkExt2 : (a b : Shape) -> (h1 h2 : LlzkHom a b) -> (p q : Path (LlzkHom a b) h1 h2) -> (sm : Path (Path (LlzkMod a b) (llzkMod h1) (llzkMod h2)) (<i> llzkMod (p @ i)) (<i> llzkMod (q @ i))) -> (sr : Path (Path Resource (llzkRes h1) (llzkRes h2)) (<i> llzkRes (p @ i)) (<i> llzkRes (q @ i))) -> Path (Path (LlzkHom a b) h1 h2) p q :=
+  fun a b h1 h2 p q sm sr => <j> <i> llzkHom a b (sm @ j @ i) (sr @ j @ i)
+-- The category laws on LlzkHom: the LlzkMod path constructors and the Resource laws.
+def llzkIdl : (a b : Shape) -> (f : LlzkHom a b) -> Path (LlzkHom a b) (llzkSeqH a b b (llzkIdH b) f) f :=
+  fun a b f => llzkExt a b (llzkSeqH a b b (llzkIdH b) f) f (llIdr a b (llzkMod f)) (resUnitL (llzkRes f))
+def llzkIdr : (a b : Shape) -> (f : LlzkHom a b) -> Path (LlzkHom a b) (llzkSeqH a a b f (llzkIdH a)) f :=
+  fun a b f => llzkExt a b (llzkSeqH a a b f (llzkIdH a)) f (llIdl a b (llzkMod f)) (resUnitR (llzkRes f))
+def llzkAssoc : (a b c d : Shape) -> (h : LlzkHom c d) -> (g : LlzkHom b c) -> (f : LlzkHom a b) -> Path (LlzkHom a d) (llzkSeqH a b d (llzkSeqH b c d h g) f) (llzkSeqH a c d h (llzkSeqH a b c g f)) :=
+  fun a b c d h g f => llzkExt a d (llzkSeqH a b d (llzkSeqH b c d h g) f) (llzkSeqH a c d h (llzkSeqH a b c g f)) (symm (llAssoc a b c d (llzkMod f) (llzkMod g) (llzkMod h))) (resAssoc (llzkRes h) (llzkRes g) (llzkRes f))
+-- llzkHomSet: the LlzkHom hom-sets are sets (llSquash and isSetResource).
+def llzkHomSet : (a b : Shape) -> isSet (LlzkHom a b) :=
+  fun a b h1 h2 p q => llzkExt2 a b h1 h2 p q (llSquash a b (llzkMod h1) (llzkMod h2) (<i> llzkMod (p @ i)) (<i> llzkMod (q @ i))) (isSetResource (llzkRes h1) (llzkRes h2) (<i> llzkRes (p @ i)) (<i> llzkRes (q @ i)))
+-- The category of LLZK modules (D3 (a)): the objects are the shapes.
+def LLZKIRCat : Category := mkCat Shape LlzkHom llzkIdH llzkSeqH llzkIdl llzkIdr llzkAssoc llzkHomSet
+-- exportHom: the module of the circuit and the resources of the layer.
+def exportHom : (I : Inst) -> (a b : Shape) -> Layer I a b -> LlzkHom a b :=
+  fun I a b L => llzkHom a b (exportMod a b (layerCircuit L)) (layerRes L)
+-- The LLZK export functor (design/DESIGN.md:189-195): funId and funSeq hold by refl.
+def exportLLZK : (I : Inst) -> Functor (LayerCat I) LLZKIRCat :=
+  fun I => mkFun (LayerCat I) LLZKIRCat (fun (s : Shape) => s) (exportHom I) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
+-- resourcesExport (design resources-export): the export keeps the resources of a layer.
+def resourcesExport : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path Resource (llzkRes (funHom (exportLLZK I) a b L)) (layerRes L) :=
+  fun I a b L => refl

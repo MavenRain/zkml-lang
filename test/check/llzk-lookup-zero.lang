@@ -1,0 +1,2 @@
+-- The export refuses a lookup (flag 69 (a)): opLookup goes to llLookup, not to llZero.
+def lookupZero : (s : Shape) -> (t : Nat) -> Path (LlzkOp s s) (opLlzk s s (opLookup s t)) (llZero s) := fun s t => refl

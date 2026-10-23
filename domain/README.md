@@ -139,6 +139,16 @@ tests use these names, so keep them when you replace the sample.
 | `LayerCat (I : Inst)` | the category of layers: the objects are shapes, the morphisms are layers | `examples/category.lang` |
 | `TypeFunctor (C : Category)` | record of a functor from `C` to the types: `tfOb`, `tfHom`, `tfId`, `tfSeq` | `denote` |
 | `denote` | `(I : Inst) -> instWeights I -> TypeFunctor (LayerCat I)`: `Tensor (instF I)` on the shapes, `layerDen L ws` on the layers | `examples/category.lang` |
+| `Functor (C D : Category)` | record of a functor from `C` to `D`: `funOb`, `funHom`, `funId`, `funSeq`. `funSeq` takes the order `g` after `f`, as `catSeq` | `exportLLZK` |
+| `LlzkOp a b` | one block of felt ops (slice Z8b, flag 69): `llMatMul` (one `felt.mul` for each product, a `felt.add` chain for each sum, one `constrain.eq` for each output), `llLookup` (the export refuses it), `llZero` (each output is constrained to 0) | `opLlzk`, `LlzkMod` |
+| `LlzkMod a b` | an LLZK module, a QIIT with the constructors of `Circuit`: `llId`, `llSeq`, `llOp`, `llResidual`, the law paths `llIdl`, `llIdr`, `llAssoc` and the set truncation `llSquash` (flag 66 (a)) | `exportMod`, `LlzkHom` |
+| `opLlzk` | the block of an operator: matmul to `llMatMul`, lookup to `llLookup`, quantize, softmax, layerNorm and attention to `llZero` (the `frRun` value, flags 44 and 46 to 48) | `exportMod` |
+| `exportMod` | the module of a circuit, by a `Circuit` fold: each constructor goes to the `LlzkMod` constructor of the same name | `exportHom` |
+| `LlzkHom a b` | record: `llzkMod`, `llzkRes`, a module and its resources (flag 75 (a)). `llzkIdH`, `llzkSeqH`, `llzkExt`, `llzkExt2`, `llzkIdl`, `llzkIdr`, `llzkAssoc` and `llzkHomSet` give the category laws, as for `Layer` | `LLZKIRCat` |
+| `LLZKIRCat` | the category of LLZK modules: the objects are shapes, the morphisms are `LlzkHom` | `exportLLZK`, `examples/llzk.lang` |
+| `exportHom` | the hom map of the export: the module of `layerCircuit L` and the resources `layerRes L` | `exportLLZK` |
+| `exportLLZK` | `(I : Inst) -> Functor (LayerCat I) LLZKIRCat`: the identity on the shapes, `exportHom I` on the layers; `funId` and `funSeq` by `refl` | `examples/llzk.lang` |
+| `resourcesExport` | the resources of the export of a layer `L` are `layerRes L`, by `refl` | `examples/llzk.lang` |
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.

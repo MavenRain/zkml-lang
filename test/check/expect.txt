@@ -117,3 +117,7 @@ fr-matvec-wrong.lang TYPE_ENDPOINT
 fr-run-lookup-wrong.lang TYPE_ENDPOINT
 trace-order.lang TYPE_ENDPOINT
 same-closure-env.lang TYPE_ENDPOINT
+llzk-res-order.lang TYPE_ENDPOINT
+llzk-id-op.lang TYPE_ENDPOINT
+llzk-lookup-zero.lang TYPE_ENDPOINT
+functor-id-res.lang TYPE_ENDPOINT

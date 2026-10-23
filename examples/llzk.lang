@@ -1,0 +1,12 @@
+-- The LLZK export (slice Z8b, flags 66, 69 and 75): LLZKIRCat, the export functor and the export of the ops.
+def llzkCatOb : Path (Type 0) (catOb LLZKIRCat) Shape := refl
+def llzkCatSeq : (a b c : Shape) -> (g : LlzkHom b c) -> (f : LlzkHom a b) -> Path (LlzkHom a c) (catSeq LLZKIRCat a b c g f) (llzkSeqH a b c g f) := fun a b c g f => refl
+def exportId : (I : Inst) -> (s : Shape) -> Path (LlzkHom s s) (funHom (exportLLZK I) s s (idL I s)) (llzkIdH s) := fun I s => refl
+def exportSeq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (LlzkHom a c) (funHom (exportLLZK I) a c (layerSeq I a b c L2 L1)) (llzkSeqH a b c (exportHom I b c L2) (exportHom I a b L1)) := fun I a b c L2 L1 => refl
+-- matmul2: the 2 by 2 matmul (4 felt.mul, 2 felt.add and 2 constrain.eq in LLZK).
+def matmul2 : Circuit (shape (cons 2 nil)) (shape (cons 2 nil)) := circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opMatMul 2 2 0)
+def matmul2Export : Path (LlzkMod (shape (cons 2 nil)) (shape (cons 2 nil))) (exportMod (shape (cons 2 nil)) (shape (cons 2 nil)) matmul2) (llOp (shape (cons 2 nil)) (shape (cons 2 nil)) (llMatMul 2 2 0)) := refl
+-- The export refuses a lookup (flag 69 (a)) and constrains the outputs of softmax to 0.
+def lookupRefused : (s : Shape) -> (t : Nat) -> Path (LlzkOp s s) (opLlzk s s (opLookup s t)) (llLookup s t) := fun s t => refl
+def softmaxZero : (s : Shape) -> (t k : Nat) -> Path (LlzkOp s s) (opLlzk s s (opSoftmax s t k)) (llZero s) := fun s t k => refl
+def matmul2Gates : Nat := resGates (cost (shape (cons 2 nil)) (shape (cons 2 nil)) matmul2)

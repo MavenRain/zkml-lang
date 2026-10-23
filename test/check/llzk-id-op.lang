@@ -1,0 +1,2 @@
+-- The export of circId is llId, not an op.
+def idOp : (s : Shape) -> Path (LlzkMod s s) (exportMod s s (circId s)) (llOp s s (llZero s)) := fun s => refl

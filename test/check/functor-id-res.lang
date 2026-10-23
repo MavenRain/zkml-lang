@@ -1,0 +1,3 @@
+-- A hom map that gives the resources res 1 0 0 breaks funId: the export of idL must cost zeroR.
+def badExport : (I : Inst) -> Functor (LayerCat I) LLZKIRCat :=
+  fun I => mkFun (LayerCat I) LLZKIRCat (fun (s : Shape) => s) (fun (a b : Shape) (L : Layer I a b) => llzkHom a b (exportMod a b (layerCircuit L)) (res 1 0 0)) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
