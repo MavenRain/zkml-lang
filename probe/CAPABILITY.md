@@ -58,8 +58,28 @@ host.>
 
 ## 5. How a result leaves the host
 
-<The path of a result from the host to a file: printed text, a module
-export, or a contract.>
+The Wasm runtime (slice Z7). The Wasm writer (`src/wasm.c`) writes a
+Wasm 1.0 module. `langc abi` gives one line for each entry: `NAME` for
+a `Nat` or a `Flag` result, and `NAME words` for a `List Nat` result.
+
+| Item | Fact | Source |
+|---|---|---|
+| Entry export | Each entry is an export with its name. Each parameter and the result is an i64. A `Flag` argument above 1 traps. | `src/wasm.c` |
+| `Nat` and `Flag` results | `test/run-wasm.mjs` prints the result as an unsigned 64-bit integer, as `langc eval` does, or `trap`. | `test/run-wasm.mjs` |
+| Words entries | The result is the address of a words block [n, w0 .. w(n-1)] in the export `$memory`. A word is 8 bytes, low byte first. In batch mode with an ABI file, `test/run-wasm.mjs` prints the n words, or `nil` when n is 0. Its single-entry mode prints the address. | flag 56 (a), `test/run-wasm.mjs` |
+| Memory export | Memory 0 has the name `$memory`. A guest name cannot have a `$`, so no entry export has this name. | flag 61 (a) |
+| Heap | Function 0 is the allocator. It bumps the i64 global 0 over memory 0, and it grows the memory when a block does not fit. It traps at `WASM_MAX_PAGES`. Each entry sets the heap pointer to 0 first. | `src/wasm.c` |
+| Locals | The lowering refuses an entry that needs more than 50000 locals (`REFUSE_LOCALS`, the V8 limit for one function). | `docs/STATUS.md` |
+| Witness words | `bbWitnessWords` and `frWitnessWords` give the witness of a circuit as a words block. | `SPEC.md` section 7 |
+
+To decode a words entry, build its module and pass its ABI file to the
+batch runner. For example, from the repository root:
+
+```sh
+build/langc build examples/witness.lang -o /tmp/witness.wasm
+build/langc abi examples/witness.lang > /tmp/witness.abi
+printf 'bbWitResidual 4 6\n' | node test/run-wasm.mjs /tmp/witness.wasm - /tmp/witness.abi
+```
 
 ## 6. Cost
 

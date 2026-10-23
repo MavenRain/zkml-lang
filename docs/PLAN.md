@@ -148,8 +148,15 @@ type does not check as written, and the default for each.
   lowering shares the values in each block, flags 51 to 55) DONE
   2026-10-20.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
-  witness. Field arithmetic in the C evaluator and the Wasm writer (31-bit,
-  and 254-bit Montgomery). Gate: `langc eval` against Wasm, differential.
+  witness. The field arithmetic (31-bit, and 254-bit Montgomery) is guest
+  code in `domain/domain.lang` (flag 57 (a)). `langc eval` and the Wasm
+  writer run it through the `Nat` operations of the kit. The C evaluator
+  and `src/wasm.c` have no field code. Gate: `langc eval` against Wasm,
+  differential. Status: part Z7a (words entries, flag 56 (a)) DONE
+  2026-10-21. Part Z7b (the BabyBear trace and its witness words, flag
+  62 (a)) DONE 2026-10-21. Part Z7c (the BN254 trace and its witness
+  words) DONE 2026-10-22. Part Z7d (the witness format in `SPEC.md` and
+  the final gate) DONE 2026-10-22.
 - Z8: LLZK. `LLZKIRCat`, `exportLLZK` with F-id, F-seq, resources-export.
   The writer prints LLZK MLIR text. Gate: `llzk-opt` accepts each module
   (O6).

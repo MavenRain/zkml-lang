@@ -89,6 +89,53 @@ An instance is a top-level definition whose type is a data type (F14).
 |---|---|
 | | |
 
+### Witness format
+
+A words entry (part Z7a, flag 56 (a)) is an entry with a `List Nat`
+result. Its Wasm export returns the address of a words block in the
+memory export `$memory` (flag 61 (a)). The block is [n, w0 .. w(n-1)]:
+the word count n, then the n words. A word is an unsigned 64-bit
+integer in 8 bytes, low byte first. Word k of the block at address A is
+at A + 8k. `langc eval` prints the n words with one space between
+them, or `nil` when n is 0. `test/run-wasm.mjs` gives the same output
+in batch mode with a `langc abi` file (see `probe/CAPABILITY.md`
+section 5). Its single-entry mode prints the block address.
+
+The guest defs `bbWitnessWords` (BabyBear) and `frWitnessWords` (BN254)
+in `domain/domain.lang` give the witness words of the weights and a
+trace (flag 58 (a)). The checker typechecks these guest definitions.
+The layout below assumes rectangular weight matrices, tensors whose
+list lengths match their dimensions, well-formed stage words, and
+canonical field elements. These value constraints are caller
+preconditions. The serializers concatenate the supplied rows and
+stage words, and copy field limbs without validating these constraints.
+
+| Part | Words | Value |
+|---|---|---|
+| Version | 1 | 1. |
+| Field id | 1 | 1 for BabyBear, 2 for BN254. |
+| Element size e | 1 | The words for each element: 1 for BabyBear, 8 for BN254. |
+| Matrix count m | 1 | The count of the weight matrices. |
+| Matrices | m blocks | For each matrix (`matWords`, `frMatWords`): 2 (the rank), the row count, the column count, then the entries in row-major order, e words for each entry. |
+| Stage count t | 1 | The count of the stages of the trace. |
+| Stages | t blocks | For each stage (`stageWords`, `frStageWords`): the rank, the dims, the aux word 0, then the entries in row-major order, e words for each entry. |
+
+- The column count of a matrix is the length of its first row, or 0
+  when the matrix has no row.
+- The rank of a stage is the count of its dims. The aux word is a count
+  of aux words. It is 0 in slice Z7, and no aux word follows it.
+- A canonical BabyBear element is one word below 2013265921. A
+  canonical BN254 element (`Fr`) has 8 limbs fr0 .. fr7 below 2^32
+  (flag 38), in the plain form (flag 39), representing a value below
+  the BN254 scalar modulus r. `frWords` writes the supplied limbs low
+  limb first, one word for each limb.
+- The trace has one stage for each op and each residual of the circuit,
+  in run order (`bbTrace`, `frTrace`, flag 62 (a)). An identity circuit
+  has an empty trace and stage count 0. For a trace with stages, the
+  last stage records the result of `bbRun` or `frRun`. The definitions
+  `bbTraceLast` and `frTraceLast` in `examples/witness.lang` check this
+  for their concrete residual circuits.
+
 ## 8. Host and target
 
 > Write here: the host, its pinned commit (`PIN`), the facts from
@@ -209,6 +256,27 @@ An instance is a top-level definition whose type is a data type (F14).
   over a `Nat` motive fold, and the code of nil and nil is
   `Path Nat 0 0`. Default (i): keep the stand-ins, with no kit change.
   Status: OPEN.
+- O11. The Wasm witness runtime (slice Z7, flags 56 to 63). RULED
+  2026-10-20 (USER): flags 56 to 60 (a). An entry with a `List Nat`
+  result is a words entry, the module exports its memory, and
+  `test/run-wasm.mjs` reads the words block (flag 56). The field
+  arithmetic is guest code in `domain/domain.lang` (flag 57). The
+  commands `langc eval` and the Wasm writer run it through the `Nat`
+  operations of the kit, and `src/` has no field code. The trace has
+  one stage for each op and each residual, and the examples check its
+  last stage (flag 58). The BN254 trace runs the operators that
+  `frRun` runs now. The lazy checker and the real matmul case of `frOpRun` come in
+  a later slice before Z9 (flag 59). A witness entry takes `Nat` or
+  `Flag` parameters, and its weights are constants (flag 60). RULED
+  2026-10-21 (USER): flags 61 to 63 (a). The memory export has the name
+  `$memory`. A guest name cannot have a `$`, so no entry export has
+  this name (flag 61). The trace fold is in continuation-passing style
+  into the stage words `List (List Nat)`, so the `idl`, `idr` and
+  `assoc` cases hold by beta and eta (flag 62). The grid gives the
+  BabyBear p - 1 and p values only to an entry with no loop. The eval
+  row `bbWitResidual 2013265920 1` gives the p - 1 case in `langc eval`
+  only (flag 63). Status: built in slice Z7. Section 7 (`Witness
+  format`) gives the witness words.
 
 ## 10. Milestones
 

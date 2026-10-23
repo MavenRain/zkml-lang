@@ -20,7 +20,8 @@ library (`isSetList`, `isSetTensor`, `zeroT`, `mapT`, `zipWithT`,
 implements part Z7a: an entry with a `List Nat` result gives a words
 block (flag 56 (a)), part Z7b: the BabyBear trace and its witness
 words (flag 62 (a)), and part Z7c: the BN254 trace and its witness
-words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
+words. It implements part Z7d: the witness format in `SPEC.md`.
+Slice Z7 is DONE. Slices Z8 to Z11 are not started.
 
 ## Implemented
 
@@ -159,6 +160,11 @@ words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
   to 16616 code bytes. The largest `bbWit` entry uses 61 locals and
   1734 code bytes. The module `witness.wasm` has 40066 bytes. Thus
   slice Z7 does not need a `frMul` jet.
+- Part Z7d: `SPEC.md` section 7 (`Witness format`) gives the witness
+  words, and item O11 gives the rulings of flags 56 to 63.
+  `probe/CAPABILITY.md` section 5 gives the Wasm result path.
+  `docs/PLAN.md` says that the field arithmetic is guest code (flag 57
+  (a)).
 - The refusal `REFUSE_LOCALS` in the lowering (HOST-LIMIT): an entry
   that needs more than `LOWER_LOCALS_MAX` (50000) locals. 50000 is the
   V8 limit for the locals of one Wasm function. The count includes the
@@ -192,7 +198,8 @@ words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
    entries, flag 56 (a)) is DONE. Flag 61 is RULED (a). Part Z7b (the
    BabyBear trace and its witness words, flag 62 (a)) is DONE. Flag 63
    is RULED (a). Part Z7c (the BN254 trace and its witness words) is
-   DONE. Part Z7d (the docs and the final gate of slice Z7) is next.
+   DONE. Part Z7d (the docs and the final gate of slice Z7) is DONE.
+   Slice Z7 is DONE.
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 
@@ -276,7 +283,7 @@ words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
   `Trunc` by `soundnessSplit`. The concrete witness model of part Z6d
   uses set-valued folds, not a Type-valued fold over `Circuit`.
   `bbInstSeqWit u v` keeps the trace of `v`, not an append of the traces
-  (flag 20, open with the USER).
+  (flag 20, RULED keep 2026-10-17).
 - Part Z6c: `isSetList` by encode-decode, and `isSetTensor` from
   `isSet F`. A concrete `Inst` gets `instTensorSet` from it in part
   Z6d. `zeroT`, `mapT`, `zipWithT` and `sumT` are `List` motive folds
@@ -299,7 +306,7 @@ words. Slice Z7 is in progress. Slices Z8 to Z11 are not started.
   A witness satisfies `f` at `x` when the read
   of its last stage is `bbRun a b f (rd (first w)) x`, where `w` is the
   witness. `bbInstSeqWit u v` keeps the weights of `u` and the trace of
-  `v` (flag 20). An append of the traces does
+  `v` (flag 20, RULED keep 2026-10-17). An append of the traces does
   not give `instSeqWitEval` when `v` has no stages. It also does not
   give `instSeqSat`, because satisfaction constrains only the last stage.
   `examples/babybear.lang` has the first entries over `Layer`.
