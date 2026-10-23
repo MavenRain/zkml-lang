@@ -191,15 +191,17 @@ Slice Z7 is DONE. Slices Z8 to Z11 are not started.
    38 to 42 are RULED. Part Z6i session 1b is DONE: `frOpRun` runs the
    lookup operator over `Fr` in `frRun`, and `frDot` and `frMatVec` are
    the matrix operators, which `examples/bn254.lang` tests directly.
-   Flags 44 to 50 are RULED (flag 50 keeps the matmul case of `frOpRun`
-   at `zeroT Fr frZero` until the checker is lazier). Part Z6j session
+   Flags 44 to 50 are RULED. Flag 50 is DONE in slice ZL: the matmul
+   case of `frOpRun` is `frMatVec`. Part Z6j session
    1b (the kit sharing slice, flags 36 and 37) is DONE: the lowering
    shares the values in each block (flags 51 to 55). Part Z7a (words
    entries, flag 56 (a)) is DONE. Flag 61 is RULED (a). Part Z7b (the
    BabyBear trace and its witness words, flag 62 (a)) is DONE. Flag 63
    is RULED (a). Part Z7c (the BN254 trace and its witness words) is
    DONE. Part Z7d (the docs and the final gate of slice Z7) is DONE.
-   Slice Z7 is DONE.
+   Slice Z7 is DONE. Slice ZL (the lazier checker, `quote_lazy` and
+   `same_closure`) is DONE. Flag 64 is RULED (a): the gate checks the
+   examples with `build/langc-256` (a 256 MiB arena).
 2. The LLZK target needs the LLZK toolchain. llzk-lib needs LLVM 23.1.3,
    and the toolchain is not installed yet.
 

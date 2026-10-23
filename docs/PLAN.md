@@ -144,9 +144,9 @@ type does not check as written, and the default for each.
   Z6h session 1b (the BN254 scalar field `Fr`, `frCanon` and `frInst`)
   DONE 2026-10-19. Part Z6i session 1b (the BN254 operators: `frOpRun`
   in `frRun`, the lookup operator real, the matmul case `zeroT Fr
-  frZero` under flag 50) DONE 2026-10-19. Part Z6j session 1b (the
-  lowering shares the values in each block, flags 51 to 55) DONE
-  2026-10-20.
+  frZero` under flag 50, and real since slice ZL) DONE 2026-10-19. Part
+  Z6j session 1b (the lowering shares the values in each block, flags
+  51 to 55) DONE 2026-10-20.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. The field arithmetic (31-bit, and 254-bit Montgomery) is guest
   code in `domain/domain.lang` (flag 57 (a)). `langc eval` and the Wasm
@@ -157,6 +157,17 @@ type does not check as written, and the default for each.
   62 (a)) DONE 2026-10-21. Part Z7c (the BN254 trace and its witness
   words) DONE 2026-10-22. Part Z7d (the witness format in `SPEC.md` and
   the final gate) DONE 2026-10-22.
+- ZL: Lazier checker (flags 50 and 64). `symm`, `trans` and `cong`
+  quote a closure as its body applied to the quoted environment
+  (`quote_lazy`). The conversion accepts two closures with the same body
+  and convertible environments (`same_closure`). The matmul case of
+  `frOpRun` is then `frMatVec` over the weights at `mmK` (flag 50).
+  Flag 64 (a): `make check` builds `build/langc-256` (a 256 MiB arena)
+  and checks the examples and the 4 `Fr` rows with it; the shipped
+  `langc` keeps 1 GiB. Gate: `make check`. Status: part ZLa
+  (`quote_lazy` and `same_closure`) DONE 2026-10-22. Part ZLb (the
+  matmul case and flag 64) DONE 2026-10-22. Part ZLc (the docs) DONE
+  2026-10-22. Slice ZL DONE 2026-10-22.
 - Z8: LLZK. `LLZKIRCat`, `exportLLZK` with F-id, F-seq, resources-export.
   The writer prints LLZK MLIR text. Gate: `llzk-opt` accepts each module
   (O6).

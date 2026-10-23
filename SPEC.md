@@ -199,12 +199,22 @@ stage words, and copy field limbs without validating these constraints.
   values (flag 45). `opQuantize`, `opSoftmax`, `opLayerNorm` and
   `opAttention` need a `Nat` division or a `Nat` order, which `Fr` does
   not have, and give `zeroT Fr frZero` (flags 44, 46, 47 and 48). The
-  matmul case of `frOpRun` is `zeroT Fr frZero` until the checker is
-  lazier (flag 50): the real case puts the symbolic `frMul` chain under
-  the stuck `Op` fold, and the check of `frInstSeqWitSat` then exhausts
-  the 1 GiB arena (flag 49, measured in part Z6i session 1c). `frDot`
-  and `frMatVec` stay defined, and `examples/bn254.lang` tests them
-  directly.
+  matmul case of `frOpRun` is `frMatVec` over the weights at `mmK`
+  (flag 50, DONE in slice ZL). In part Z6i, this case put the symbolic
+  `frMul` chain under the stuck `Op` fold, and the check of
+  `frInstSeqWitSat` used all of the 1 GiB arena (flag 49, measured in
+  part Z6i session 1c). Slice ZL makes the checker lazier: `symm`,
+  `trans` and `cong` quote a closure as its body applied to the quoted
+  environment (`quote_lazy`), and the conversion accepts two closures
+  with the same body and convertible environments (`same_closure`).
+  `examples/bn254.lang` tests `frDot` and `frMatVec` directly, and the
+  rows `frRunMatMulSum` and `frOpMatMulSum` test the matmul case
+  through `frRun` and `frOpRun`.
+  Flag 64 is RULED (a): `make check` builds `build/langc-256`, a `langc`
+  with a 256 MiB arena (`ARENA_LIMIT_BYTES`), and checks the 28
+  examples and the 4 `Fr` rows with it. The shipped `langc` keeps the
+  1 GiB arena. This bound is on the arena bytes, not on the resident
+  memory of the process.
   Flags 51 to 55 (part Z6j) are RULED: the lowering keeps a memo of the
   lowered values in each block. The key is the `Value` pointer (flag
   51): `apply_value` and the cache of the defs give one pointer to one
@@ -265,8 +275,8 @@ stage words, and copy field limbs without validating these constraints.
   operations of the kit, and `src/` has no field code. The trace has
   one stage for each op and each residual, and the examples check its
   last stage (flag 58). The BN254 trace runs the operators that
-  `frRun` runs now. The lazy checker and the real matmul case of `frOpRun` come in
-  a later slice before Z9 (flag 59). A witness entry takes `Nat` or
+  `frRun` runs now. Slice ZL completed the lazy checker and the real
+  matmul case of `frOpRun` (flag 59). A witness entry takes `Nat` or
   `Flag` parameters, and its weights are constants (flag 60). RULED
   2026-10-21 (USER): flags 61 to 63 (a). The memory export has the name
   `$memory`. A guest name cannot have a `$`, so no entry export has
