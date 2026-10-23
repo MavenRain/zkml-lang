@@ -28,3 +28,8 @@ def frWitResidual : (u : Nat) -> (v : Nat) -> List Nat := fun u v => frWitnessWo
 def frWitWrap : List Nat := frWitnessWords frWitT (frTrace (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0))) frWitT (cons frWitRm1 (cons (frWitN 4294967295) nil)))
 -- frTraceLast: the last stage of the trace is the stage of the frRun result.
 def frTraceLast : Path (Option (List Nat)) (listLast (List Nat) (frTrace (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0))) frWitT (cons (frWitN 1) (cons (frWitN 4294967295) nil)))) (some (frStageWords (shape (cons 2 nil)) (frRun (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opLookup (shape (cons 2 nil)) 0))) frWitT (cons (frWitN 1) (cons (frWitN 4294967295) nil))))) := refl
+
+-- congRun is a cong at the top level (not in a symm or a trans) over a stuck
+-- frRun. The proof rule quotes the closure lazily; a full quote to the normal
+-- form fills the arena.
+def congRun : (a b c : Shape) -> (f : Circuit a b) -> (g : Circuit b c) -> (ws : FrWeights) -> (x : Tensor Fr a) -> (y : Tensor Fr b) -> Path (Tensor Fr b) (frRun a b f ws x) y -> Path (Tensor Fr c) (frRun b c g ws (frRun a b f ws x)) (frRun b c g ws y) := fun a b c f g ws x y h => cong (fun (t : Tensor Fr b) => frRun b c g ws t) h

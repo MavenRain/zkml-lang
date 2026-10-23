@@ -56,8 +56,7 @@ def frRunOpSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frR
 -- The BN254 operators (Z6i): frMatVec at the matrix with the rows [1, 2, 3] and
 -- [4, 5, 6] and at no matrix, frRun at opLookup over the table with the rows
 -- [0, 8], [1, 3] and [2, 1] (the key 9 is missing and gives frZero), and frEqB
--- on the limbs (flag 45). The frOpRun matmul case is zeroT Fr frZero (flag 50),
--- so the examples test frMatVec directly. frN n is the element n below 2^32.
+-- on the limbs (flag 45). frN n is the element n below 2^32.
 def frN : Nat -> Fr := fun n => frMk n 0 0 0 0 0 0 0
 def frMatM : List (List Fr) := cons (cons (frN 1) (cons (frN 2) (cons (frN 3) nil))) (cons (cons (frN 4) (cons (frN 5) (cons (frN 6) nil))) nil)
 def frExpTbl : List (List Fr) := cons (cons (frN 0) (cons (frN 8) nil)) (cons (cons (frN 1) (cons (frN 3) nil)) (cons (cons (frN 2) (cons (frN 1) nil)) nil))
@@ -71,3 +70,11 @@ def frMatVecSum : Nat := frDigest (fold (fun (h : Fr) (acc : Fr) => frAdd h acc)
 -- frMatVecSumUV is the sum of frMatVec frMatM [u, v, 1]: the oracle is 5u + 7v + 9.
 def frMatVecSumUV : (u : Nat) -> (v : Nat) -> Nat := fun u v => frDigest (fold (fun (h : Fr) (acc : Fr) => frAdd h acc) frZero (frMatVec frMatM (cons (frN u) (cons (frN v) (cons frOne nil)))))
 def frRunLookupSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 3 nil)) (frRun (shape (cons 3 nil)) (shape (cons 3 nil)) (circOp (shape (cons 3 nil)) (shape (cons 3 nil)) (opLookup (shape (cons 3 nil)) 0)) (cons frBigTbl nil) (cons frA (cons frOne (cons frC nil)))))
+-- The matmul case of frOpRun at the weights frMatW = [frMatM]: frRunMatMulSum
+-- (by frRun and circOp) and frOpMatMulSum (by frOpRun) are the sum of
+-- frMatVec frMatM [frA, frC, 1], so both equal frMatVecSum. frDiffAC counts
+-- the limbs where frA and frC differ.
+def frMatW : FrWeights := cons frMatM nil
+def frRunMatMulSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frRun (shape (cons 3 nil)) (shape (cons 2 nil)) (circOp (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0)) frMatW (cons frA (cons frC (cons frOne nil)))))
+def frOpMatMulSum : Nat := frDigest (sumT Fr frAdd frZero (shape (cons 2 nil)) (frOpRun (shape (cons 3 nil)) (shape (cons 2 nil)) (opMatMul 3 2 0) frMatW (cons frA (cons frC (cons frOne nil)))))
+def frDiffAC : Nat := frDiff frA frC

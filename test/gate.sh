@@ -39,6 +39,31 @@ refusals() {
 refusals test/parse parse
 refusals test/check check
 
+# The arena row: build/langc-256 is langc with a 256 MiB arena (the shipped
+# langc has 1 GiB). Each example must check, and the 4 Fr refusals of
+# test/check/expect.txt must give their codes.
+capped=0
+for prog in examples/*.lang; do
+  out=$(build/langc-256 check "$prog" 2>&1) || true
+  capped=$((capped + 1))
+  if [ "$out" != "ok" ]; then
+    echo "FAIL langc-256 $prog: $out"
+    fail=$((fail + 1))
+  fi
+done
+rg '^fr-(run-residual-wrong|run-op-nonzero|matvec-wrong|run-lookup-wrong)\.lang ' test/check/expect.txt >"$tmp/capped.txt"
+while read -r file code; do
+  status=0
+  build/langc-256 check "test/check/$file" 2>"$tmp/err" >/dev/null || status=$?
+  first=$(head -n 1 "$tmp/err")
+  capped=$((capped + 1))
+  case "$status:$first" in
+    "1:langc: $code: "*) ;;
+    *) echo "FAIL langc-256 $file: want exit 1 and $code, got exit $status: $first"; fail=$((fail + 1)) ;;
+  esac
+done <"$tmp/capped.txt"
+echo "langc-256: $capped checked"
+
 # A refl refusal shows both normal forms.
 build/langc check test/check/bad-refl.lang 2>"$tmp/err" >/dev/null || true
 if ! rg -q -F 'the left side normalizes to 1201, the right side normalizes to 1200' "$tmp/err"; then

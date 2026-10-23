@@ -20,6 +20,10 @@ build/domain.c: domain/domain.lang gen/embed.c
 build/langc: $(SRC) $(HEADERS) build/domain.c
 	$(TCC) $(CFLAGS) -o build/langc $(SRC) build/domain.c
 
+# The arena row of test/gate.sh: the same langc with a 256 MiB arena.
+build/langc-256: $(SRC) $(HEADERS) build/domain.c
+	$(TCC) $(CFLAGS) '-DARENA_LIMIT_BYTES=((size_t)256 << 20)' -o build/langc-256 $(SRC) build/domain.c
+
 build/fronttool: $(FRONT_TOOL) $(HEADERS)
 	mkdir -p build
 	$(TCC) $(CFLAGS) -o build/fronttool $(FRONT_TOOL)
@@ -28,7 +32,7 @@ check-clang: build/domain.c
 	$(CC) $(CLANG_FLAGS) $(SRC) build/domain.c
 	$(CC) $(CLANG_FLAGS) $(FRONT_TOOL)
 
-check: build/langc build/fronttool check-clang
+check: build/langc build/langc-256 build/fronttool check-clang
 	sh test/gate.sh
 	sh test/review.sh
 	build/fronttool

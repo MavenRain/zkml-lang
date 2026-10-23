@@ -685,7 +685,7 @@ def frTableRow : List Fr -> Option (Prod Fr Fr) :=
 def frLookup : List (List Fr) -> Fr -> Fr -> Fr :=
   fun tb d v => fold (fun (r : List Fr) (acc : Fr) => option acc (fun (kv : Prod Fr Fr) => flagIf (frEqB (first kv) v) (second kv) acc) (frTableRow r)) d tb
 -- frOpRun: the function of an operator at the weights ws over Fr, by an Op fold
--- (Z6i). opMatMul gives zeroT Fr frZero until the checker is lazier (flag 50).
+-- (Z6i). opMatMul gives frMatVec over the weights at mmK (slice ZL).
 -- opLookup s t reads the table t of ws and gives frZero for a missing
 -- key. opQuantize, opSoftmax, opLayerNorm and opAttention need a Nat division
 -- or a Nat order, which Fr does not have, and give zeroT Fr frZero (flags 44,
@@ -693,7 +693,7 @@ def frLookup : List (List Fr) -> Fr -> Fr -> Fr :=
 def frOpRun : (a b : Shape) -> Op a b -> FrWeights -> Tensor Fr a -> Tensor Fr b :=
   fun a b o => fold (fun (a : Shape) => fun (b : Shape) => FrWeights -> Tensor Fr a -> Tensor Fr b)
     (fun qzS qzK => fun (ws : FrWeights) => fun (x : Tensor Fr qzS) => zeroT Fr frZero qzS)
-    (fun mmN mmM mmK => fun (ws : FrWeights) => fun (x : Tensor Fr (shape (cons mmN nil))) => zeroT Fr frZero (shape (cons mmM nil)))
+    (fun mmN mmM mmK => fun (ws : FrWeights) => fun (x : Tensor Fr (shape (cons mmN nil))) => frMatVec (listAt (List (List Fr)) nil mmK ws) x)
     (fun lkS lkT => fun (ws : FrWeights) => mapT Fr Fr (fun (v : Fr) => frLookup (listAt (List (List Fr)) nil lkT ws) frZero v) lkS)
     (fun smS smT smK => fun (ws : FrWeights) => fun (x : Tensor Fr smS) => zeroT Fr frZero smS)
     (fun lnS lnG lnT => fun (ws : FrWeights) => fun (x : Tensor Fr lnS) => zeroT Fr frZero lnS)
