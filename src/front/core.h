@@ -249,6 +249,7 @@ typedef struct {
   uint64_t fuel;
   int overflowed;
   int symbolic_nat_iota; /* checking/conversion only: runtime must keep the count's overflow */
+  int quote_lazy; /* checking only: symm, trans and cong quote a closure by its body and env */
 } Machine;
 
 /* Each function returns NULL (or 0) after a diagnostic. A NULL input gives a

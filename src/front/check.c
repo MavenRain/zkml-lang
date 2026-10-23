@@ -1321,6 +1321,18 @@ static const Core *rule_trans(Call *k) {
   return op3(c, OP_TRANS, 0, 2, e1, e2, NULL);
 }
 
+/* Run a proof rule with the lazy quote of closures (quote_lazy in eval.c): a
+   path over a stuck fold does not quote each case closure to its normal form.
+   The flag is saved and restored, so a nested rule keeps it. */
+static const Core *lazy_rule(Call *k, const Core *(*rule)(Call *)) {
+  int saved = k->c->m->quote_lazy;
+  const Core *r;
+  k->c->m->quote_lazy = 1;
+  r = rule(k);
+  k->c->m->quote_lazy = saved;
+  return r;
+}
+
 /* cong f p for p : Path A a b is `<%i> f (p @ %i) : Path B (f a) (f b)`, built
    as Core (a Term desugar fails on a lambda head such as `fun k => k x`). */
 static const Core *cong_path(Call *k, const Core *p, const Value *pt) {
@@ -2051,11 +2063,11 @@ static const Core *rule(Call *k) {
   case RULE_UNFOLD:
     return rule_unfold(k);
   case RULE_SYMM:
-    return rule_symm(k);
+    return lazy_rule(k, rule_symm);
   case RULE_TRANS:
-    return rule_trans(k);
+    return lazy_rule(k, rule_trans);
   case RULE_CONG:
-    return rule_cong(k);
+    return lazy_rule(k, rule_cong);
   case RULE_TRANSPORT:
     return rule_transport(k);
   case RULE_NAT2:
@@ -3115,6 +3127,7 @@ static int check_program_inner(Arena *arena, const DeclList *decls, Machine *m, 
   m->diag = diag;
   m->fuel = EVAL_FUEL_STEPS;
   m->symbolic_nat_iota = 1;
+  m->quote_lazy = 0;
   for (i = 0; i < decls->count; i++) {
     const Decl *d = &decls->items[i];
     size_t j;

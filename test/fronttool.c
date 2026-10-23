@@ -432,6 +432,8 @@ int main(void) {
                "(f : I) -> (g : I) -> (h : I) -> (i : I) -> "
                "Partial (a /\\ b /\\ c /\\ d /\\ e /\\ f /\\ g /\\ h /\\ i) Nat -> "
                "Partial (a /\\ b /\\ c /\\ d /\\ e /\\ f /\\ g /\\ h /\\ i) Nat := fun a b c d e f g h i p => p", NULL);
+  ok &= roundtrip_in("def ignore : (A : Type 0) -> A -> Nat -> Nat := fun A a x => x",
+                     "Path (Nat -> Nat) (ignore Nat 0) (ignore (Nat -> Nat) (fun x => x))", "refl");
   if (ok) puts("domain, path and system regressions: passed");
   return ok ? 0 : 1;
 }

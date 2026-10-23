@@ -2501,9 +2501,36 @@ static int conv_ctor(Machine *m, uint32_t level, const Value *ctor, const Value 
   return 1;
 }
 
+/* Two closures with the same body and pointwise convertible envs are the same
+   function. The walk stops at a shared tail and needs equal lengths. A failure
+   falls back to conv_fun, so conversion accepts each pair it accepted before. */
+static int same_closure(Machine *m, uint32_t level, const Value *a, const Value *b) {
+  const Env *x = a->env;
+  const Env *y = b->env;
+  if (a->body == NULL || a->body != b->body)
+    return 0;
+  while (x != NULL && y != NULL && x != y) {
+    if (x->value != y->value) {
+      Diag saved = *m->diag;
+      int same = conv_values(m, level, x->value, y->value);
+      /* Unused captures can have unrelated types. A speculative comparison
+         must not leave a diagnostic behind when conv_fun can still succeed. */
+      if (!same || m->diag->set) {
+        *m->diag = saved;
+        return 0;
+      }
+    }
+    x = x->next;
+    y = y->next;
+  }
+  return x == y;
+}
+
 static int conv_loop(Machine *m, uint32_t level, const Value *a, const Value *b) {
   uint32_t i;
   while (a != NULL && b != NULL && spend(m, 1)) {
+    if (a == b)
+      return 1;
     if (val_is(a, OP_PARTIAL) && val_is(b, OP_PARTIAL)) {
       if (!face_equal(m, level, a->args[0], b->args[0])
           && !conv_values(m, level, a->args[0], b->args[0]))
@@ -2518,6 +2545,8 @@ static int conv_loop(Machine *m, uint32_t level, const Value *a, const Value *b)
       if (equal >= 0)
         return equal;
     }
+    if (a->kind == VAL_LAM && b->kind == VAL_LAM && same_closure(m, level, a, b))
+      return 1;
     if (a->kind == VAL_LAM || b->kind == VAL_LAM)
       return conv_fun(m, level, a, b);
     if ((val_is(a, OP_PAIR) || val_is(a, OP_PACK)) && scrut_of(b) == SCRUT_NEUTRAL)
@@ -2668,6 +2697,57 @@ static const Core *quote_binder(Machine *m, uint32_t level, const Value *v, Core
   return c;
 }
 
+/* A closure with body b and env e_1 .. e_n (e_n is the head) quotes as
+   `(fun _ .. _ x => b) q(e_1) .. q(e_n)`: the outermost binder takes e_1, so
+   each index of b reads the same entry again. Evaluation gives the same body
+   and convertible values, so the same function. The result is not a normal
+   form: a stuck fold keeps its case closures unnormalized. */
+static const Core *quote_lazy(Machine *m, uint32_t level, const Value *v) {
+  const Env *e;
+  const Core **qs;
+  const Core *f;
+  Core *c;
+  uint32_t n = 0;
+  uint32_t i;
+  for (e = v->env; e != NULL; e = e->next)
+    n++;
+  qs = arena_alloc(m->arena, ((size_t)n + 1u) * sizeof *qs);
+  if (qs == NULL) {
+    oom(m);
+    return NULL;
+  }
+  for (i = 0, e = v->env; e != NULL; i++, e = e->next) {
+    qs[i] = quote_value(m, level, e->value);
+    if (qs[i] == NULL)
+      return NULL;
+  }
+  c = new_core(m, CORE_LAM);
+  if (c == NULL)
+    return NULL;
+  c->name = v->name;
+  c->a = NULL;
+  c->b = v->body;
+  f = c;
+  for (i = 0; i < n; i++) {
+    c = new_core(m, CORE_LAM);
+    if (c == NULL)
+      return NULL;
+    c->name = "_";
+    c->a = NULL;
+    c->b = f;
+    f = c;
+  }
+  for (i = n; i > 0u; i--) {
+    c = new_core(m, CORE_APP);
+    if (c == NULL)
+      return NULL;
+    c->a = f;
+    c->b = qs[i - 1u];
+    f = c;
+  }
+  return f;
+}
+
 static const Core *quote_op(Machine *m, uint32_t level, const Value *v) {
   const Core **args = arena_alloc(m->arena, ((size_t)v->argc + 1u) * sizeof *args);
   Core *c;
@@ -2705,6 +2785,8 @@ static const Core *quote_inner(Machine *m, uint32_t level, const Value *v) {
   case VAL_APP:
     return quote_app(m, level, v);
   case VAL_LAM:
+    if (m->quote_lazy && v->body != NULL)
+      return quote_lazy(m, level, v);
     return quote_binder(m, level, v, CORE_LAM);
   case VAL_PI:
     return quote_binder(m, level, v, CORE_PI);

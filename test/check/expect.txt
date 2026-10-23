@@ -116,3 +116,4 @@ fr-run-op-nonzero.lang TYPE_ENDPOINT
 fr-matvec-wrong.lang TYPE_ENDPOINT
 fr-run-lookup-wrong.lang TYPE_ENDPOINT
 trace-order.lang TYPE_ENDPOINT
+same-closure-env.lang TYPE_ENDPOINT

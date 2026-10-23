@@ -12,3 +12,7 @@ def congComp : (A : Type 0) -> (B : Type 0) -> (C : Type 0) -> (f : A -> B) -> (
 def fe0 : (A : Type 0) -> (B : Type 0) -> (f : A -> B) -> (g : A -> B) -> (h : (x : A) -> Path B (f x) (g x)) -> Path (A -> B) f g := fun A => fun B => fun f => fun g => fun h => funExt h
 def fe1 : (A : Type 0) -> (B : Type 0) -> (f : A -> B) -> (g : A -> B) -> (h : (x : A) -> Path B (f x) (g x)) -> (x : A) -> Path (Path B (f x) (g x)) (cong (fun k => k x) (fe0 A B f g h)) (h x) := fun A => fun B => fun f => fun g => fun h => fun x => refl
 def line : (a : Nat) -> PathP (fun (i : I) => Nat) a a := fun a => <i> a
+
+-- symm and cong quote a closure by its body and environment. The closure
+-- of the cong has the environment [2, 1], and its body reads the 1.
+def lazyEnd : Path Nat 1 1 := symm (cong ((fun (a : Nat) => fun (b : Nat) => fun (c : Nat) => a) 1 2) (line 5))

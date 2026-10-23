@@ -1,0 +1,4 @@
+-- Two closures with the same body and different environments do not
+-- convert. k 1 and k 2 share the body of k, but they differ at each argument.
+def k : Nat -> Nat -> Nat := fun a b => a
+def wrong : Path (Nat -> Nat) (k 1) (k 2) := refl
