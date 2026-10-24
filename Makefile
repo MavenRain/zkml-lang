@@ -11,7 +11,7 @@ HEADERS = $(wildcard src/*.h src/front/*.h)
 
 .PHONY: build check check-clang clean zk-check
 
-build: build/langc build/fronttool build/llzkprint
+build: build/langc build/fronttool build/llzkprint build/halo2print
 
 build/domain.c: domain/domain.lang gen/embed.c
 	mkdir -p build
@@ -34,12 +34,25 @@ build/llzkprint: src/llzk.c
 	mkdir -p build
 	$(TCC) $(CFLAGS) -o build/llzkprint src/llzk.c
 
+# The Halo2 printer (slice Z9c, flag 78 (a)): the `langc eval` words of a
+# Halo2 entry to a Rust crate. src/main.c does not use it.
+build/halo2print: src/halo2.c
+	mkdir -p build
+	$(TCC) $(CFLAGS) -o build/halo2print src/halo2.c
+
+build/halo2-reader: test/halo2-reader.c src/halo2.c
+	mkdir -p build
+	$(TCC) $(CFLAGS) -o build/halo2-reader test/halo2-reader.c
+
 check-clang: build/domain.c
 	$(CC) $(CLANG_FLAGS) $(SRC) build/domain.c
 	$(CC) $(CLANG_FLAGS) $(FRONT_TOOL)
 	$(CC) $(CLANG_FLAGS) src/llzk.c
+	$(CC) $(CLANG_FLAGS) src/halo2.c
+	$(CC) $(CLANG_FLAGS) test/halo2-reader.c
 
-check: build/langc build/langc-256 build/fronttool build/llzkprint check-clang
+check: build/langc build/langc-256 build/fronttool build/llzkprint build/halo2print build/halo2-reader check-clang
+	build/halo2-reader
 	sh test/gate.sh
 	sh test/review.sh
 	sh test/zk-check-runner.sh

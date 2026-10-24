@@ -163,6 +163,55 @@ llzk_refused twice 'an output is written twice'
 llzk_refused r 'a const is not below the field modulus'
 echo "llzk refusals: $llzk_refusals checked"
 
+# The Halo2 printer rows (slice Z9c). The words of a row are test/halo2/CASE.words,
+# or else the `langc eval` output of the entry CASEHalo2 of examples/halo2.lang.
+halo2_words() {
+  if [ -f "test/halo2/$1.words" ]; then
+    cp "test/halo2/$1.words" "$tmp/words"
+  else
+    build/langc eval examples/halo2.lang "${1}Halo2" >"$tmp/words" 2>/dev/null || true
+  fi
+}
+# halo2_accepted CASE: build/halo2print exits 0 and prints nothing (part c-1
+# has only the checks, so it writes no file).
+halo2s=0
+halo2_accepted() {
+  halo2_words "$1"
+  status=0
+  build/halo2print "$1" "$tmp/halo2/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+  halo2s=$((halo2s + 1))
+  case "$status|$(cat "$tmp/err" "$tmp/out")" in
+    "0|") ;;
+    *) echo "FAIL halo2 $1: want exit 0, got exit $status"; fail=$((fail + 1)) ;;
+  esac
+}
+# halo2_refused CASE MESSAGE: build/halo2print exits 1, prints the one line
+# `halo2print: MESSAGE` on stderr, prints nothing on stdout and writes no file.
+halo2_refusals=0
+halo2_refused() {
+  halo2_words "$1"
+  status=0
+  build/halo2print "$1" "$tmp/halo2/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+  halo2_refusals=$((halo2_refusals + 1))
+  case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')|$(ls -A "$tmp/halo2" 2>/dev/null)" in
+    "1|halo2print: $2|0|") ;;
+    *) echo "FAIL halo2 refusal $1: want exit 1 and $2, got exit $status"; fail=$((fail + 1)) ;;
+  esac
+}
+for name in matmul2 residual2 seq2 zero wrap; do
+  halo2_accepted "$name"
+done
+echo "halo2: $halo2s checked"
+# Each refusal file is the matmul2Halo2 words with one change (D3).
+halo2_refused field 'the field id is not 2'
+halo2_refused index 'a matrix index is not below the matrix count'
+halo2_refused sum 'the mapped matrix entries are not the weight count'
+halo2_refused inputs 'the input count is not the circuit input count'
+halo2_refused stage 'the last stage entry count is not the output count'
+halo2_refused element 'an element is not below the field modulus'
+halo2_refused extra 'a word follows the witness block'
+echo "halo2 refusals: $halo2_refusals checked"
+
 status=0
 build/langc 2>/dev/null || status=$?
 [ "$status" -eq 2 ] || { echo "FAIL usage: want exit 2, got $status"; fail=$((fail + 1)); }
