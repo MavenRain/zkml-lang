@@ -1,0 +1,2 @@
+-- h2Llzk keeps the matrix index: h2MatMul 2 2 1 does not go to llMatMul 2 2 0.
+def keepIndex : Path (LlzkMod (shape (cons 2 nil)) (shape (cons 2 nil))) (h2Llzk (shape (cons 2 nil)) (shape (cons 2 nil)) (h2Op (shape (cons 2 nil)) (shape (cons 2 nil)) (h2MatMul 2 2 1))) (llOp (shape (cons 2 nil)) (shape (cons 2 nil)) (llMatMul 2 2 0)) := refl

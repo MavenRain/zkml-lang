@@ -121,3 +121,8 @@ llzk-res-order.lang TYPE_ENDPOINT
 llzk-id-op.lang TYPE_ENDPOINT
 llzk-lookup-zero.lang TYPE_ENDPOINT
 functor-id-res.lang TYPE_ENDPOINT
+halo2-id-op.lang TYPE_ENDPOINT
+halo2-res-order.lang TYPE_ENDPOINT
+halo2-llzk-index.lang TYPE_ENDPOINT
+halo2-index-order.lang TYPE_ENDPOINT
+halo2-functor-id-res.lang TYPE_ENDPOINT

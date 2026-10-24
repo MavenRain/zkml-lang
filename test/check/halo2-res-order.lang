@@ -1,0 +1,2 @@
+-- The resources of the Halo2 export of layerSeq are L2 then L1 (as layerSeq): the other order is not refl.
+def resOrder : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path Resource (h2Res (funHom (exportHalo2 I) a c (layerSeq I a b c L2 L1))) (resAdd (layerRes L1) (layerRes L2)) := fun I a b c L2 L1 => refl

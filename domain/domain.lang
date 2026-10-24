@@ -951,3 +951,85 @@ def llzkK : (a b : Shape) -> LlzkMod a b -> Nat -> Nat -> List Nat -> (Nat -> Na
 -- value, and eq constrains that value to the value of the entry.
 def llzkWords : (a b : Shape) -> LlzkMod a b -> List Nat :=
   fun a b f => (fun (n : Nat) => (fun (m : Nat) => (fun (p : Nat) => (fun (ins : List (List Nat)) => cons 1 (cons 2 (cons 8 (cons n (cons m (cons p (cons (listLen (List Nat) ins) (listConcat Nat ins)))))))) (llzkK a b f n (natAdd n m) (llzkRange 0 n) (fun (w : Nat) => fun (v : Nat) => fun (y : List Nat) => listAppend (List Nat) (listZipWith Nat Nat (List Nat) (fun (o : Nat) (yo : Nat) => llzkIns 5 o yo) (llzkRange 0 p) y) (listZipWith Nat Nat (List Nat) (fun (vo : Nat) (yo : Nat) => llzkIns 6 vo yo) (llzkRange v p) y)))) (shapeSize b)) (llzkWeightsK a b f 0)) (shapeSize a)
+-- Halo2 (slice Z9b, flag 76 (a)): a guest model of a Halo2 circuit, in the form
+-- of the LLZK model. H2Op a b is one block: h2MatMul n m k keeps the matrix
+-- index k (G2), h2Lookup s t is refused, h2Zero s constrains each output to 0.
+family H2Op (a b : Shape) :=
+    h2MatMul (hmN hmM hmK : Nat) : H2Op (shape (cons hmN nil)) (shape (cons hmM nil))
+  | h2Lookup (hkS : Shape) (hkT : Nat) : H2Op hkS hkS
+  | h2Zero (hzS : Shape) : H2Op hzS hzS
+-- H2Mod a b: a Halo2 circuit from a to b, a QIIT with the constructors of Circuit.
+family H2Mod (a b : Shape) :=
+    h2Id (hidA : Shape) : H2Mod hidA hidA
+  | h2Seq (hseA hseB hseC : Shape) (hseF : H2Mod hseA hseB) (hseG : H2Mod hseB hseC) : H2Mod hseA hseC
+  | h2Op (hopA hopB : Shape) (hopO : H2Op hopA hopB) : H2Mod hopA hopB
+  | h2Residual (hrsS : Shape) (hrsF : H2Mod hrsS hrsS) : H2Mod hrsS hrsS
+  | h2Idl (hilA hilB : Shape) (hilF : H2Mod hilA hilB)
+      : Path (H2Mod hilA hilB) (h2Seq hilA hilA hilB (h2Id hilA) hilF) hilF
+  | h2Idr (hirA hirB : Shape) (hirF : H2Mod hirA hirB)
+      : Path (H2Mod hirA hirB) (h2Seq hirA hirB hirB hirF (h2Id hirB)) hirF
+  | h2Assoc (hasA hasB hasC hasD : Shape) (hasF : H2Mod hasA hasB) (hasG : H2Mod hasB hasC) (hasH : H2Mod hasC hasD)
+      : Path (H2Mod hasA hasD) (h2Seq hasA hasC hasD (h2Seq hasA hasB hasC hasF hasG) hasH) (h2Seq hasA hasB hasD hasF (h2Seq hasB hasC hasD hasG hasH))
+  | h2Squash (hsqA hsqB : Shape) (hsqF hsqG : H2Mod hsqA hsqB) (hsqP hsqQ : Path (H2Mod hsqA hsqB) hsqF hsqG)
+      : Path (Path (H2Mod hsqA hsqB) hsqF hsqG) hsqP hsqQ
+-- opH2: the Halo2 block of an operator, by an Op fold (the opLlzk form).
+def opH2 : (a b : Shape) -> Op a b -> H2Op a b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => H2Op a b) (fun qzS qzK => h2Zero qzS) (fun mmN mmM mmK => h2MatMul mmN mmM mmK) (fun lkS lkT => h2Lookup lkS lkT) (fun smS smT smK => h2Zero smS) (fun lnS lnG lnT => h2Zero lnS) (fun atH atD atQ atK atV atT atE => h2Zero (shape (cons atH (cons atD nil)))) o
+-- exportH2Mod: the Halo2 circuit of a circuit, by a Circuit fold. Each constructor
+-- goes to the H2Mod constructor of the same name.
+def exportH2Mod : (a b : Shape) -> Circuit a b -> H2Mod a b :=
+  fun a b x => fold (fun (a : Shape) => fun (b : Shape) => H2Mod a b) (fun idA => h2Id idA) (fun seqA seqB seqC seqF seqG => h2Seq seqA seqB seqC seqF seqG) (fun opA opB opO => h2Op opA opB (opH2 opA opB opO)) (fun rsS rsF => h2Residual rsS rsF) (fun idlA idlB idlF => h2Idl idlA idlB idlF) (fun idrA idrB idrF => h2Idr idrA idrB idrF) (fun asA asB asC asD asF asG asH => h2Assoc asA asB asC asD asF asG asH) (fun sqA sqB sqF sqG sqP sqQ => h2Squash sqA sqB sqF sqG sqP sqQ) x
+-- A Halo2 hom: a circuit and its resources (the LlzkHom form).
+family Halo2Hom (a b : Shape) := halo2Hom (h2Mod : H2Mod a b) (h2Res : Resource)
+def halo2IdH : (s : Shape) -> Halo2Hom s s := fun s => halo2Hom s s (h2Id s) zeroR
+def halo2SeqH : (a b c : Shape) -> Halo2Hom b c -> Halo2Hom a b -> Halo2Hom a c :=
+  fun a b c g f => halo2Hom a c (h2Seq a b c (h2Mod f) (h2Mod g)) (resAdd (h2Res g) (h2Res f))
+-- halo2Ext and halo2Ext2: the llzkExt and llzkExt2 forms (record eta).
+def halo2Ext : (a b : Shape) -> (h1 h2 : Halo2Hom a b) -> Path (H2Mod a b) (h2Mod h1) (h2Mod h2) -> Path Resource (h2Res h1) (h2Res h2) -> Path (Halo2Hom a b) h1 h2 :=
+  fun a b h1 h2 pm pr => <i> halo2Hom a b (pm @ i) (pr @ i)
+def halo2Ext2 : (a b : Shape) -> (h1 h2 : Halo2Hom a b) -> (p q : Path (Halo2Hom a b) h1 h2) -> (sm : Path (Path (H2Mod a b) (h2Mod h1) (h2Mod h2)) (<i> h2Mod (p @ i)) (<i> h2Mod (q @ i))) -> (sr : Path (Path Resource (h2Res h1) (h2Res h2)) (<i> h2Res (p @ i)) (<i> h2Res (q @ i))) -> Path (Path (Halo2Hom a b) h1 h2) p q :=
+  fun a b h1 h2 p q sm sr => <j> <i> halo2Hom a b (sm @ j @ i) (sr @ j @ i)
+-- The category laws on Halo2Hom: the H2Mod path constructors and the Resource laws.
+def halo2Idl : (a b : Shape) -> (f : Halo2Hom a b) -> Path (Halo2Hom a b) (halo2SeqH a b b (halo2IdH b) f) f :=
+  fun a b f => halo2Ext a b (halo2SeqH a b b (halo2IdH b) f) f (h2Idr a b (h2Mod f)) (resUnitL (h2Res f))
+def halo2Idr : (a b : Shape) -> (f : Halo2Hom a b) -> Path (Halo2Hom a b) (halo2SeqH a a b f (halo2IdH a)) f :=
+  fun a b f => halo2Ext a b (halo2SeqH a a b f (halo2IdH a)) f (h2Idl a b (h2Mod f)) (resUnitR (h2Res f))
+def halo2Assoc : (a b c d : Shape) -> (h : Halo2Hom c d) -> (g : Halo2Hom b c) -> (f : Halo2Hom a b) -> Path (Halo2Hom a d) (halo2SeqH a b d (halo2SeqH b c d h g) f) (halo2SeqH a c d h (halo2SeqH a b c g f)) :=
+  fun a b c d h g f => halo2Ext a d (halo2SeqH a b d (halo2SeqH b c d h g) f) (halo2SeqH a c d h (halo2SeqH a b c g f)) (symm (h2Assoc a b c d (h2Mod f) (h2Mod g) (h2Mod h))) (resAssoc (h2Res h) (h2Res g) (h2Res f))
+-- halo2HomSet: the Halo2Hom hom-sets are sets (h2Squash and isSetResource).
+def halo2HomSet : (a b : Shape) -> isSet (Halo2Hom a b) :=
+  fun a b h1 h2 p q => halo2Ext2 a b h1 h2 p q (h2Squash a b (h2Mod h1) (h2Mod h2) (<i> h2Mod (p @ i)) (<i> h2Mod (q @ i))) (isSetResource (h2Res h1) (h2Res h2) (<i> h2Res (p @ i)) (<i> h2Res (q @ i)))
+-- The category of Halo2 circuits: the objects are the shapes.
+def Halo2CircuitCat : Category := mkCat Shape Halo2Hom halo2IdH halo2SeqH halo2Idl halo2Idr halo2Assoc halo2HomSet
+-- exportHalo2Hom: the Halo2 circuit of the circuit and the resources of the layer.
+def exportHalo2Hom : (I : Inst) -> (a b : Shape) -> Layer I a b -> Halo2Hom a b :=
+  fun I a b L => halo2Hom a b (exportH2Mod a b (layerCircuit L)) (layerRes L)
+-- The Halo2 export functor: funId and funSeq hold by refl.
+def exportHalo2 : (I : Inst) -> Functor (LayerCat I) Halo2CircuitCat :=
+  fun I => mkFun (LayerCat I) Halo2CircuitCat (fun (s : Shape) => s) (exportHalo2Hom I) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
+-- resourcesExportHalo2: the Halo2 export keeps the resources of a layer.
+def resourcesExportHalo2 : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path Resource (h2Res (funHom (exportHalo2 I) a b L)) (layerRes L) :=
+  fun I a b L => refl
+-- h2OpLlzk and h2Llzk: the LLZK block and the LLZK module of a Halo2 circuit, by
+-- an H2Op fold and an H2Mod fold. Each constructor goes to the LLZK constructor
+-- of the same name. llMatMul keeps k, and llzkWords does not write it.
+def h2OpLlzk : (a b : Shape) -> H2Op a b -> LlzkOp a b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => LlzkOp a b) (fun hmN hmM hmK => llMatMul hmN hmM hmK) (fun hkS hkT => llLookup hkS hkT) (fun hzS => llZero hzS) o
+def h2Llzk : (a b : Shape) -> H2Mod a b -> LlzkMod a b :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => LlzkMod a b) (fun hidA => llId hidA) (fun hseA hseB hseC hseF hseG => llSeq hseA hseB hseC hseF hseG) (fun hopA hopB hopO => llOp hopA hopB (h2OpLlzk hopA hopB hopO)) (fun hrsS hrsF => llResidual hrsS hrsF) (fun hilA hilB hilF => llIdl hilA hilB hilF) (fun hirA hirB hirF => llIdr hirA hirB hirF) (fun hasA hasB hasC hasD hasF hasG hasH => llAssoc hasA hasB hasC hasD hasF hasG hasH) (fun hsqA hsqB hsqF hsqG hsqP hsqQ => llSquash hsqA hsqB hsqF hsqG hsqP hsqQ) f
+-- h2OpIndexK and h2IndexK f r: the matrix index of each h2MatMul of f in run
+-- order, then r (difference-list form). The idl, idr and assoc ends are equal by
+-- beta and eta. h2MatIndex f: the list of f alone (the D3 block 2).
+def h2OpIndexK : (a b : Shape) -> H2Op a b -> List Nat -> List Nat :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => List Nat -> List Nat) (fun hmN hmM hmK => fun (r : List Nat) => cons hmK r) (fun hkS hkT => fun (r : List Nat) => r) (fun hzS => fun (r : List Nat) => r) o
+def h2IndexK : (a b : Shape) -> H2Mod a b -> List Nat -> List Nat :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => List Nat -> List Nat)
+    (fun hidA => fun (r : List Nat) => r)
+    (fun hseA hseB hseC hseF hseG => fun (r : List Nat) => hseF (hseG r))
+    (fun hopA hopB hopO => h2OpIndexK hopA hopB hopO)
+    (fun hrsS hrsF => hrsF)
+    (fun hilA hilB hilF => <i> hilF)
+    (fun hirA hirB hirF => <i> hirF)
+    (fun hasA hasB hasC hasD hasF hasG hasH => <i> fun (r : List Nat) => hasF (hasG (hasH r)))
+    (fun hsqA hsqB hsqF hsqG hsqP hsqQ => isSetPi (List Nat) (fun (r : List Nat) => List Nat) (fun (r : List Nat) => isSetList Nat natIsSet) hsqF hsqG hsqP hsqQ) f
+def h2MatIndex : (a b : Shape) -> H2Mod a b -> List Nat := fun a b f => h2IndexK a b f nil

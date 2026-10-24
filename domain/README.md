@@ -159,6 +159,13 @@ tests use these names, so keep them when you replace the sample.
 | `llzkWeightsK` | the weight count of a module, by a `LlzkMod` fold with an accumulator; each `llMatMul` in run order takes the next weight numbers | `llzkWords` |
 | `llzkK` | the instructions of a module, by a `LlzkMod` fold in continuation-passing style (the `bbTraceK` form, flag 62 (a)); `llResidual` adds one `felt.add` for each entry | `llzkWords` |
 | `llzkWords` | the LLZK words of a module (D10): version 1, field id 2 (BN254), element size 8, the input, weight, output and instruction counts, then the instructions; at the end one `out` and one `eq` for each output entry. `build/llzkprint` (src/llzk.c) prints the module | `examples/llzk.lang` |
+| `H2Op a b` | one Halo2 block (slice Z9b, flag 76 (a)): `h2MatMul n m k` (the matrix index `k` stays, G2), `h2Lookup` (refused), `h2Zero` (each output is constrained to 0) | `opH2`, `H2Mod` |
+| `H2Mod a b` | a Halo2 circuit, a QIIT with the constructors of `Circuit`: `h2Id`, `h2Seq`, `h2Op`, `h2Residual`, the law paths `h2Idl`, `h2Idr`, `h2Assoc` and the set truncation `h2Squash` | `exportH2Mod`, `Halo2Hom` |
+| `opH2`, `exportH2Mod` | the Halo2 block of an operator (the `opLlzk` cases) and the Halo2 circuit of a `Circuit` (each constructor to the `H2Mod` constructor of the same name) | `exportHalo2Hom` |
+| `Halo2Hom a b` | record of a Halo2 hom: `h2Mod` and `h2Res`; `halo2IdH`, `halo2SeqH`, `halo2Ext`, `halo2Ext2`, the laws `halo2Idl`, `halo2Idr`, `halo2Assoc`, `halo2HomSet` | `Halo2CircuitCat` |
+| `Halo2CircuitCat`, `exportHalo2` | the category of Halo2 circuits (the objects are the shapes) and the export functor from `LayerCat I`: the identity on shapes, `exportHalo2Hom` on the homs, funId and funSeq by `refl`; `resourcesExportHalo2` by `refl` | examples/halo2.lang |
+| `h2Llzk`, `h2OpLlzk` | the LLZK module of a Halo2 circuit: each constructor to the LLZK constructor of the same name (`h2MatMul n m k` to `llMatMul n m k`); `llzkWords` does not write `k` | examples/halo2.lang |
+| `h2MatIndex`, `h2IndexK`, `h2OpIndexK` | the matrix index `k` of each `h2MatMul` in run order (D3 block 2), by an `H2Mod` fold in difference-list form | examples/halo2.lang |
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.

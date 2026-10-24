@@ -1,0 +1,41 @@
+-- The Halo2 export (slice Z9b, flags 76 and 77): Halo2CircuitCat, the export functor and the words of the cases.
+def halo2CatOb : Path (Type 0) (catOb Halo2CircuitCat) Shape := refl
+def halo2CatSeq : (a b c : Shape) -> (g : Halo2Hom b c) -> (f : Halo2Hom a b) -> Path (Halo2Hom a c) (catSeq Halo2CircuitCat a b c g f) (halo2SeqH a b c g f) := fun a b c g f => refl
+def exportHalo2Id : (I : Inst) -> (s : Shape) -> Path (Halo2Hom s s) (funHom (exportHalo2 I) s s (idL I s)) (halo2IdH s) := fun I s => refl
+def exportHalo2Seq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Halo2Hom a c) (funHom (exportHalo2 I) a c (layerSeq I a b c L2 L1)) (halo2SeqH a b c (exportHalo2Hom I b c L2) (exportHalo2Hom I a b L1)) := fun I a b c L2 L1 => refl
+-- The index list of the two ends of h2Idl and h2Assoc are equal by refl.
+def indexIdl : (a b : Shape) -> (f : H2Mod a b) -> Path (List Nat) (h2MatIndex a b (h2Seq a a b (h2Id a) f)) (h2MatIndex a b f) := fun a b f => refl
+def indexAssoc : (a b c d : Shape) -> (f : H2Mod a b) -> (g : H2Mod b c) -> (h : H2Mod c d) -> Path (List Nat) (h2MatIndex a d (h2Seq a c d (h2Seq a b c f g) h)) (h2MatIndex a d (h2Seq a b d f (h2Seq b c d g h))) := fun a b c d f g h => refl
+-- The cases: the shape [2], small Fr values, r - 1 and the circuits.
+def h2S : Shape := shape (cons 2 nil)
+def h2N : Nat -> Fr := fun v => frMk v 0 0 0 0 0 0 0
+def h2Rm1 : Fr := frMk 4026531840 1138881939 2042196113 674490440 2172737629 3092268470 3778125865 811880050
+def h2Mat : Fr -> Fr -> Fr -> Fr -> List (List Fr) := fun p q u v => cons (cons p (cons q nil)) (cons (cons u (cons v nil)) nil)
+def h2W0 : List (List Fr) := h2Mat (h2N 2) (h2N 7) (h2N 11) (h2N 13)
+def h2W1 : List (List Fr) := h2Mat (h2N 3) (h2N 1) (h2N 4) (h2N 6)
+def h2X : Tensor Fr (shape (cons 2 nil)) := cons (h2N 3) (cons (h2N 5) nil)
+def h2Mm0 : Circuit h2S h2S := circOp h2S h2S (opMatMul 2 2 0)
+def h2Mm1 : Circuit h2S h2S := circOp h2S h2S (opMatMul 2 2 1)
+-- h2Llzk keeps the module of the LLZK export, and h2MatIndex gives k in run order.
+def h2LlzkMatmul2 : Path (LlzkMod h2S h2S) (h2Llzk h2S h2S (exportH2Mod h2S h2S h2Mm0)) (exportMod h2S h2S h2Mm0) := refl
+def h2LlzkSeq2 : Path (LlzkMod h2S h2S) (h2Llzk h2S h2S (exportH2Mod h2S h2S (circSeq h2S h2S h2S h2Mm0 h2Mm1))) (exportMod h2S h2S (circSeq h2S h2S h2S h2Mm0 h2Mm1)) := refl
+def h2IndexSeq2 : Path (List Nat) (h2MatIndex h2S h2S (exportH2Mod h2S h2S (circSeq h2S h2S h2S h2Mm0 h2Mm1))) (cons 0 (cons 1 nil)) := refl
+-- The eval rows of h2Llzk and h2MatIndex.
+def matmul2H2Llzk : List Nat := llzkWords h2S h2S (h2Llzk h2S h2S (exportH2Mod h2S h2S h2Mm0))
+def seq2H2Index : List Nat := h2MatIndex h2S h2S (exportH2Mod h2S h2S (circSeq h2S h2S h2S h2Mm0 h2Mm1))
+def residual2H2Index : List Nat := h2MatIndex h2S h2S (exportH2Mod h2S h2S (circResidual h2S h2Mm0))
+-- h2Words a b f ws x: the 4 blocks of a Halo2 entry (D3): the LLZK words of the
+-- circuit, the matrix map (the count c, then k for each matmul), the inputs (the
+-- count n, then 8 limbs for each element) and the Z7 witness words.
+def h2Words : (a b : Shape) -> Circuit a b -> FrWeights -> Tensor Fr a -> List Nat :=
+  fun a b f ws x => (fun (md : H2Mod a b) => (fun (ix : List Nat) => listAppend Nat (llzkWords a b (h2Llzk a b md)) (listAppend Nat (cons (listLen Nat ix) ix) (listAppend Nat (cons (listLen Fr (flatT Fr a x)) (frWords (flatT Fr a x))) (frWitnessWords ws (frTrace a b f ws x))))) (h2MatIndex a b md)) (exportH2Mod a b f)
+-- matmul2Halo2: x = [3, 5], W = [[2, 7], [11, 13]], y = [41, 98].
+def matmul2Halo2 : List Nat := h2Words h2S h2S h2Mm0 (cons h2W0 nil) h2X
+-- residual2Halo2: x + W x = [44, 103]; the trace has 2 stages.
+def residual2Halo2 : List Nat := h2Words h2S h2S (circResidual h2S h2Mm0) (cons h2W0 nil) h2X
+-- seq2Halo2: matrix 0, then matrix 1 = [[3, 1], [4, 6]]: y = [221, 752].
+def seq2Halo2 : List Nat := h2Words h2S h2S (circSeq h2S h2S h2S h2Mm0 h2Mm1) (cons h2W0 (cons h2W1 nil)) h2X
+-- zeroHalo2: softmax gives [0, 0] with no matrix (flag 69 (a), h2Zero).
+def zeroHalo2 : List Nat := h2Words h2S h2S (circOp h2S h2S (opSoftmax h2S 0 0)) nil h2X
+-- wrapHalo2: r - 1 in x and in W: y = [(r - 1) (r - 1) + 35, 11 (r - 1) + 65] = [36, 54].
+def wrapHalo2 : List Nat := h2Words h2S h2S h2Mm0 (cons (h2Mat h2Rm1 (h2N 7) (h2N 11) (h2N 13)) nil) (cons h2Rm1 (cons (h2N 5) nil))

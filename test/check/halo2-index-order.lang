@@ -1,0 +1,2 @@
+-- h2MatIndex gives the run order: the index of f, then the index of g.
+def indexOrder : Path (List Nat) (h2MatIndex (shape (cons 2 nil)) (shape (cons 2 nil)) (h2Seq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (h2Op (shape (cons 2 nil)) (shape (cons 2 nil)) (h2MatMul 2 2 0)) (h2Op (shape (cons 2 nil)) (shape (cons 2 nil)) (h2MatMul 2 2 1)))) (cons 1 (cons 0 nil)) := refl

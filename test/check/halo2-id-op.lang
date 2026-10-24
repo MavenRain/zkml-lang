@@ -1,0 +1,2 @@
+-- The export of circId is h2Id, not an op.
+def idOp : (s : Shape) -> Path (H2Mod s s) (exportH2Mod s s (circId s)) (h2Op s s (h2Zero s)) := fun s => refl
