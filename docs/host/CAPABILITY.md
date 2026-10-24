@@ -26,6 +26,12 @@ on 2026-10-08 on AArch64 Darwin.
   It needs no library, and `make check-clang` checks it too.
   `make zk-check` runs `llzk-opt` (LLZK 2.1.2) on its output.
   `make check` does not need `llzk-opt`.
+- `src/halo2.c` is the Halo2 printer `build/halo2print` (slice Z9c). It
+  reads the Halo2 words that `langc eval` prints and writes a Rust crate
+  (`Cargo.toml` and `src/lib.rs`). It needs no library, and
+  `make check-clang` checks it too. `make halo2-check` runs `cargo test`
+  (halo2_proofs MockProver) on the 5 crates. `make check` does not need
+  Rust.
 
 ## Values
 
@@ -77,11 +83,15 @@ on 2026-10-08 on AArch64 Darwin.
 
 ## Measured numbers
 
-- `make check` runs 5008 differential cases on 32 modules, with
+- `make check` runs 5016 differential cases on 33 modules, with
   0 mismatches.
 - `make zk-check` runs `llzk-opt` 14 times in about 1.3 s: 12 modules
   pass and 2 mutants fail. One `llzk-opt` run has a peak RSS of about
   25 MB (part Z8a).
+- `make halo2-check` runs `cargo test` on 5 crates. The first run takes
+  about 20 s and builds the dependencies in `build/halo2/target`
+  (434 MB). A second run takes about 5 s. The peak RSS is about 256 MiB
+  (slice Z9d).
 - `langc build examples/entries.lang` writes a module of 492 bytes for six
   entries.
 

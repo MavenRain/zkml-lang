@@ -57,6 +57,21 @@ the expected parser error. When it is GREEN, it prints
 `zk-check: 12 accepted, 2 rejected`. It needs `llzk-opt` from
 LLZK 2.1.2. Set `LLZK_OPT` to its path. `make check` does not run it.
 
+`make check` also builds the Halo2 printer `build/halo2print`
+(`src/halo2.c`) and `build/halo2-reader` (`test/halo2-reader.c`), and
+runs the reader first. The reader makes its test directories in
+`$TMPDIR` (default `/tmp`).
+
+`make halo2-check` prints a Rust crate for each of the 5 Halo2 entries
+of `examples/halo2.lang` into `build/halo2/`, and runs the MockProver
+tests of each crate with `cargo test --offline --locked -j 2`. The lock
+file is `test/halo2/Cargo.lock`. The run fetches nothing, so the
+dependencies must be in the cargo cache. When it is GREEN, it prints
+`halo2-check: 5 accepted, 9 rejected`. `CARGO_TEST` is the test command
+(default `testledger -- cargo test`; set `CARGO_TEST='cargo test'` if
+testledger is not installed). Run it outside the sandbox. `make check`
+does not run it.
+
 ## Source language
 
 A program is a sequence of `def NAME : TYPE := TERM`. A line comment

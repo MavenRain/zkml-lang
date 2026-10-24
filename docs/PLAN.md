@@ -177,16 +177,19 @@ type does not check as written, and the default for each.
   (`make zk-check` and the docs) DONE 2026-10-23. Slice Z8 DONE
   2026-10-23.
 - Z9: Halo2. `Halo2CircuitCat`, `exportHalo2`. The writer prints a Rust
-  crate for each entry. Gate: MockProver accepts the Z7 witness and
-  rejects a mutated witness.
+  crate for each entry. Gate: `make halo2-check`: MockProver accepts the
+  Z7 witness of each of the 5 entries and rejects 9 mutated witnesses
+  (outside the sandbox). Status: parts Z9a to Z9c DONE 2026-10-23. Part
+  Z9d (`make halo2-check` and the docs) DONE 2026-10-24. Slice Z9 DONE
+  2026-10-24.
 - Z10: Plonky3. `Plonky3CircuitCat`, `exportPlonky3`. The writer prints an
   AIR and its trace. Gate: the Plonky3 debug constraint check accepts the
   Z7 trace and rejects a mutated trace.
 - Z11: `SPEC.md`, `probe/CAPABILITY.md`, `docs/STATUS.md`,
   `docs/VALIDATION.md` and `README.md`. Final gate.
 - Gate: `make check`. The target gates need Rust and LLVM tools, so they
-  are `make zk-check`, outside the sandbox when needed. Each long run stays
-  under 4 GB. Rust builds use `-j 2`.
+  are `make zk-check` and `make halo2-check`, outside the sandbox when
+  needed. Each long run stays under 4 GB. Rust builds use `-j 2`.
 
 ## 6. Open items
 

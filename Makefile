@@ -9,7 +9,7 @@ SRC = src/main.c $(FRONT) $(TARGET)
 FRONT_TOOL = test/fronttool.c $(filter-out src/front/front.c src/front/lower.c,$(FRONT))
 HEADERS = $(wildcard src/*.h src/front/*.h)
 
-.PHONY: build check check-clang clean zk-check
+.PHONY: build check check-clang clean halo2-check zk-check
 
 build: build/langc build/fronttool build/llzkprint build/halo2print
 
@@ -90,6 +90,38 @@ zk-check: build/langc build/llzkprint
 	reject test/llzk/reject/matmul2-m2-undef.mlir 'use of undeclared SSA value name'; \
 	echo "zk-check: $$ok accepted, $$no rejected"; \
 	[ "$$fail" -eq 0 ] && [ "$$no" -eq 2 ]
+
+
+# The Halo2 Rust row (slice Z9d, D8, D9). halo2print writes the crate of each
+# Halo2 entry of examples/halo2.lang into build/halo2. cargo tests each crate
+# with the lock test/halo2/Cargo.lock: the MockProver must accept the Z7
+# witness and reject each mutated witness. `check` does not run this row,
+# because it needs a Rust toolchain and halo2_proofs v0.3.0 in the cargo cache
+# (--offline). Set CARGO_TEST='cargo test' if testledger is not installed.
+CARGO_TEST ?= testledger -- cargo test
+
+halo2-check: build/langc build/halo2print
+	@set -e; mkdir -p build/halo2; ok=0; no=0; fail=0; \
+	crates='matmul2 residual2 seq2 wrap zero'; \
+	for n in $$crates; do \
+	  build/langc eval examples/halo2.lang "$${n}Halo2" >"build/halo2/$$n.words" || \
+	    { echo "FAIL halo2-check $$n: langc eval fails"; exit 1; }; \
+	  build/halo2print "$$n" "build/halo2/$$n" <"build/halo2/$$n.words" || \
+	    { echo "FAIL halo2-check $$n: halo2print refuses the words"; exit 1; }; \
+	done; \
+	{ printf '[workspace]\nresolver = "2"\nmembers = ['; sep=; \
+	  for n in $$crates; do printf '%s"%s"' "$$sep" "$$n"; sep=', '; done; \
+	  printf ']\n'; } >build/halo2/Cargo.toml; \
+	cp test/halo2/Cargo.lock build/halo2/Cargo.lock; \
+	for n in $$crates; do \
+	  if $(CARGO_TEST) --offline --locked -j 2 --manifest-path build/halo2/Cargo.toml \
+	    --target-dir build/halo2/target -p "zkml-halo2-$$n"; then \
+	    ok=$$((ok + 1)); \
+	    no=$$((no + $$(awk '/fn rejects_/ { k++ } END { print k + 0 }' "build/halo2/$$n/src/lib.rs"))); \
+	  else echo "FAIL halo2-check $$n: cargo test fails"; fail=$$((fail + 1)); fi; \
+	done; \
+	echo "halo2-check: $$ok accepted, $$no rejected"; \
+	[ "$$fail" -eq 0 ] && [ "$$ok" -eq 5 ] && [ "$$no" -eq 9 ]
 
 clean:
 	rm -rf build

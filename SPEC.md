@@ -203,6 +203,50 @@ number below 2^32` and `no memory`.
 `make zk-check` runs `llzk-opt` (LLZK 2.1.2) on the modules (see
 `docs/VALIDATION.md`).
 
+### Halo2 words
+
+`build/halo2print NAME DIR` (`src/halo2.c`, slice Z9c) reads the words
+of one Halo2 entry on stdin. `h2Words` (`examples/halo2.lang`) gives the
+entry, and `langc eval` prints the words. The words are 4 blocks on one
+line:
+
+1. The circuit: the LLZK words of this section (`LLZK words`). The field
+   id is 2 and the element size is 8, because Halo2 is BN254 only
+   (flag 79).
+2. The matrix map: the matmul count c, then the matrix index of each
+   matmul in run order.
+3. The inputs: n, then n elements.
+4. The Z7 witness (`frWitnessWords`, `Witness format`): the version 1,
+   the field id 2, the element size 8, the matrix count, the words of
+   each matrix, the stage count, then the words of each stage.
+
+An element is 8 limbs of 32 bits, low limb first. The printer checks
+NAME (a to z and 0 to 9) and all of the words first. The circuit block
+has the checks of `llzkprint`. Each matrix index is below the matrix
+count. The mapped matrix entries are the weight count. The input count
+is the circuit input count. The entry count of the last stage is the
+output count. Each element is below r. Only the last stage maps to
+circuit cells (O13).
+
+A refusal exits 1, writes one message line on stderr and writes no
+file. A write that fails is a refusal. A refusal keeps an existing
+crate: the printer writes both files in the stage directory
+`DIR/.halo2print` first, and keeps a backup of each old file until both
+renames succeed. The messages include `the field id is not 2`, `a matrix
+index is not below the matrix count`, `the mapped matrix entries are not
+the weight count`, `the input count is not the circuit input count`,
+`the last stage entry count is not the output count`, `an element is not
+below the field modulus`, `a word follows the witness block`, `lookup is
+refused (flag 69 (a))` and `the name is empty or has a character that is
+not a to z or 0 to 9`.
+
+An accepted entry exits 0, prints nothing and writes the crate
+`zkml-halo2-NAME`: `DIR/Cargo.toml` (one dependency, `halo2_proofs`) and
+`DIR/src/lib.rs`. The tests of `lib.rs` run MockProver (D7):
+`accepts_z7_witness` must pass, `rejects_mutated_output` (output entry 0
+plus 1) must fail, and for an entry with weights `rejects_mutated_weight`
+(weight entry 0 plus 1) must fail.
+
 ## 8. Host and target
 
 > Write here: the host, its pinned commit (`PIN`), the facts from
@@ -362,6 +406,17 @@ number below 2^32` and `no memory`.
   `llzkWords` gives BN254 words only. The printer also takes BabyBear
   words. Status: built in slice Z8. Section 7 (`LLZK words`) gives the
   format.
+- O13. The Halo2 target (slice Z9, flags 76 to 86). RULED 2026-10-23
+  and 2026-10-24 (USER). The guest entries `h2Words`
+  (`examples/halo2.lang`) give the words, and the host printer
+  `build/halo2print` writes a Rust crate for each entry (flag 78 (a)).
+  Halo2 is BN254 only (flag 79). Only the last trace stage (the `frRun`
+  result) maps to circuit cells, the out cells. The other stages have no
+  cell, so the MockProver tests do not check them (G9, D7 (a)). The
+  lookup op is refused: the circuit block gives `lookup is refused
+  (flag 69 (a))`, as in `llzkprint`. `make halo2-check` runs the crate
+  tests outside the sandbox (flag 81). Status: built in slice Z9.
+  Section 7 (`Halo2 words`) gives the format.
 
 ## 10. Milestones
 

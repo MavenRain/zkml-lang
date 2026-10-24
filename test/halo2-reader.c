@@ -46,10 +46,15 @@ static int has_text(const char *path, const char *text)
 static int check_write_refusal(int blocker)
 {
   static unsigned int directory_number;
-  char dir[80];
-  snprintf(dir, sizeof dir, "/tmp/zkml-halo2-write-%lu-%u", (unsigned long)getpid(), directory_number++);
-  if (mkdir(dir, 0700) != 0)
+  const char *base = getenv("TMPDIR");
+  char dir[512];
+  const int length = snprintf(dir, sizeof dir, "%s/zkml-halo2-write-%lu-%u",
+                              base != NULL && base[0] != '\0' ? base : "/tmp",
+                              (unsigned long)getpid(), directory_number++);
+  if (length < 0 || (size_t)length >= sizeof dir || mkdir(dir, 0700) != 0) {
+    fprintf(stderr, "FAIL halo2 writer refusal %d: cannot make the directory %s\n", blocker, dir);
     return 1;
+  }
   char cargo[sizeof dir + sizeof "/Cargo.toml"];
   char src[sizeof dir + sizeof "/src"];
   char lib[sizeof dir + sizeof "/src/lib.rs"];
