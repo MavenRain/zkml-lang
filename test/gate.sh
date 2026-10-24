@@ -241,16 +241,19 @@ plonky3_words() {
     build/langc eval examples/plonky3.lang "${1}Plonky3" >"$tmp/words" 2>/dev/null || true
   fi
 }
-# plonky3_accepted CASE: build/plonky3print exits 0, prints nothing and does
-# not make the directory $tmp/plonky3/CASE. Part 1 of slice Z10c has no writer.
+# plonky3_golden CASE: build/plonky3print exits 0, prints nothing and writes
+# the crate $tmp/plonky3/CASE. Its Cargo.toml and src/lib.rs are the same as
+# test/plonky3/CASE/Cargo.toml and test/plonky3/CASE/src/lib.rs.
 plonky3s=0
-plonky3_accepted() {
+plonky3_golden() {
   plonky3_words "$1"
   status=0
   build/plonky3print "$1" "$tmp/plonky3/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
   plonky3s=$((plonky3s + 1))
-  if [ "$status" -ne 0 ] || [ -s "$tmp/out" ] || [ -s "$tmp/err" ] || [ -e "$tmp/plonky3/$1" ]; then
-    echo "FAIL plonky3 $1: exit $status, an output or a file"
+  if [ "$status" -ne 0 ] || [ -s "$tmp/out" ] || [ -s "$tmp/err" ] ||
+    ! cmp -s "$tmp/plonky3/$1/Cargo.toml" "test/plonky3/$1/Cargo.toml" ||
+    ! cmp -s "$tmp/plonky3/$1/src/lib.rs" "test/plonky3/$1/src/lib.rs"; then
+    echo "FAIL plonky3 $1: exit $status or a different crate"
     fail=$((fail + 1))
   fi
 }
@@ -270,7 +273,7 @@ plonky3_refused() {
 }
 mkdir -p "$tmp/plonky3"
 for name in matmul2 residual2 seq2 zero wrap; do
-  plonky3_accepted "$name"
+  plonky3_golden "$name"
 done
 echo "plonky3: $plonky3s checked"
 # Each refusal file is the matmul2Plonky3 words with one change (D3), and
@@ -293,6 +296,16 @@ plonky3_refused residual 'a residual source entry count is not the stage entry c
 # There is no test/plonky3/Bad.words, so the words are empty. The printer
 # checks NAME before it reads the words.
 plonky3_refused Bad 'the name is empty or has a character that is not a to z or 0 to 9'
+# The write refusal: DIR is a regular file, so the printer cannot make DIR.
+: >"$tmp/plonky3/file"
+plonky3_words matmul2
+status=0
+build/plonky3print file "$tmp/plonky3/file" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+plonky3_refusals=$((plonky3_refusals + 1))
+case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')" in
+  "1|plonky3print: the write to $tmp/plonky3/file failed|0") ;;
+  *) echo "FAIL plonky3 refusal file: want exit 1 and the write failure, got exit $status"; fail=$((fail + 1)) ;;
+esac
 echo "plonky3 refusals: $plonky3_refusals checked"
 
 status=0

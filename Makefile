@@ -45,8 +45,7 @@ build/halo2-reader: test/halo2-reader.c src/halo2.c
 	$(TCC) $(CFLAGS) -o build/halo2-reader test/halo2-reader.c
 
 # The Plonky3 printer (slice Z10c, flag 91 (a)): the `langc eval` words of a
-# Plonky3 entry to a Rust crate. src/main.c does not use it. Part 1 of slice
-# Z10c has the checks only.
+# Plonky3 entry to a Rust crate. src/main.c does not use it.
 build/plonky3print: src/plonky3.c
 	mkdir -p build
 	$(TCC) $(CFLAGS) -o build/plonky3print src/plonky3.c

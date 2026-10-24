@@ -1,0 +1,28 @@
+[package]
+name = "zkml-plonky3-zero"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "The Plonky3 AIR of the zkml-lang entry zeroPlonky3 (printed by plonky3print)"
+publish = false
+
+[dependencies]
+# Flag 87 (a): Plonky3 rev 5fcf8d7c (workspace version 0.4.2), from the cargo
+# git db (the lambdaworks lock pins the same rev).
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+
+[dev-dependencies]
+# Flag 95 (a): the BabyBear config of uni-stark/tests/fib_air.rs at the rev
+# (Poseidon2 hash and compress, a Merkle tree MMCS, Radix2DitParallel,
+# DuplexChallenger, the test FRI params, rand seed 1).
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "5fcf8d7c78666dd10304d45ae47b71c9e79bd141" }
+rand = { version = "0.9", default-features = false, features = ["small_rng"] }
