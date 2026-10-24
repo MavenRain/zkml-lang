@@ -1,0 +1,2 @@
+-- The Plonky3 export of the identity layer is p3Id, not an op: the path to p3Op is not refl.
+def idOp : (I : Inst) -> (s : Shape) -> Path (P3Mod s s) (p3Mod (funHom (exportPlonky3 I) s s (idL I s))) (p3Op s s (p3Zero s)) := fun I s => refl

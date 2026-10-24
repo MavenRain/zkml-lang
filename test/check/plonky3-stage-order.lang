@@ -1,0 +1,2 @@
+-- The stage program of seq2 runs matrix 0 first, then matrix 1 from stage 1: the other order is not refl.
+def stageOrder : Path (List Nat) (p3Program (shape (cons 2 nil)) (shape (cons 2 nil)) (exportP3Mod (shape (cons 2 nil)) (shape (cons 2 nil)) (circSeq (shape (cons 2 nil)) (shape (cons 2 nil)) (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opMatMul 2 2 0)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opMatMul 2 2 1))))) (cons 2 (cons 1 (cons 1 (cons 0 (cons 1 (cons 0 (cons 1 nil))))))) := refl

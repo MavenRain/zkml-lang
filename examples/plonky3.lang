@@ -1,0 +1,38 @@
+-- The Plonky3 export (slice Z10b, flags 89 and 90): Plonky3CircuitCat, the export functor and the words of the cases.
+def plonky3CatOb : Path (Type 0) (catOb Plonky3CircuitCat) Shape := refl
+def plonky3CatSeq : (a b c : Shape) -> (g : Plonky3Hom b c) -> (f : Plonky3Hom a b) -> Path (Plonky3Hom a c) (catSeq Plonky3CircuitCat a b c g f) (plonky3SeqH a b c g f) := fun a b c g f => refl
+def exportPlonky3Id : (I : Inst) -> (s : Shape) -> Path (Plonky3Hom s s) (funHom (exportPlonky3 I) s s (idL I s)) (plonky3IdH s) := fun I s => refl
+def exportPlonky3Seq : (I : Inst) -> (a b c : Shape) -> (L2 : Layer I b c) -> (L1 : Layer I a b) -> Path (Plonky3Hom a c) (funHom (exportPlonky3 I) a c (layerSeq I a b c L2 L1)) (plonky3SeqH a b c (exportPlonky3Hom I b c L2) (exportPlonky3Hom I a b L1)) := fun I a b c L2 L1 => refl
+-- The stage records of the two ends of p3Idl and p3Assoc are equal by refl.
+def stagesIdl : (a b : Shape) -> (f : P3Mod a b) -> Path (List (List Nat)) (p3Stages a b (p3Seq a a b (p3Id a) f)) (p3Stages a b f) := fun a b f => refl
+def stagesAssoc : (a b c d : Shape) -> (f : P3Mod a b) -> (g : P3Mod b c) -> (h : P3Mod c d) -> Path (List (List Nat)) (p3Stages a d (p3Seq a c d (p3Seq a b c f g) h)) (p3Stages a d (p3Seq a b d f (p3Seq b c d g h))) := fun a b c d f g h => refl
+-- The cases: the shape [2], small BabyBear values, p - 1 and the circuits.
+def p3S : Shape := shape (cons 2 nil)
+def p3Pm1 : Nat := 2013265920
+def p3Mat : Nat -> Nat -> Nat -> Nat -> List (List Nat) := fun p q u v => cons (cons p (cons q nil)) (cons (cons u (cons v nil)) nil)
+def p3W0 : List (List Nat) := p3Mat 2 7 11 13
+def p3W1 : List (List Nat) := p3Mat 3 1 4 6
+def p3X : Tensor Nat (shape (cons 2 nil)) := cons 3 (cons 5 nil)
+def p3Mm0 : Circuit p3S p3S := circOp p3S p3S (opMatMul 2 2 0)
+def p3Mm1 : Circuit p3S p3S := circOp p3S p3S (opMatMul 2 2 1)
+def p3Rs0 : Circuit p3S p3S := circResidual p3S p3Mm0
+def p3Mm01 : Circuit p3S p3S := circSeq p3S p3S p3S p3Mm0 p3Mm1
+def p3Sm : Circuit p3S p3S := circOp p3S p3S (opSoftmax p3S 0 0)
+-- The stage program of each circuit (D3 block 1) by refl (the wrap case has the circuit of matmul2).
+def p3ProgramMatmul2 : Path (List Nat) (p3Program p3S p3S (exportP3Mod p3S p3S p3Mm0)) (cons 1 (cons 1 (cons 0 (cons 0 nil)))) := refl
+def p3ProgramResidual2 : Path (List Nat) (p3Program p3S p3S (exportP3Mod p3S p3S p3Rs0)) (cons 2 (cons 1 (cons 0 (cons 0 (cons 3 (cons 0 (cons 1 nil))))))) := refl
+def p3ProgramSeq2 : Path (List Nat) (p3Program p3S p3S (exportP3Mod p3S p3S p3Mm01)) (cons 2 (cons 1 (cons 0 (cons 0 (cons 1 (cons 1 (cons 1 nil))))))) := refl
+def p3ProgramZero : Path (List Nat) (p3Program p3S p3S (exportP3Mod p3S p3S p3Sm)) (cons 1 (cons 2 nil)) := refl
+-- The eval rows of p3Program.
+def seq2P3Program : List Nat := p3Program p3S p3S (exportP3Mod p3S p3S p3Mm01)
+def residual2P3Program : List Nat := p3Program p3S p3S (exportP3Mod p3S p3S p3Rs0)
+-- matmul2Plonky3: x = [3, 5], W = [[2, 7], [11, 13]], y = [41, 98].
+def matmul2Plonky3 : List Nat := p3Words p3S p3S p3Mm0 (cons p3W0 nil) p3X
+-- residual2Plonky3: x + W x = [44, 103]; the trace has 2 stages.
+def residual2Plonky3 : List Nat := p3Words p3S p3S p3Rs0 (cons p3W0 nil) p3X
+-- seq2Plonky3: matrix 0, then matrix 1 = [[3, 1], [4, 6]]: y = [221, 752].
+def seq2Plonky3 : List Nat := p3Words p3S p3S p3Mm01 (cons p3W0 (cons p3W1 nil)) p3X
+-- zeroPlonky3: softmax gives [0, 0] with no matrix (flag 69 (a), p3Zero).
+def zeroPlonky3 : List Nat := p3Words p3S p3S p3Sm nil p3X
+-- wrapPlonky3: p - 1 in x and in W: y = [(p - 1) (p - 1) + 35, 11 (p - 1) + 65] = [36, 54].
+def wrapPlonky3 : List Nat := p3Words p3S p3S p3Mm0 (cons (p3Mat p3Pm1 7 11 13) nil) (cons p3Pm1 (cons 5 nil))

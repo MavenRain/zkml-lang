@@ -1033,3 +1033,93 @@ def h2IndexK : (a b : Shape) -> H2Mod a b -> List Nat -> List Nat :=
     (fun hasA hasB hasC hasD hasF hasG hasH => <i> fun (r : List Nat) => hasF (hasG (hasH r)))
     (fun hsqA hsqB hsqF hsqG hsqP hsqQ => isSetPi (List Nat) (fun (r : List Nat) => List Nat) (fun (r : List Nat) => isSetList Nat natIsSet) hsqF hsqG hsqP hsqQ) f
 def h2MatIndex : (a b : Shape) -> H2Mod a b -> List Nat := fun a b f => h2IndexK a b f nil
+-- The Plonky3 model (slice Z10b, flag 89 (a)): the Halo2 model form, with its
+-- own names. P3Op a b is one AIR block: p3MatMul n m k keeps the matrix index
+-- k, p3Lookup s t is refused, p3Zero s constrains each output to 0.
+family P3Op (a b : Shape) :=
+    p3MatMul (pmN pmM pmK : Nat) : P3Op (shape (cons pmN nil)) (shape (cons pmM nil))
+  | p3Lookup (pkS : Shape) (pkT : Nat) : P3Op pkS pkS
+  | p3Zero (pzS : Shape) : P3Op pzS pzS
+-- P3Mod a b: a Plonky3 circuit from a to b, a QIIT with the constructors of Circuit.
+family P3Mod (a b : Shape) :=
+    p3Id (pidA : Shape) : P3Mod pidA pidA
+  | p3Seq (pseA pseB pseC : Shape) (pseF : P3Mod pseA pseB) (pseG : P3Mod pseB pseC) : P3Mod pseA pseC
+  | p3Op (popA popB : Shape) (popO : P3Op popA popB) : P3Mod popA popB
+  | p3Residual (prsS : Shape) (prsF : P3Mod prsS prsS) : P3Mod prsS prsS
+  | p3Idl (pilA pilB : Shape) (pilF : P3Mod pilA pilB)
+      : Path (P3Mod pilA pilB) (p3Seq pilA pilA pilB (p3Id pilA) pilF) pilF
+  | p3Idr (pirA pirB : Shape) (pirF : P3Mod pirA pirB)
+      : Path (P3Mod pirA pirB) (p3Seq pirA pirB pirB pirF (p3Id pirB)) pirF
+  | p3Assoc (pasA pasB pasC pasD : Shape) (pasF : P3Mod pasA pasB) (pasG : P3Mod pasB pasC) (pasH : P3Mod pasC pasD)
+      : Path (P3Mod pasA pasD) (p3Seq pasA pasC pasD (p3Seq pasA pasB pasC pasF pasG) pasH) (p3Seq pasA pasB pasD pasF (p3Seq pasB pasC pasD pasG pasH))
+  | p3Squash (psqA psqB : Shape) (psqF psqG : P3Mod psqA psqB) (psqP psqQ : Path (P3Mod psqA psqB) psqF psqG)
+      : Path (Path (P3Mod psqA psqB) psqF psqG) psqP psqQ
+-- opP3: the Plonky3 block of an operator, by an Op fold (the opH2 form).
+def opP3 : (a b : Shape) -> Op a b -> P3Op a b :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => P3Op a b) (fun qzS qzK => p3Zero qzS) (fun mmN mmM mmK => p3MatMul mmN mmM mmK) (fun lkS lkT => p3Lookup lkS lkT) (fun smS smT smK => p3Zero smS) (fun lnS lnG lnT => p3Zero lnS) (fun atH atD atQ atK atV atT atE => p3Zero (shape (cons atH (cons atD nil)))) o
+-- exportP3Mod: the Plonky3 circuit of a circuit, by a Circuit fold. Each
+-- constructor goes to the P3Mod constructor of the same name.
+def exportP3Mod : (a b : Shape) -> Circuit a b -> P3Mod a b :=
+  fun a b x => fold (fun (a : Shape) => fun (b : Shape) => P3Mod a b) (fun idA => p3Id idA) (fun seqA seqB seqC seqF seqG => p3Seq seqA seqB seqC seqF seqG) (fun opA opB opO => p3Op opA opB (opP3 opA opB opO)) (fun rsS rsF => p3Residual rsS rsF) (fun idlA idlB idlF => p3Idl idlA idlB idlF) (fun idrA idrB idrF => p3Idr idrA idrB idrF) (fun asA asB asC asD asF asG asH => p3Assoc asA asB asC asD asF asG asH) (fun sqA sqB sqF sqG sqP sqQ => p3Squash sqA sqB sqF sqG sqP sqQ) x
+-- A Plonky3 hom: a circuit and its resources (the Halo2Hom form).
+family Plonky3Hom (a b : Shape) := plonky3Hom (p3Mod : P3Mod a b) (p3Res : Resource)
+def plonky3IdH : (s : Shape) -> Plonky3Hom s s := fun s => plonky3Hom s s (p3Id s) zeroR
+def plonky3SeqH : (a b c : Shape) -> Plonky3Hom b c -> Plonky3Hom a b -> Plonky3Hom a c :=
+  fun a b c g f => plonky3Hom a c (p3Seq a b c (p3Mod f) (p3Mod g)) (resAdd (p3Res g) (p3Res f))
+-- plonky3Ext and plonky3Ext2: the halo2Ext and halo2Ext2 forms (record eta).
+def plonky3Ext : (a b : Shape) -> (h1 h2 : Plonky3Hom a b) -> Path (P3Mod a b) (p3Mod h1) (p3Mod h2) -> Path Resource (p3Res h1) (p3Res h2) -> Path (Plonky3Hom a b) h1 h2 :=
+  fun a b h1 h2 pm pr => <i> plonky3Hom a b (pm @ i) (pr @ i)
+def plonky3Ext2 : (a b : Shape) -> (h1 h2 : Plonky3Hom a b) -> (p q : Path (Plonky3Hom a b) h1 h2) -> (sm : Path (Path (P3Mod a b) (p3Mod h1) (p3Mod h2)) (<i> p3Mod (p @ i)) (<i> p3Mod (q @ i))) -> (sr : Path (Path Resource (p3Res h1) (p3Res h2)) (<i> p3Res (p @ i)) (<i> p3Res (q @ i))) -> Path (Path (Plonky3Hom a b) h1 h2) p q :=
+  fun a b h1 h2 p q sm sr => <j> <i> plonky3Hom a b (sm @ j @ i) (sr @ j @ i)
+-- The category laws on Plonky3Hom: the P3Mod path constructors and the Resource laws.
+def plonky3Idl : (a b : Shape) -> (f : Plonky3Hom a b) -> Path (Plonky3Hom a b) (plonky3SeqH a b b (plonky3IdH b) f) f :=
+  fun a b f => plonky3Ext a b (plonky3SeqH a b b (plonky3IdH b) f) f (p3Idr a b (p3Mod f)) (resUnitL (p3Res f))
+def plonky3Idr : (a b : Shape) -> (f : Plonky3Hom a b) -> Path (Plonky3Hom a b) (plonky3SeqH a a b f (plonky3IdH a)) f :=
+  fun a b f => plonky3Ext a b (plonky3SeqH a a b f (plonky3IdH a)) f (p3Idl a b (p3Mod f)) (resUnitR (p3Res f))
+def plonky3Assoc : (a b c d : Shape) -> (h : Plonky3Hom c d) -> (g : Plonky3Hom b c) -> (f : Plonky3Hom a b) -> Path (Plonky3Hom a d) (plonky3SeqH a b d (plonky3SeqH b c d h g) f) (plonky3SeqH a c d h (plonky3SeqH a b c g f)) :=
+  fun a b c d h g f => plonky3Ext a d (plonky3SeqH a b d (plonky3SeqH b c d h g) f) (plonky3SeqH a c d h (plonky3SeqH a b c g f)) (symm (p3Assoc a b c d (p3Mod f) (p3Mod g) (p3Mod h))) (resAssoc (p3Res h) (p3Res g) (p3Res f))
+-- plonky3HomSet: the Plonky3Hom hom-sets are sets (p3Squash and isSetResource).
+def plonky3HomSet : (a b : Shape) -> isSet (Plonky3Hom a b) :=
+  fun a b h1 h2 p q => plonky3Ext2 a b h1 h2 p q (p3Squash a b (p3Mod h1) (p3Mod h2) (<i> p3Mod (p @ i)) (<i> p3Mod (q @ i))) (isSetResource (p3Res h1) (p3Res h2) (<i> p3Res (p @ i)) (<i> p3Res (q @ i)))
+-- The category of Plonky3 circuits: the objects are the shapes.
+def Plonky3CircuitCat : Category := mkCat Shape Plonky3Hom plonky3IdH plonky3SeqH plonky3Idl plonky3Idr plonky3Assoc plonky3HomSet
+-- exportPlonky3Hom: the Plonky3 circuit of the circuit and the resources of the layer.
+def exportPlonky3Hom : (I : Inst) -> (a b : Shape) -> Layer I a b -> Plonky3Hom a b :=
+  fun I a b L => plonky3Hom a b (exportP3Mod a b (layerCircuit L)) (layerRes L)
+-- The Plonky3 export functor: funId and funSeq hold by refl.
+def exportPlonky3 : (I : Inst) -> Functor (LayerCat I) Plonky3CircuitCat :=
+  fun I => mkFun (LayerCat I) Plonky3CircuitCat (fun (s : Shape) => s) (exportPlonky3Hom I) (fun (a : Shape) => refl) (fun (a b c : Shape) (g : Layer I b c) (f : Layer I a b) => refl)
+-- resourcesExportPlonky3: the Plonky3 export keeps the resources of a layer.
+def resourcesExportPlonky3 : (I : Inst) -> (a b : Shape) -> (L : Layer I a b) -> Path Resource (p3Res (funHom (exportPlonky3 I) a b L)) (layerRes L) :=
+  fun I a b L => refl
+-- p3OpStage o s: the stage record of one block (D3 block 1, flag 90 (a)): 1 k s
+-- for a matmul (the matrix index k, the source s), 2 for a zero, 4 for a lookup.
+def p3OpStage : (a b : Shape) -> P3Op a b -> Nat -> List Nat :=
+  fun a b o => fold (fun (a : Shape) => fun (b : Shape) => Nat -> List Nat) (fun pmN pmM pmK => fun (s : Nat) => cons 1 (cons pmK (cons s nil))) (fun pkS pkT => fun (s : Nat) => cons 4 nil) (fun pzS => fun (s : Nat) => cons 2 nil) o
+-- p3StagesK f j s k: the stage records of f in run order (the bbTraceK form). j is
+-- the number of the next stage, s is the source of the input (0 for the inputs, j
+-- for stage j), and k gets the next stage number and the source of the output. A
+-- residual record is 3 s u (the residual input s, the inner result u). The idl,
+-- idr and assoc ends are equal by beta and eta. The squash case uses isSetPi
+-- three times and isSetList.
+def p3StagesK : (a b : Shape) -> P3Mod a b -> Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat) :=
+  fun a b f => fold (fun (a : Shape) => fun (b : Shape) => Nat -> Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat))
+    (fun pidA => fun (j : Nat) => fun (s : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => k j s)
+    (fun pseA pseB pseC pseF pseG => fun (j : Nat) => fun (s : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => pseF j s (fun (j2 : Nat) => fun (s2 : Nat) => pseG j2 s2 k))
+    (fun popA popB popO => fun (j : Nat) => fun (s : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => cons (p3OpStage popA popB popO s) (k (natAdd j 1) j))
+    (fun prsS prsF => fun (j : Nat) => fun (s : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => prsF j s (fun (j2 : Nat) => fun (u : Nat) => cons (cons 3 (cons s (cons u nil))) (k (natAdd j2 1) j2)))
+    (fun pilA pilB pilF => <i> pilF)
+    (fun pirA pirB pirF => <i> pirF)
+    (fun pasA pasB pasC pasD pasF pasG pasH => <i> fun (j : Nat) => fun (s : Nat) => fun (k : Nat -> Nat -> List (List Nat)) => pasF j s (fun (j2 : Nat) => fun (s2 : Nat) => pasG j2 s2 (fun (j3 : Nat) => fun (s3 : Nat) => pasH j3 s3 k)))
+    (fun psqA psqB psqF psqG psqP psqQ => isSetPi Nat (fun (j : Nat) => Nat -> (Nat -> Nat -> List (List Nat)) -> List (List Nat)) (fun (j : Nat) => isSetPi Nat (fun (s : Nat) => (Nat -> Nat -> List (List Nat)) -> List (List Nat)) (fun (s : Nat) => isSetPi (Nat -> Nat -> List (List Nat)) (fun (k : Nat -> Nat -> List (List Nat)) => List (List Nat)) (fun (k : Nat -> Nat -> List (List Nat)) => isSetList (List Nat) (isSetList Nat natIsSet)))) psqF psqG psqP psqQ) f
+-- p3Stages f: the stage records of f alone. The first stage is stage 1.
+def p3Stages : (a b : Shape) -> P3Mod a b -> List (List Nat) :=
+  fun a b f => p3StagesK a b f 1 0 (fun (j : Nat) => fun (s : Nat) => nil)
+-- p3Program f: the D3 block 1: the stage count t, then the record of each stage.
+def p3Program : (a b : Shape) -> P3Mod a b -> List Nat :=
+  fun a b f => (fun (st : List (List Nat)) => cons (listLen (List Nat) st) (listConcat Nat st)) (p3Stages a b f)
+-- p3Words a b f ws x: the 3 blocks of a Plonky3 entry (D3): the stage program,
+-- the inputs (the count n, then one word for each element) and the Z7 witness
+-- words (field id 1).
+def p3Words : (a b : Shape) -> Circuit a b -> BbWeights -> Tensor Nat a -> List Nat :=
+  fun a b f ws x => listAppend Nat (p3Program a b (exportP3Mod a b f)) (listAppend Nat (cons (listLen Nat (flatT Nat a x)) (flatT Nat a x)) (bbWitnessWords ws (bbTrace a b f ws x)))

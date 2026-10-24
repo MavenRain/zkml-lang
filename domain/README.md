@@ -166,6 +166,13 @@ tests use these names, so keep them when you replace the sample.
 | `Halo2CircuitCat`, `exportHalo2` | the category of Halo2 circuits (the objects are the shapes) and the export functor from `LayerCat I`: the identity on shapes, `exportHalo2Hom` on the homs, funId and funSeq by `refl`; `resourcesExportHalo2` by `refl` | examples/halo2.lang |
 | `h2Llzk`, `h2OpLlzk` | the LLZK module of a Halo2 circuit: each constructor to the LLZK constructor of the same name (`h2MatMul n m k` to `llMatMul n m k`); `llzkWords` does not write `k` | examples/halo2.lang |
 | `h2MatIndex`, `h2IndexK`, `h2OpIndexK` | the matrix index `k` of each `h2MatMul` in run order (D3 block 2), by an `H2Mod` fold in difference-list form | examples/halo2.lang |
+| `P3Op a b` | one Plonky3 AIR block (slice Z10b, flag 89 (a)): `p3MatMul n m k` (the matrix index `k` stays), `p3Lookup` (refused), `p3Zero` (each output is constrained to 0) | `opP3`, `P3Mod` |
+| `P3Mod a b` | a Plonky3 circuit, a QIIT with the constructors of `Circuit`: `p3Id`, `p3Seq`, `p3Op`, `p3Residual`, the law paths `p3Idl`, `p3Idr`, `p3Assoc` and the set truncation `p3Squash` | `exportP3Mod`, `Plonky3Hom`, `p3StagesK` |
+| `opP3`, `exportP3Mod` | the Plonky3 block of an operator (the `opH2` cases) and the Plonky3 circuit of a `Circuit` (each constructor to the `P3Mod` constructor of the same name) | `exportPlonky3Hom`, `p3Words` |
+| `Plonky3Hom a b`, `Plonky3CircuitCat` | a Plonky3 circuit and its resources (the `Halo2Hom` form); the category laws by the `P3Mod` paths and the `Resource` laws; the hom-sets are sets (`p3Squash`, `isSetResource`) | `exportPlonky3` |
+| `exportPlonky3`, `resourcesExportPlonky3` | the Plonky3 export functor (the identity on shapes; funId and funSeq by `refl`) and the proof that it keeps the resources of a layer (`refl`) | examples/plonky3.lang |
+| `p3OpStage`, `p3StagesK`, `p3Stages`, `p3Program` | the stage records in run order, a `P3Mod` fold in the `bbTraceK` form (flag 90 (a): `1 k s` matmul, `2` zero, `3 s u` residual, `4` lookup; a source is 0 for the inputs or j for stage j), then the D3 block 1 (the count t, then the records) | `p3Words` |
+| `p3Words` | the 3 blocks of a Plonky3 entry (D3): the stage program, the inputs (the count n, then one word for each element) and the Z7 witness words `bbWitnessWords` | examples/plonky3.lang |
 
 `layerSeq I a b c L2 L1` is `L2` after `L1`. Its resources are
 `resAdd (layerRes L2) (layerRes L1)`.

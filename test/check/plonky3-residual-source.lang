@@ -1,0 +1,2 @@
+-- The residual record of residual2 is 3 0 1 (the residual input 0, the inner result 1): the swapped sources are not refl.
+def residualSource : Path (List Nat) (p3Program (shape (cons 2 nil)) (shape (cons 2 nil)) (exportP3Mod (shape (cons 2 nil)) (shape (cons 2 nil)) (circResidual (shape (cons 2 nil)) (circOp (shape (cons 2 nil)) (shape (cons 2 nil)) (opMatMul 2 2 0))))) (cons 2 (cons 1 (cons 0 (cons 0 (cons 3 (cons 1 (cons 0 nil))))))) := refl
