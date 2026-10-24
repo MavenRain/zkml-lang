@@ -231,6 +231,70 @@ case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')" in
 esac
 echo "halo2 refusals: $halo2_refusals checked"
 
+# The Plonky3 printer rows (slice Z10c). The words of a row are
+# test/plonky3/CASE.words, or else the `langc eval` output of the entry
+# CASEPlonky3 of examples/plonky3.lang.
+plonky3_words() {
+  if [ -f "test/plonky3/$1.words" ]; then
+    cp "test/plonky3/$1.words" "$tmp/words"
+  else
+    build/langc eval examples/plonky3.lang "${1}Plonky3" >"$tmp/words" 2>/dev/null || true
+  fi
+}
+# plonky3_accepted CASE: build/plonky3print exits 0, prints nothing and does
+# not make the directory $tmp/plonky3/CASE. Part 1 of slice Z10c has no writer.
+plonky3s=0
+plonky3_accepted() {
+  plonky3_words "$1"
+  status=0
+  build/plonky3print "$1" "$tmp/plonky3/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+  plonky3s=$((plonky3s + 1))
+  if [ "$status" -ne 0 ] || [ -s "$tmp/out" ] || [ -s "$tmp/err" ] || [ -e "$tmp/plonky3/$1" ]; then
+    echo "FAIL plonky3 $1: exit $status, an output or a file"
+    fail=$((fail + 1))
+  fi
+}
+# plonky3_refused CASE MESSAGE: build/plonky3print exits 1, prints the one
+# line `plonky3print: MESSAGE` on stderr, prints nothing on stdout and does
+# not make the directory $tmp/plonky3/CASE.
+plonky3_refusals=0
+plonky3_refused() {
+  plonky3_words "$1"
+  status=0
+  build/plonky3print "$1" "$tmp/plonky3/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+  plonky3_refusals=$((plonky3_refusals + 1))
+  case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')|$([ -e "$tmp/plonky3/$1" ] && echo written)" in
+    "1|plonky3print: $2|0|") ;;
+    *) echo "FAIL plonky3 refusal $1: want exit 1 and $2, got exit $status"; fail=$((fail + 1)) ;;
+  esac
+}
+mkdir -p "$tmp/plonky3"
+for name in matmul2 residual2 seq2 zero wrap; do
+  plonky3_accepted "$name"
+done
+echo "plonky3: $plonky3s checked"
+# Each refusal file is the matmul2Plonky3 words with one change (D3), and
+# residual.words is the residual2Plonky3 words with one change.
+plonky3_refused field 'the field id is not 1'
+plonky3_refused header 'the witness header is not 1 1 1'
+plonky3_refused count 'the witness stage count is not the stage count'
+plonky3_refused tag 'a stage tag is not known'
+plonky3_refused lookup 'lookup is refused (flag 69 (a))'
+plonky3_refused source 'a source is not below its stage number'
+plonky3_refused index 'a matrix index is not below the matrix count'
+plonky3_refused matrix 'a matrix rank is not 2'
+plonky3_refused rank 'a matmul stage does not have rank 1'
+plonky3_refused rows 'the matmul stage entry count is not the row count of its matrix'
+plonky3_refused cols 'the matrix column count is not the entry count of the matmul source'
+plonky3_refused aux 'a stage aux word is not 0'
+plonky3_refused element 'an element is not below the field modulus'
+plonky3_refused extra 'a word follows the witness block'
+plonky3_refused residual 'a residual source entry count is not the stage entry count'
+# There is no test/plonky3/Bad.words, so the words are empty. The printer
+# checks NAME before it reads the words.
+plonky3_refused Bad 'the name is empty or has a character that is not a to z or 0 to 9'
+echo "plonky3 refusals: $plonky3_refusals checked"
+
 status=0
 build/langc 2>/dev/null || status=$?
 [ "$status" -eq 2 ] || { echo "FAIL usage: want exit 2, got $status"; fail=$((fail + 1)); }

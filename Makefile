@@ -11,7 +11,7 @@ HEADERS = $(wildcard src/*.h src/front/*.h)
 
 .PHONY: build check check-clang clean halo2-check zk-check
 
-build: build/langc build/fronttool build/llzkprint build/halo2print
+build: build/langc build/fronttool build/llzkprint build/halo2print build/plonky3print
 
 build/domain.c: domain/domain.lang gen/embed.c
 	mkdir -p build
@@ -44,15 +44,29 @@ build/halo2-reader: test/halo2-reader.c src/halo2.c
 	mkdir -p build
 	$(TCC) $(CFLAGS) -o build/halo2-reader test/halo2-reader.c
 
+# The Plonky3 printer (slice Z10c, flag 91 (a)): the `langc eval` words of a
+# Plonky3 entry to a Rust crate. src/main.c does not use it. Part 1 of slice
+# Z10c has the checks only.
+build/plonky3print: src/plonky3.c
+	mkdir -p build
+	$(TCC) $(CFLAGS) -o build/plonky3print src/plonky3.c
+
+build/plonky3-reader: test/plonky3-reader.c src/plonky3.c
+	mkdir -p build
+	$(TCC) $(CFLAGS) -o build/plonky3-reader test/plonky3-reader.c
+
 check-clang: build/domain.c
 	$(CC) $(CLANG_FLAGS) $(SRC) build/domain.c
 	$(CC) $(CLANG_FLAGS) $(FRONT_TOOL)
 	$(CC) $(CLANG_FLAGS) src/llzk.c
 	$(CC) $(CLANG_FLAGS) src/halo2.c
 	$(CC) $(CLANG_FLAGS) test/halo2-reader.c
+	$(CC) $(CLANG_FLAGS) src/plonky3.c
+	$(CC) $(CLANG_FLAGS) test/plonky3-reader.c
 
-check: build/langc build/langc-256 build/fronttool build/llzkprint build/halo2print build/halo2-reader check-clang
+check: build/langc build/langc-256 build/fronttool build/llzkprint build/halo2print build/halo2-reader build/plonky3print build/plonky3-reader check-clang
 	build/halo2-reader
+	build/plonky3-reader
 	sh test/gate.sh
 	sh test/review.sh
 	sh test/zk-check-runner.sh
