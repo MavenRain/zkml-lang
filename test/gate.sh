@@ -172,34 +172,40 @@ halo2_words() {
     build/langc eval examples/halo2.lang "${1}Halo2" >"$tmp/words" 2>/dev/null || true
   fi
 }
-# halo2_accepted CASE: build/halo2print exits 0 and prints nothing (part c-1
-# has only the checks, so it writes no file).
+# halo2_golden CASE: build/halo2print exits 0, prints nothing and writes the
+# crate $tmp/halo2/CASE. Its Cargo.toml and src/lib.rs are the same as
+# test/halo2/CASE/Cargo.toml and test/halo2/CASE/src/lib.rs.
 halo2s=0
-halo2_accepted() {
+halo2_golden() {
   halo2_words "$1"
   status=0
   build/halo2print "$1" "$tmp/halo2/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
   halo2s=$((halo2s + 1))
-  case "$status|$(cat "$tmp/err" "$tmp/out")" in
-    "0|") ;;
-    *) echo "FAIL halo2 $1: want exit 0, got exit $status"; fail=$((fail + 1)) ;;
-  esac
+  if [ "$status" -ne 0 ] || [ -s "$tmp/out" ] || [ -s "$tmp/err" ] ||
+    ! cmp -s "$tmp/halo2/$1/Cargo.toml" "test/halo2/$1/Cargo.toml" ||
+    ! cmp -s "$tmp/halo2/$1/src/lib.rs" "test/halo2/$1/src/lib.rs"; then
+    echo "FAIL halo2 $1: exit $status or a different crate"
+    fail=$((fail + 1))
+  fi
 }
 # halo2_refused CASE MESSAGE: build/halo2print exits 1, prints the one line
-# `halo2print: MESSAGE` on stderr, prints nothing on stdout and writes no file.
+# `halo2print: MESSAGE` on stderr, prints nothing on stdout and does not make
+# the directory $tmp/halo2/CASE.
 halo2_refusals=0
 halo2_refused() {
   halo2_words "$1"
   status=0
   build/halo2print "$1" "$tmp/halo2/$1" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
   halo2_refusals=$((halo2_refusals + 1))
-  case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')|$(ls -A "$tmp/halo2" 2>/dev/null)" in
+  case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')|$([ -e "$tmp/halo2/$1" ] && echo written)" in
     "1|halo2print: $2|0|") ;;
     *) echo "FAIL halo2 refusal $1: want exit 1 and $2, got exit $status"; fail=$((fail + 1)) ;;
   esac
 }
+# The printer makes DIR and DIR/src only, so the parent of DIR must exist.
+mkdir -p "$tmp/halo2"
 for name in matmul2 residual2 seq2 zero wrap; do
-  halo2_accepted "$name"
+  halo2_golden "$name"
 done
 echo "halo2: $halo2s checked"
 # Each refusal file is the matmul2Halo2 words with one change (D3).
@@ -210,6 +216,19 @@ halo2_refused inputs 'the input count is not the circuit input count'
 halo2_refused stage 'the last stage entry count is not the output count'
 halo2_refused element 'an element is not below the field modulus'
 halo2_refused extra 'a word follows the witness block'
+# There is no test/halo2/Bad.words, so the words are empty. The printer checks
+# NAME before it reads the words.
+halo2_refused Bad 'the name is empty or has a character that is not a to z or 0 to 9'
+# The write refusal: DIR is a regular file, so the printer cannot make DIR.
+: >"$tmp/halo2/file"
+halo2_words matmul2
+status=0
+build/halo2print file "$tmp/halo2/file" <"$tmp/words" >"$tmp/out" 2>"$tmp/err" || status=$?
+halo2_refusals=$((halo2_refusals + 1))
+case "$status|$(cat "$tmp/err")|$(wc -c <"$tmp/out" | tr -d ' ')" in
+  "1|halo2print: the write to $tmp/halo2/file failed|0") ;;
+  *) echo "FAIL halo2 refusal file: want exit 1 and the write failure, got exit $status"; fail=$((fail + 1)) ;;
+esac
 echo "halo2 refusals: $halo2_refusals checked"
 
 status=0

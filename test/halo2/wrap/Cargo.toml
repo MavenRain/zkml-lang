@@ -1,0 +1,12 @@
+[package]
+name = "zkml-halo2-wrap"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "The Halo2 circuit of the zkml-lang entry wrapHalo2 (printed by halo2print)"
+publish = false
+
+[dependencies]
+# Flag 79 (a): PSE halo2_proofs v0.3.0 (the tag is the commit
+# 73408a140737d8336490452193b21f5a7a94e7de).
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v0.3.0" }
