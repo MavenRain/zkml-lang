@@ -9,7 +9,7 @@ SRC = src/main.c $(FRONT) $(TARGET)
 FRONT_TOOL = test/fronttool.c $(filter-out src/front/front.c src/front/lower.c,$(FRONT))
 HEADERS = $(wildcard src/*.h src/front/*.h)
 
-.PHONY: build check check-clang clean halo2-check zk-check
+.PHONY: build check check-clang clean halo2-check plonky3-check zk-check
 
 build: build/langc build/fronttool build/llzkprint build/halo2print build/plonky3print
 
@@ -135,6 +135,36 @@ halo2-check: build/langc build/halo2print
 	done; \
 	echo "halo2-check: $$ok accepted, $$no rejected"; \
 	[ "$$fail" -eq 0 ] && [ "$$ok" -eq 5 ] && [ "$$no" -eq 9 ]
+
+# The Plonky3 Rust row (slice Z10d, D8, D9). plonky3print writes the crate of
+# each Plonky3 entry of examples/plonky3.lang into build/plonky3. cargo tests
+# each crate with the lock test/plonky3/Cargo.lock: the uni-stark prover must
+# prove and verify the Z7 trace, and its check_constraints must reject each
+# mutated trace. `check` does not run this row, because it needs a Rust
+# toolchain and the Plonky3 crates of rev 5fcf8d7c in the cargo cache
+# (--offline). No --release: check_constraints runs only with debug_assertions.
+plonky3-check: build/langc build/plonky3print
+	@set -e; mkdir -p build/plonky3; ok=0; no=0; fail=0; \
+	crates='matmul2 residual2 seq2 wrap zero'; \
+	for n in $$crates; do \
+	  build/langc eval examples/plonky3.lang "$${n}Plonky3" >"build/plonky3/$$n.words" || \
+	    { echo "FAIL plonky3-check $$n: langc eval fails"; exit 1; }; \
+	  build/plonky3print "$$n" "build/plonky3/$$n" <"build/plonky3/$$n.words" || \
+	    { echo "FAIL plonky3-check $$n: plonky3print refuses the words"; exit 1; }; \
+	done; \
+	{ printf '[workspace]\nresolver = "2"\nmembers = ['; sep=; \
+	  for n in $$crates; do printf '%s"%s"' "$$sep" "$$n"; sep=', '; done; \
+	  printf ']\n'; } >build/plonky3/Cargo.toml; \
+	cp test/plonky3/Cargo.lock build/plonky3/Cargo.lock; \
+	for n in $$crates; do \
+	  if $(CARGO_TEST) --offline --locked -j 2 --manifest-path build/plonky3/Cargo.toml \
+	    --target-dir build/plonky3/target -p "zkml-plonky3-$$n"; then \
+	    ok=$$((ok + 1)); \
+	    no=$$((no + $$(awk '/fn rejects_/ { k++ } END { print k + 0 }' "build/plonky3/$$n/src/lib.rs"))); \
+	  else echo "FAIL plonky3-check $$n: cargo test fails"; fail=$$((fail + 1)); fi; \
+	done; \
+	echo "plonky3-check: $$ok accepted, $$no rejected"; \
+	[ "$$fail" -eq 0 ] && [ "$$ok" -eq 5 ] && [ "$$no" -eq 11 ]
 
 clean:
 	rm -rf build

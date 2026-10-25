@@ -247,6 +247,56 @@ An accepted entry exits 0, prints nothing and writes the crate
 plus 1) must fail, and for an entry with weights `rejects_mutated_weight`
 (weight entry 0 plus 1) must fail.
 
+### Plonky3 words
+
+`build/plonky3print NAME DIR` (`src/plonky3.c`, slice Z10c) reads the
+words of one Plonky3 entry on stdin. `p3Words` (`examples/plonky3.lang`)
+gives the entry, and `langc eval` prints the words. The words are 3
+blocks on one line:
+
+1. The stage program: the stage count t, then one record for each stage
+   in run order: `1 k s` (matmul: the matrix index k, the source s), `2`
+   (zero), `3 s u` (residual: the residual input s, the inner result u)
+   and `4` (lookup). A source is 0 for the inputs, or j for stage j. The
+   first stage is stage 1.
+2. The inputs: n, then n elements.
+3. The Z7 witness (`bbWitnessWords`, `Witness format`): the version 1,
+   the field id 1, the element size 1, the matrix count, the words of
+   each matrix, the stage count, then the words of each stage.
+
+An element is one word below the BabyBear modulus p = 15 * 2^27 + 1.
+Plonky3 is BabyBear only (flag 90), so the field id is 1. The printer
+checks NAME (a to z and 0 to 9) and all of the words first. Each tag is
+known. Each source is below its stage number. Each matrix index is below
+the matrix count. The witness stage count is t. The shape of each matmul
+and each residual agrees with the entry counts of its stages. Each
+element is below p.
+
+A refusal exits 1, writes one message line on stderr and writes no
+file. A write that fails is a refusal. A refusal keeps an existing
+crate, as in `halo2print` (the stage directory is `DIR/.plonky3print`).
+The messages include `the field id is not 1`, `the witness stage count
+is not the stage count`, `a stage tag is not known`, `lookup is refused
+(flag 69 (a))`, `a source is not below its stage number`, `a matrix
+index is not below the matrix count`, `an element is not below the field
+modulus`, `a word follows the witness block` and `the name is empty or
+has a character that is not a to z or 0 to 9`.
+
+An accepted entry exits 0, prints nothing and writes the crate
+`zkml-plonky3-NAME`: `DIR/Cargo.toml` (the p3 crates at Plonky3 rev
+5fcf8d7c, flag 87 (a)) and `DIR/src/lib.rs`: the AIR of the D5 layout
+(one trace row holds the inputs, the weights and the entries of each
+stage), the trace (`HEIGHT` copies of the row, with `HEIGHT` 1) and the
+D7 tests. Each stage is bound, so the
+tests check each stage, not only the last. The tests prove and verify
+with the uni-stark test config (BabyBear, Poseidon2, flag 95 (a)):
+`accepts_z7_trace` must pass, `rejects_mutated_output` (an entry of the
+last stage plus 1) must fail, for an entry with weights
+`rejects_mutated_weight` (weight entry 0 plus 1) must fail, and for an
+entry with an inner stage (residual2 and seq2) `rejects_mutated_stage`
+(an entry of stage 1 plus 1) must fail. In the dev profile, `prove` runs
+the debug constraint check first, and a failed constraint panics there.
+
 ## 8. Host and target
 
 > Write here: the host, its pinned commit (`PIN`), the facts from
@@ -417,6 +467,16 @@ plus 1) must fail, and for an entry with weights `rejects_mutated_weight`
   (flag 69 (a))`, as in `llzkprint`. `make halo2-check` runs the crate
   tests outside the sandbox (flag 81). Status: built in slice Z9.
   Section 7 (`Halo2 words`) gives the format.
+- O14. The Plonky3 target (slice Z10, flags 87 to 95). RULED (USER).
+  The guest entries `p3Words` (`examples/plonky3.lang`) give the words,
+  and the host printer `build/plonky3print` writes a Rust crate for each
+  entry (flag 91 (a)). Plonky3 is BabyBear only (flag 90). Each trace
+  stage is bound in the AIR, so the tests check each stage. The lookup op
+  is refused: the stage program gives `lookup is refused (flag 69 (a))`.
+  The crates use Plonky3 rev 5fcf8d7c (flag 87 (a)) and the uni-stark
+  test config (flag 95 (a)). `make plonky3-check` runs the crate tests
+  outside the sandbox (flag 81). Status: built in slice Z10. Section 7
+  (`Plonky3 words`) gives the format.
 
 ## 10. Milestones
 

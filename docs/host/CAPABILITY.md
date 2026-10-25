@@ -32,6 +32,12 @@ on 2026-10-08 on AArch64 Darwin.
   `make check-clang` checks it too. `make halo2-check` runs `cargo test`
   (halo2_proofs MockProver) on the 5 crates. `make check` does not need
   Rust.
+- `src/plonky3.c` is the Plonky3 printer `build/plonky3print` (slice
+  Z10c). It reads the Plonky3 words that `langc eval` prints and writes
+  a Rust crate (`Cargo.toml` and `src/lib.rs`). It needs no library, and
+  `make check-clang` checks it too.
+  `make plonky3-check` runs `cargo test` (the uni-stark prover) on the
+  5 crates. `make check` does not need Rust.
 
 ## Values
 
@@ -92,6 +98,10 @@ on 2026-10-08 on AArch64 Darwin.
   about 20 s and builds the dependencies in `build/halo2/target`
   (434 MB). A second run takes about 5 s. The peak RSS is about 256 MiB
   (slice Z9d).
+- `make plonky3-check` runs `cargo test` on 5 crates. The first run
+  takes about 46 s and builds the dependencies in `build/plonky3/target`
+  (529 MB). A second run takes about 12 s. The peak RSS is about
+  291 MiB (slice Z10d).
 - `langc build examples/entries.lang` writes a module of 492 bytes for six
   entries.
 

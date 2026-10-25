@@ -59,8 +59,10 @@ LLZK 2.1.2. Set `LLZK_OPT` to its path. `make check` does not run it.
 
 `make check` also builds the Halo2 printer `build/halo2print`
 (`src/halo2.c`) and `build/halo2-reader` (`test/halo2-reader.c`), and
-runs the reader first. The reader makes its test directories in
-`$TMPDIR` (default `/tmp`).
+runs the reader first. It also builds the Plonky3 printer
+`build/plonky3print` (`src/plonky3.c`) and `build/plonky3-reader`
+(`test/plonky3-reader.c`), and runs that reader too. The readers make
+their test directories in `$TMPDIR` (default `/tmp`).
 
 `make halo2-check` prints a Rust crate for each of the 5 Halo2 entries
 of `examples/halo2.lang` into `build/halo2/`, and runs the MockProver
@@ -70,6 +72,17 @@ dependencies must be in the cargo cache. When it is GREEN, it prints
 `halo2-check: 5 accepted, 9 rejected`. `CARGO_TEST` is the test command
 (default `testledger -- cargo test`; set `CARGO_TEST='cargo test'` if
 testledger is not installed). Run it outside the sandbox. `make check`
+does not run it.
+
+`make plonky3-check` prints a Rust crate for each of the 5 Plonky3
+entries of `examples/plonky3.lang` into `build/plonky3/`, and runs the
+uni-stark tests of each crate with `cargo test --offline --locked -j 2`.
+It does not use `--release`, because the debug constraint check runs
+only with debug assertions. The lock file is `test/plonky3/Cargo.lock`
+(Plonky3 rev 5fcf8d7c). The run fetches nothing, so the dependencies
+must be in the cargo cache. When it is GREEN, it prints
+`plonky3-check: 5 accepted, 11 rejected`. `CARGO_TEST` is the test
+command, as for `halo2-check`. Run it outside the sandbox. `make check`
 does not run it.
 
 ## Source language

@@ -182,14 +182,18 @@ type does not check as written, and the default for each.
   (outside the sandbox). Status: parts Z9a to Z9c DONE 2026-10-23. Part
   Z9d (`make halo2-check` and the docs) DONE 2026-10-24. Slice Z9 DONE
   2026-10-24.
-- Z10: Plonky3. `Plonky3CircuitCat`, `exportPlonky3`. The writer prints an
-  AIR and its trace. Gate: the Plonky3 debug constraint check accepts the
-  Z7 trace and rejects a mutated trace.
+- Z10: Plonky3. `Plonky3CircuitCat`, `exportPlonky3`. The writer prints a
+  Rust crate (an AIR and its trace) for each entry. Gate:
+  `make plonky3-check`: the uni-stark prover proves and verifies the Z7
+  trace of each of the 5 entries, and the debug constraint check rejects
+  11 mutated traces (outside the sandbox). Status: parts Z10a to Z10d
+  DONE. Slice Z10 DONE 2026-10-24.
 - Z11: `SPEC.md`, `probe/CAPABILITY.md`, `docs/STATUS.md`,
   `docs/VALIDATION.md` and `README.md`. Final gate.
 - Gate: `make check`. The target gates need Rust and LLVM tools, so they
-  are `make zk-check` and `make halo2-check`, outside the sandbox when
-  needed. Each long run stays under 4 GB. Rust builds use `-j 2`.
+  are `make zk-check`, `make halo2-check` and `make plonky3-check`,
+  outside the sandbox when needed. Each long run stays under 4 GB. Rust
+  builds use `-j 2`.
 
 ## 6. Open items
 
