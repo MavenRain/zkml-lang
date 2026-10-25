@@ -146,7 +146,7 @@ type does not check as written, and the default for each.
   in `frRun`, the lookup operator real, the matmul case `zeroT Fr
   frZero` under flag 50, and real since slice ZL) DONE 2026-10-19. Part
   Z6j session 1b (the lowering shares the values in each block, flags
-  51 to 55) DONE 2026-10-20.
+  51 to 55) DONE 2026-10-20. Slice Z6 DONE 2026-10-20.
 - Z7: Wasm witness runtime. An entry compiles to Wasm and makes the
   witness. The field arithmetic (31-bit, and 254-bit Montgomery) is guest
   code in `domain/domain.lang` (flag 57 (a)). `langc eval` and the Wasm
@@ -156,7 +156,7 @@ type does not check as written, and the default for each.
   2026-10-21. Part Z7b (the BabyBear trace and its witness words, flag
   62 (a)) DONE 2026-10-21. Part Z7c (the BN254 trace and its witness
   words) DONE 2026-10-22. Part Z7d (the witness format in `SPEC.md` and
-  the final gate) DONE 2026-10-22.
+  the final gate) DONE 2026-10-22. Slice Z7 DONE 2026-10-22.
 - ZL: Lazier checker (flags 50 and 64). `symm`, `trans` and `cong`
   quote a closure as its body applied to the quoted environment
   (`quote_lazy`). The conversion accepts two closures with the same body
@@ -189,7 +189,13 @@ type does not check as written, and the default for each.
   11 mutated traces (outside the sandbox). Status: parts Z10a to Z10d
   DONE. Slice Z10 DONE 2026-10-24.
 - Z11: `SPEC.md`, `probe/CAPABILITY.md`, `docs/STATUS.md`,
-  `docs/VALIDATION.md` and `README.md`. Final gate.
+  `docs/VALIDATION.md` and `README.md`. Final gate. Status: part Z11a
+  (`probe/CAPABILITY.md` and `docs/host/CAPABILITY.md`) DONE 2026-10-24.
+  Part Z11b (the `SPEC.md` header and sections 1 to 4 and 8 to 10) DONE
+  2026-10-24. Part Z11c (`SPEC.md` sections 5 to 7) DONE 2026-10-24. Part
+  Z11d (`docs/STATUS.md`, `README.md`, this file and the cites of
+  `formers/tcc-wasm.md`, flag 103) DONE 2026-10-25. Part Z11e (the final
+  gate and `docs/VALIDATION.md`) is open.
 - Gate: `make check`. The target gates need Rust and LLVM tools, so they
   are `make zk-check`, `make halo2-check` and `make plonky3-check`,
   outside the sandbox when needed. Each long run stays under 4 GB. Rust
@@ -199,9 +205,12 @@ type does not check as written, and the default for each.
 
 - O1: Move C1 to C5 into lang-template as a kit change. Default: no, until
   Z4 is done and the USER asks.
+  Status: the default, as built; open for the USER (flag 99 (a)).
 - O2: Fields. Default: BabyBear and BN254. Goldilocks and Mersenne31 later.
+  Status: the default, as built; open for the USER (flag 99 (a)).
 - O3: Glue types and univalence. Default: out, because the design does not
   list them.
+  Status: the default, as built; open for the USER (flag 99 (a)).
 - O4: matmul weights (N7). RULED 2026-10-15 (USER): (b), the weights are
   part of the witness. The Layer type change is the N7 default.
 - O5: attention shapes (N7). RULED 2026-10-16 (USER): the default.
@@ -213,6 +222,8 @@ type does not check as written, and the default for each.
   `LLZK_OPT` in the `Makefile` gives the path of its `llzk-opt`.
 - O7: Circuit as a QIIT (N2). The other option: `seq` pattern matches on
   `id`, so one unit law is `refl` and the others are proofs.
+  Status: the default, as built; open for the USER (flag 99 (a)).
 - O8: QIIT schema. Default: finitary QIITs (sorts indexed by earlier sorts,
   path constructors between point terms), as in Kaposi, Kovács and
   Altenkirch.
+  Status: the default, as built; open for the USER (flag 99 (a)).

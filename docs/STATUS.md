@@ -1,27 +1,18 @@
 # zkml-lang status
 
-The build implements slice Z0 (the tcc-wasm kit with the formers F1 to
-F15) and slice Z1 of `docs/PLAN.md`: the interval C1 with faces, partial
-elements and systems, and PathP and Path (C2). It also implements
-slice Z2 (C3): `transp`, `hcomp`, `comp` and `fill`, and transport and
-`trans` over a path, slice Z3 (C4): higher inductive types in the
-domain, path constructor values, the formal `hcomp` and the `fold`
-eliminator, and slice Z4 (C5): indexed sorts with the motive fold (part
-Z4a) and mutual blocks (part Z4b). It implements part Z5a of slice Z5:
-`Nat` induction, the `natAdd` neutral rules, `natMax`, `natIsSet` and
-record eta. It implements part Z5b: the `natMax` neutral rules and, in
-the domain, `Resource`, `Inst`, `Layer`, the h-level library and the
-category laws of `Layer`. It implements part Z5c: `isSetHom`, the
-category `LayerCat` and the functor `denote`. Slice Z5 is DONE. It
-implements part Z6a: the `List` motive fold (C7), part Z6b: the
-split witness of `instSeqSat` (flag 16), and part Z6c: the tensor
-library (`isSetList`, `isSetTensor`, `zeroT`, `mapT`, `zipWithT`,
-`sumT` and the stage round trip). Slice Z6 is in progress. It
-implements part Z7a: an entry with a `List Nat` result gives a words
-block (flag 56 (a)), part Z7b: the BabyBear trace and its witness
-words (flag 62 (a)), and part Z7c: the BN254 trace and its witness
-words. It implements part Z7d: the witness format in `SPEC.md`.
-Slices Z7 to Z10 are DONE. Slice Z11 is not started.
+The build implements each slice of `docs/PLAN.md` from Z0 to Z10, and
+slice ZL. Slice Z0 gives the tcc-wasm kit with the formers F1 to F15.
+Slices Z1 to Z4 give the cubical formers C1 to C5: the interval, PathP
+and Path, `transp`, `hcomp`, `comp` and `fill`, higher inductive types,
+and indexed sorts with mutual blocks. Slices Z5 and Z6 give the `Nat`
+conversion rules and record eta (C6), the `List` induction (C7) and the
+domain of `design/DESIGN.md`: `Resource`, `Inst`, `Layer`, the category
+`LayerCat`, the functor `denote`, the tensor library, the operators and
+the BabyBear and BN254 instances. Slice Z7 gives the Wasm witness
+runtime. Slice ZL gives the lazier checker. Slices Z8, Z9 and Z10 give
+the LLZK, Halo2 and Plonky3 targets. Each of these slices is DONE.
+Slice Z11 (the final docs and the final gate) closes the plan.
+`docs/PLAN.md` row Z11 gives the status of its parts.
 
 ## Implemented
 
@@ -105,6 +96,23 @@ Slices Z7 to Z10 are DONE. Slice Z11 is not started.
   `cat-idl-swap`, `tfun-seq-order`, `isset-hom-square`, `denote-hom`
   and `isprop-isset-side`.
 - The refusal `REFUSE_RUNTIME_PATH` in the lowering.
+- Slice Z6 (DONE 2026-10-20). Parts Z6a to Z6d: the `List` motive fold
+  (C7, flag 15), the split witness of `instSeqSat` (flag 16), the tensor
+  library, and `natDiv`, `natMod` and the BabyBear `Inst`.
+  `## Known limits` gives their details. Parts Z6e to Z6g: the `Op` family has
+  `opQuantize`, `opMatMul`, `opLookup` (a table lookup for each entry),
+  `opSoftmax` and `opLayerNorm` (on each row of the last dim), and
+  `opAttention` (one head that maps [h, d] to [h, d], PLAN O5), each
+  with a cost in `opRes`. `bbRun` takes the weights, and
+  `circResidualLoop` gives n residual steps with a cost law for each n.
+  Flags 22 to 35 are RULED (a) 2026-10-18 (USER): the defaults as
+  built. Part Z6h: the BN254 scalar field `Fr` (8 `Nat` limbs,
+  Montgomery CIOS), the canonical predicate `frCanon` and the `Inst`
+  `frInst`, with `examples/bn254.lang`. Flags 38 to 42 are RULED. Part
+  Z6i: `frOpRun` runs the lookup operator over `Fr` in `frRun`, and
+  `frDot` and `frMatVec` are the matrix operators. Flags 44 to 50 are
+  RULED. Part Z6j (the kit sharing slice, flags 36 and 37): the
+  lowering shares the values in each block (flags 51 to 55).
 - Part Z7a (flag 56 (a)): an entry with a `List Nat` result is a words
   entry. The lowering makes a words block [n, w0 .. w(n-1)], with one
   word for each element, and the entry returns the address of the
@@ -171,58 +179,48 @@ Slices Z7 to Z10 are DONE. Slice Z11 is not started.
   3 scratch locals of the Wasm target. `test/ir/locals.lang` gives the
   cases.
 
+- Slice ZL (DONE 2026-10-22): the lazier checker. `quote_lazy` quotes a
+  closure as its body applied to the quoted environment, and the
+  conversion accepts two closures with the same body and convertible
+  environments (`same_closure`). The matmul case of `frOpRun` is then
+  `frMatVec` over the weights at `mmK` (flag 50). Flag 64 (RULED (a)):
+  `make check` checks the examples and the 4 `Fr` rows with
+  `build/langc-256` (a 256 MiB arena), and the shipped `langc` keeps
+  1 GiB.
+- Slice Z8 (DONE 2026-10-23): the LLZK target. `exportLLZK` is a functor
+  into `LLZKIRCat`, and the writer prints LLZK MLIR text. `make check`
+  checks the LLZK words and the printer, and needs no LLVM tool.
+  `make zk-check`: `llzk-opt` accepts each module and rejects 2 mutated
+  modules (PLAN O6).
+- Slice Z9 (DONE 2026-10-24): the Halo2 target. `exportHalo2` is a
+  functor into `Halo2CircuitCat`, and the writer prints a Rust crate for
+  each entry. `make check` checks the Halo2 words, the printer
+  `build/halo2print` and the crate writer, and needs no Rust tool.
+  `make halo2-check` prints the 5 crates and runs
+  `cargo test --offline --locked -j 2` on them: the halo2_proofs
+  MockProver accepts the Z7 witness of each of the 5 entries and
+  rejects 9 mutated witnesses. The lock file is `test/halo2/Cargo.lock`.
+- Slice Z10 (DONE 2026-10-24): the Plonky3 target. `exportPlonky3` is a
+  functor into `Plonky3CircuitCat`, and the writer prints a Rust crate
+  (an AIR and its trace) for each entry. `make check` checks the
+  Plonky3 words, the printer `build/plonky3print` and the crate writer,
+  and needs no Rust tool. `make plonky3-check` prints the 5 crates and
+  runs `cargo test --offline --locked -j 2` on them: the uni-stark
+  prover proves and verifies the Z7 trace of each of the 5 entries, and
+  the debug constraint check rejects 11 mutated traces. Each trace
+  stage is bound. The lock file is `test/plonky3/Cargo.lock`.
+
 ## Remaining work
 
-1. Slices Z6 to Z11 as `docs/PLAN.md` gives them. Item O5 (attention
-   shapes) is RULED. Parts Z6a to Z6e are DONE. Part Z6f session 1 is
-   DONE: the `Op` family has `opQuantize` and `opMatMul`, `bbRun` takes
-   the weights, and `circResidualLoop` gives n residual steps with a cost
-   law for each n. Flags 22 to 25 are open, and the build uses the
-   defaults. Part Z6f session 2 is DONE: the `Op` family also has
-   `opLookup` (a table lookup for each entry), `opSoftmax` and
-   `opLayerNorm` (on each row of the last dim), each with a cost in
-   `opRes`. Flags 26 to 30 are open, and the build uses the defaults.
-   Part Z6g session 1 is DONE: the `Op` family also has `opAttention`
-   (one head that maps [h, d] to [h, d]), with a cost in `opRes`. Flags
-   31 to 35 are open, and the build uses the defaults.
-   Part Z6h session 1b is DONE: the domain has the BN254 scalar field
-   `Fr` (8 `Nat` limbs, Montgomery CIOS), the canonical predicate
-   `frCanon` and the `Inst` `frInst`, with `examples/bn254.lang`. Flags
-   38 to 42 are RULED. Part Z6i session 1b is DONE: `frOpRun` runs the
-   lookup operator over `Fr` in `frRun`, and `frDot` and `frMatVec` are
-   the matrix operators, which `examples/bn254.lang` tests directly.
-   Flags 44 to 50 are RULED. Flag 50 is DONE in slice ZL: the matmul
-   case of `frOpRun` is `frMatVec`. Part Z6j session
-   1b (the kit sharing slice, flags 36 and 37) is DONE: the lowering
-   shares the values in each block (flags 51 to 55). Part Z7a (words
-   entries, flag 56 (a)) is DONE. Flag 61 is RULED (a). Part Z7b (the
-   BabyBear trace and its witness words, flag 62 (a)) is DONE. Flag 63
-   is RULED (a). Part Z7c (the BN254 trace and its witness words) is
-   DONE. Part Z7d (the docs and the final gate of slice Z7) is DONE.
-   Slice Z7 is DONE. Slice ZL (the lazier checker, `quote_lazy` and
-   `same_closure`) is DONE. Flag 64 is RULED (a): the gate checks the
-   examples with `build/langc-256` (a 256 MiB arena). Slice Z8 (the
-   LLZK target) is DONE. Slice Z9 (the Halo2 target) is DONE. Slice Z10
-   (the Plonky3 target) is DONE.
-2. The LLZK target is DONE in slice Z8. `make check` checks the LLZK
-   words and the printer, and needs no LLVM tool. `make zk-check` needs
-   `llzk-opt` from llzk-lib v2.1.2 (LLVM 20.1.8, a nix build in part
-   Z8a), because llzk-lib main needs LLVM 23.1.3. Set `LLZK_OPT` to its
-   path. The lookup op is refused (flag 73 (a)).
-3. The Halo2 target is DONE in slice Z9. `make check` checks the Halo2
-   words, the printer `build/halo2print` and the crate writer, and needs
-   no Rust tool. `make halo2-check` prints the 5 crates and runs
-   `cargo test --offline --locked -j 2` on them (halo2_proofs
-   MockProver), outside the sandbox. The lock file is
-   `test/halo2/Cargo.lock`. Only the last trace stage maps to circuit
-   cells, and the lookup op is refused (O13).
-4. The Plonky3 target is DONE in slice Z10. `make check` checks the
-   Plonky3 words, the printer `build/plonky3print` and the crate writer,
-   and needs no Rust tool. `make plonky3-check` prints the 5 crates and
-   runs `cargo test --offline --locked -j 2` on them (the uni-stark
-   prover and its debug constraint check), outside the sandbox. The lock
-   file is `test/plonky3/Cargo.lock`. Each trace stage is bound, the
-   field is BabyBear only, and the lookup op is refused (O14).
+1. Part Z11e remains: run the final gate and record the results in
+   `docs/VALIDATION.md` (`docs/PLAN.md` row Z11).
+2. These items of `docs/PLAN.md` section 6 are open
+   at the close. Each is the default, as built; open for the USER (flag
+   99 (a)): O1 (C1 to C5 stay in this repository, not a kit change in
+   lang-template), O2 (the fields are BabyBear and BN254; Goldilocks and
+   Mersenne31 are later), O3 (no Glue types and no univalence), O7
+   (`Circuit` is a QIIT, PLAN N2) and O8 (finitary QIITs). The PLAN O
+   numbers are not the `SPEC.md` O numbers (`SPEC.md` section 9).
 
 ## Known limits
 
@@ -336,7 +334,7 @@ Slices Z7 to Z10 are DONE. Slice Z11 is not started.
   so zip and stage decoding also lower when their input lists and
   the source shape are known only at run time. `examples/tensor.lang`
   checks both operations against the generated Wasm.
-- Flag 18 (OPEN, default (i)): the kit has no Empty former (a family
+- Flag 18 (RULED (i) 2026-10-17): the kit has no Empty former (a family
   needs at least one constructor), and `Unit` has no eta and no
   eliminator. Part Z6c uses stand-ins and does not change the kit:
   `Void` is `Path Nat 0 1`, `isPropVoid` comes from `natIsSet`, and
@@ -349,6 +347,21 @@ Slices Z7 to Z10 are DONE. Slice Z11 is not started.
 - The succ iota of the `Nat` motive fold applies only to `natAdd x 1`.
   `natAdd x L` with a number `L` greater than 1 does not unfold. Cause:
   the iota matches only the form `natAdd x 1`.
+- `make zk-check` needs `llzk-opt` from llzk-lib v2.1.2 (LLVM 20.1.8, a
+  nix build in part Z8a). Set `LLZK_OPT` to its path. Cause: llzk-lib
+  main needs LLVM 23.1.3. The LLZK export refuses the lookup op (flag
+  73 (a)).
+- `make halo2-check` and `make plonky3-check` need a Rust toolchain and
+  the crates in the cargo cache (`--offline --locked`), and run outside
+  the sandbox. The Halo2 target maps only the last trace stage to
+  circuit cells, and refuses the lookup op (`SPEC.md` O13). The Plonky3
+  target is BabyBear only, and refuses the lookup op (`SPEC.md` O14).
+- For BN254, `frOpRun` gives a zero tensor (`zeroT Fr frZero`) for
+  `quantize`, `softmax`, `layerNorm` and `attention` (flags 44, 46, 47
+  and 48). The LLZK, Halo2 and Plonky3 export models map these 4
+  operators to zero-output blocks. For Plonky3 (BabyBear), a nonzero
+  result of one of these operators fails the zero constraint of the
+  AIR. `SPEC.md` sections 6 and 7 give the cites.
 - The kit limits stay. `docs/host/CAPABILITY.md` gives them.
 
 ## Internal boundaries
