@@ -2,8 +2,10 @@
 
 This file holds host facts only. Put the facts of your domain in the
 `probe/CAPABILITY.md` of your language. Paths are relative to the host
-kit, or to the root of a generated language. The numbers were measured
-on 2026-10-08 on AArch64 Darwin.
+kit, or to the root of a generated language. The kit numbers were
+measured on 2026-10-08 on AArch64 Darwin. Each tool row names its slice.
+The `make check` counts, the module size and the line cites were checked
+on 2026-10-24 at commit 6b4333f.
 
 ## Toolchain
 
@@ -13,7 +15,7 @@ on 2026-10-08 on AArch64 Darwin.
   sources (`make check-clang`, `Makefile:5`). Each switch on an enum names
   every case and has no default arm.
 - `tcc -run gen/embed.c` turns `domain/domain.lang` into `build/domain.c`
-  at build time (`Makefile:17`). The domain is part of the executable.
+  at build time (`Makefile:18`). The domain is part of the executable.
 - The kit uses the C99 `uint64_t` type for `Nat`. Unsigned arithmetic in
   C wraps modulo 2^64, so the evaluator and the IR use explicit carry
   tests to find an overflow.
@@ -53,14 +55,14 @@ on 2026-10-08 on AArch64 Darwin.
 
 ## Overflow tests on Wasm
 
-- `ADD_CARRY` is `a + b < a`, modulo 2^64 (`src/wasm.c:178`).
+- `ADD_CARRY` is `a + b < a`, modulo 2^64 (`src/wasm.c:190`).
 - `MUL_CARRY` is `b > (2^64 - 1) / max(a, 1)` with `i64.div_u`
-  (`src/wasm.c:181`). The Wasm MVP has no 128-bit product. The test is
+  (`src/wasm.c:193`). The Wasm MVP has no 128-bit product. The test is
   exact: for a > 0, a * b <= 2^64 - 1 if and only if
   b <= floor((2^64 - 1) / a). For a = 0 the product is 0, and the test
   gives 0 for each b.
 - `SUB` is `select(a - b, 0, a >= b)`.
-- The differential grid holds the edge values (`test/grid.awk:8`). Node
+- The differential grid holds the edge values (`test/grid.awk:9`). Node
   and `langc eval` agree: `scale 4294967296 4294967296` is `trap`,
   `scale 4294967295 4294967297` is 18446744073709551615, and
   `addPrice 18446744073709551615 1` is `trap`.
@@ -77,20 +79,20 @@ on 2026-10-08 on AArch64 Darwin.
   reason the differential grid uses values of 2^32 and more only for
   entries with no loop.
 - All memory of `langc` comes from one arena with a limit of 1 GiB
-  (`src/main.c:11`). A run that reaches it stops with `OOM`.
+  (`src/main.c:12`). A run that reaches it stops with `OOM`.
   `langc eval test/ir/spine.lang foldOnes 4294967296` stops with `OOM`.
 - The Wasm memory has a maximum of 16384 pages, which is 1 GiB
   (`src/wasm.c:27`). The allocator traps when `memory.grow` fails.
 - The Wasm writer stops at a statement nesting of 2000 (`src/wasm.c:28`).
   The IR printer stops at 4000 (`src/front/lower.c:17`).
 - A loop over a list spine has a fuel of 2^63 steps
-  (`src/front/lower.c:727`). The heap limit stops the loop first.
+  (`src/front/lower.c:823`). The heap limit stops the loop first.
 - Source files are at most 1 MiB (`src/front/front.h:7`).
 
 ## Measured numbers
 
-- `make check` runs 5016 differential cases on 33 modules, with
-  0 mismatches.
+- `make check` builds 34 Wasm modules and runs 5025 differential cases
+  on them, with 0 mismatches (slice Z10d).
 - `make zk-check` runs `llzk-opt` 14 times in about 1.3 s: 12 modules
   pass and 2 mutants fail. One `llzk-opt` run has a peak RSS of about
   25 MB (part Z8a).
@@ -102,7 +104,7 @@ on 2026-10-08 on AArch64 Darwin.
   takes about 46 s and builds the dependencies in `build/plonky3/target`
   (529 MB). A second run takes about 12 s. The peak RSS is about
   291 MiB (slice Z10d).
-- `langc build examples/entries.lang` writes a module of 492 bytes for six
+- `langc build examples/entries.lang` writes a module of 502 bytes for six
   entries.
 
 ## HOST-LIMIT reasons
@@ -112,21 +114,21 @@ counted loops and bounded loops. It has no calls, no function values and
 no stack of its own. Two programs need more than that. The lowering
 refuses them with a HOST-LIMIT code. These are not defects.
 
-- `REFUSE_RUNTIME_CLOSURE` (`src/front/lower.c:503`): a function value
+- `REFUSE_RUNTIME_CLOSURE` (`src/front/lower.c:587`): a function value
   must exist at run time, for example as the result of a `fold`. The IR
   has no closures. `test/ir/closure.lang` is the gate case.
-- `REFUSE_RUNTIME_TREE` (`src/front/lower.c:1048`): a `fold` walks a value
+- `REFUSE_RUNTIME_TREE` (`src/front/lower.c:1148`): a `fold` walks a value
   of a family with two or more recursive fields, and the value exists
   only at run time. A loop walks one spine. A tree needs recursion or an
   explicit stack. `test/ir/tree.lang` is the gate case.
-- `REFUSE_RUNTIME_PATH` (`src/front/lower.c:509`): an interval or path
+- `REFUSE_RUNTIME_PATH` (`src/front/lower.c:594`): an interval or path
   value must exist at run time, for example in a `fold` accumulator. The
   IR has no interval and no path. A definition of a `PathP` type is a
   proof and erases, so the lowering skips it. `test/ir/path.lang` is the
   gate case. A `transp` that stays unreduced does not refuse: it lowers
-  to its payload `u` (`src/front/lower.c:1212`). The core has no Glue and
+  to its payload `u` (`src/front/lower.c:1312`). The core has no Glue and
   no univalence, so `transp` cannot change the data. Revisit this
   lowering when Glue or `ua` lands. An `hcomp` that stays unreduced
-  refuses (`src/front/lower.c:1207`), for example
+  refuses (`src/front/lower.c:1307`), for example
   `fun x => hcomp (fun j => []) x` at `Nat`: an empty system at a
   neutral base.
