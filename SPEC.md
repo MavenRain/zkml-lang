@@ -1,62 +1,121 @@
-# zkml-lang specification (draft)
+# zkml-lang specification
 
-Status: draft before milestone M0. `zkml-lang` is a working name.
-
-Fill each section. The quoted line under each heading says what to write
-there. Delete the quoted line when the section is complete.
+Status 2026-10-24: slices Z0 to Z10 and ZL are DONE. Slice Z11 writes the
+final docs, runs the final gate and closes the plan.
 
 ## 1. Purpose
 
-> Write here: what one program describes, what the compiler checks, and what
-> it writes. Name the host and the target. Say that the core types and core
-> operations are only those of `design/DESIGN.md`.
-
-zkml-lang is a language for <the domain>. Its type formers are F1 to F15 of
-`formers/FORMERS.md`. Its core data types and core operations are only the
-types and operations of `design/DESIGN.md` (the design).
+zkml-lang is a language for zero-knowledge circuits of machine-learning
+inference. A program is a set of definitions over the domain prelude
+(`domain/domain.lang`): shapes, tensors, layers, circuits and two field
+instances. The compiler `build/langc` checks each definition in cubical
+type theory, with the type formers F1 to F15 of `formers/FORMERS.md` and
+the cubical formers C1 to C7 of `formers/tcc-wasm.md`. `langc build`
+writes a Wasm module, the witness runtime, with one export for each entry.
+The host printers `build/llzkprint`, `build/halo2print` and
+`build/plonky3print` write the LLZK, Halo2 and Plonky3 forms from the
+words of a guest entry. The host is TinyCC, with the tcc-wasm kit
+(section 8). The core data types and core operations are only the types
+and operations of `design/DESIGN.md` (the design).
 
 ## 2. Programs
 
-> Write here: the form of a program and the refusal list. Copy the host
-> forms from `formers/tcc-wasm.md`. Add each fixed first definition that the
-> domain needs (for example a size parameter).
-
-A program is a sequence of definitions:
+A program is one file of at most 1 MiB, with a sequence of definitions:
 
 ```
 def NAME : TYPE := TERM
 ```
 
-The compiler refuses these host forms in a program: <the list from
-`formers/tcc-wasm.md`>. It also refuses a definition that uses a core name or
-a prelude name. Thus a program cannot add a data type, an unproved fact or
-general recursion. Recursion comes only from `fold` and `unfold` (F6, F7).
+A line comment starts with `--`. A definition can use only the core
+names, the prelude names and the earlier definitions of the file. The
+compiler refuses these host forms in a program (`docs/host/README.md`,
+the rule table):
+
+| Rule | Code | The compiler refuses |
+|---|---|---|
+| R1 | `REFUSE_DATA` | a `family` declaration |
+| R2 | `REFUSE_AXIOM` | an `axiom` declaration |
+| R3 | `REFUSE_REC` | `def rec`, or a definition that refers to itself or to a later definition |
+| R4 | `REFUSE_NAME` | a core name, a prelude name, a reserved name or a repeated name as a new definition |
+
+Thus a program cannot add a data type, an unproved fact or general
+recursion. Recursion comes only from `fold` and `unfold` (F6, F7). The
+mutants `test/check/data.lang`, `test/check/axiom.lang`,
+`test/check/rec.lang` and `test/check/core-name.lang` give each code
+(`test/check/expect.txt`).
+
+`langc build` also refuses an entry that needs a value with no
+first-order form at run time. These are HOST-LIMIT codes, not defects of
+the program:
+
+- `REFUSE_RUNTIME_CLOSURE`: a function value must exist at run time (F9).
+- `REFUSE_RUNTIME_TREE`: a fold walks a tree that exists only at run
+  time (F6).
+- `REFUSE_RUNTIME_PATH`: an interval or path value must exist at run
+  time (C1, C2, C3).
+
 The compiler writes the target; a program cannot.
+
+The fixed first definitions are the prelude `domain/domain.lang`. The
+build embeds it in `build/langc` (`Makefile:18`). Each family,
+constructor, field and definition name of the prelude is a core name
+(`domain/domain.lang:2`). The prelude gives these names:
+
+- `Shape` (`domain/domain.lang:33`): the dimensions of a tensor, a
+  `List Nat`. The shape is the size parameter of the domain.
+- `Tensor A s` (`domain/domain.lang:92`): a nested `List A`, with one
+  level for each dimension of `s`.
+- `Op a b`, `Circuit a b` and `Layer I a b` (`domain/domain.lang:41`,
+  `domain/domain.lang:48`, `domain/domain.lang:119`): the ops, the
+  circuits and the layers between two shapes.
+- `Inst` (`domain/domain.lang:99`): an instance: the field, the witness,
+  the weights and the circuit semantics.
+- The two field instances: `bbInst` (BabyBear, p = 2013265921,
+  `domain/domain.lang:537`) and `frInst` (the BN254 scalar field `Fr`,
+  8 limbs below 2^32, `domain/domain.lang:766`).
+- `LlzkHom`, `Halo2Hom` and `Plonky3Hom` (`domain/domain.lang:845`,
+  `domain/domain.lang:983`, `domain/domain.lang:1065`): the guest models
+  of the three circuit targets.
+
+Sections 5 and 6 give the core types and the core operations.
 
 ## 3. Type formers
 
-> Write here: only the deviations from the formers. Do not copy the forms.
-> Give each former whose status in `formers/tcc-wasm.md` is not DONE, and the
-> open item (section 9) that records it.
-
-The type formers are F1 to F15 of `formers/FORMERS.md`. This language uses
-the tcc-wasm column of the realization matrix. `formers/tcc-wasm.md` gives
-the host form of each former.
+The type formers are F1 to F15 of `formers/FORMERS.md` and C1 to C7 of
+`formers/tcc-wasm.md`. This language uses the tcc-wasm column of the
+realization matrix. `formers/tcc-wasm.md` gives the host form and the
+status of each former. Each former is DONE, except these two:
 
 | ID | Status on tcc-wasm | Effect on this language | Open item |
 |---|---|---|---|
-| | | | |
+| F15 | PARTIAL: only the domain file declares an indexed family | A program cannot declare a family (rule R1). The prelude declares the indexed families, for example `Lot`, `Op`, `Circuit` and `Layer`. A constructor takes its indices first. The index erases on Wasm. | None: rule R1 is a design rule. |
+| C6 | PARTIAL: `natMax` has no idempotence rule | The checker does not reduce `natMax n n` to `n` when `n` is a variable. The three `natMax` neutral rules of slice Z5b apply. | None: flag 12 RULED (a) in slice Z5b. |
+
+A former that is DONE can have a limit. `formers/tcc-wasm.md` gives each
+limit: F5 is over `Option`, `Sum E` and `List`; F14 has `Type 0` and
+`Type 1`, with no cumulativity; F6, F9, C1, C2 and C3 have the HOST-LIMIT
+codes of section 2.
 
 ## 4. Structures
 
-> Write here: the carriers of Monad (F5), fold and unfold (F6, F7) and
-> filter (F8) that the design uses. Name each carrier that the host does not
-> give.
+The design uses only the host carriers for the structures (F5 to F8):
 
-- **Monad**: `pure`, `map`, `bind` on <carriers>.
-- **Algebra**: `fold` on <carriers>. `unfold` on <carriers>, or the reason
-  that there is no `unfold`.
-- **Filterable**: `filter` on <carriers>.
+- **Monad**: `pure`, `map` and `bind` on `Option`, `Sum E` and `List`
+  (F5). The prelude uses `map` on `List` (for example
+  `domain/domain.lang:408`) and on `Option`, and `bind` on `Option`
+  (`domain/domain.lang:331`). No prelude definition uses `pure`.
+- **Algebra**: `fold` on `Nat` (with a motive), on `List` (with a motive,
+  C7) and on the prelude families, for example `Stack` and `Rose` (F6).
+  `unfold` makes a `List` with a `Nat` step limit (F7). The prelude uses
+  `unfold` once, in `listZipWith` (`domain/domain.lang:330`).
+- **Filterable**: `filter` on `Option` and `List` (F8). The prelude uses
+  `filter` on `List` (`domain/domain.lang:19`).
+
+The host does not give a Monad, an Algebra or a filter on `Tensor A s`.
+The prelude gives `mapT` (`domain/domain.lang:321`), a `fold` over the
+dimension list of the shape. A `fold` over a tree that exists only at run
+time (for example `Tree` or `Rose`) has no Wasm form
+(`REFUSE_RUNTIME_TREE`, section 2).
 
 ## 5. Core types
 
@@ -299,15 +358,54 @@ the debug constraint check first, and a failed constraint panics there.
 
 ## 8. Host and target
 
-> Write here: the host, its pinned commit (`PIN`), the facts from
-> `probe/CAPABILITY.md` that set the design, and the check that the compiler
-> runs on its output (for example the axiom report).
+The host is TinyCC 0.9.28rc, with the tcc-wasm kit. `PIN` records the
+`tcc` version (`tcc version 0.9.28rc 2026-09-04 mob@0fb54300`), node
+v23.10.0 and wabt 1.0.39 (`wasm-validate`, `wasm-objdump`). The target is
+a Wasm 1.0 module, the witness runtime. The circuit forms are LLZK, Halo2
+and Plonky3 (section 7).
+
+These facts of `probe/CAPABILITY.md` set the design:
+
+- A program is one file over the prelude, with no import. A definition
+  uses only earlier definitions (sections 1, 2 and 7).
+- Each loop is a `fold`, or an `unfold` with a `Nat` step limit. No other
+  recursion checks (section 3).
+- Each number is a 64-bit `Nat` word. `natAdd` and `natMul` trap on an
+  overflow, `natSub` stops at 0, and `natDiv` and `natMod` trap on 0. The
+  prelude makes each field element from `Nat` words (section 4).
+- A proof erases, and a value at run time is first-order. An entry with
+  a `Nat` or `Flag` result gives that value. An entry with a `List Nat`
+  result is a words entry: `node test/run-wasm.mjs` prints its address,
+  and `OUT - ABI` decodes the words (section 5).
+- The cost is small at this scale: at N = 1000, each step (check, build,
+  run) takes less than 0.1 s and less than 55 MiB (section 6).
+- `refl` proves the eta laws of Sigma and Prod (section 8). `Eq` and
+  `Path` work at each index type (section 9).
+- A checked file has no axiom. `natIsSet` is the one trusted primitive,
+  and the lowering refuses it at run time (section 10).
+
+The checks on the output:
+
+- `make check` (`Makefile:66`) runs the gate of the compiler and the
+  printers. `docs/host/CAPABILITY.md` gives its counts.
+- `make zk-check` (`Makefile:81`): `llzk-opt` of LLZK 2.1.2 must accept
+  each LLZK module.
+- `make halo2-check` (`Makefile:116`): `cargo test` of each Halo2 crate
+  (halo2_proofs v0.3.0, offline). The MockProver must accept the witness.
+- `make plonky3-check` (`Makefile:146`): `cargo test` of each Plonky3
+  crate (Plonky3 rev 5fcf8d7c, the uni-stark test config, offline).
+
+The three tool checks run outside the sandbox (flag 81). There is no
+axiom report: the checker refuses `axiom` (rule R2), thus a checked file
+has no axiom (`probe/CAPABILITY.md` section 10).
 
 ## 9. Open items
 
-> Write here: one item for each open question. Number the items O1, O2 and
-> so on. Mark each decision as "RULED YYYY-MM-DD (USER): <the ruling>". Mark
-> each fact that a probe found as "Probe-forced".
+Each item ends with its status at the close: RULED (the USER ruled it),
+or Default, built (the build uses the default, and the USER can still
+rule it). "Probe-forced" marks a fact that a probe found. The numbers O3
+to O8 are not used: `docs/PLAN.md` section 6 has its own items O1 to O8,
+and the other docs cite O9 to O14 by number, thus the numbers stay.
 
 - O1. The denotation of a layer (PLAN N7, ruling O4). The weights are part
   of the witness. Thus a layer denotes a function `Weights -> Tensor ->
@@ -386,6 +484,7 @@ the debug constraint check first, and a failed constraint panics there.
   the memo (flag 54): the other kinds lower to a constant or a level, or
   the lowering refuses them. The tables grow in the arena until the
   arena is freed (flag 55); the peak memory of a check does not change.
+  The flags of this item are RULED. Close: Default, built.
 - O2. The order of composition in `Category` (USER flag 7, N9). The
   design sets `LayerCat ._⋆_ = _∘_`, but `⋆` in the Cubical library is
   diagrammatic: `f ⋆ g` is `f`, then `g`. Thus `catSeq` takes the order
@@ -393,7 +492,7 @@ the debug constraint check first, and a failed constraint panics there.
   this order, `LayerCat` is well typed. The check row
   `test/check/cat-seq-order.lang` shows that the diagrammatic order is
   refused. Status: built in slice Z5c. RULED 2026-10-16 (USER): `catSeq`
-  keeps the order of `∘`. No code change.
+  keeps the order of `∘`. No code change. Close: RULED.
 - O9. The sequence witness laws of `Inst` (USER flag 16, N8). In part
   Z5b, `instSeqSat` gave the same witness `w` to the two stages of
   `circSeq a b c f g`, and `instSeqEval` gave the value of the sequence
@@ -419,14 +518,15 @@ the debug constraint check first, and a failed constraint panics there.
   the two stages is refused (`TYPE_MISMATCH`). The check row
   `test/check/inst-seq-mixed-weights.lang` refuses witness composition
   without the weights path (`TYPE_MISMATCH`). Status: built in part
-  Z6b.
+  Z6b. Close: RULED.
 - O10. No empty type and no `Unit` eta (flag 18). The kit has no Empty
   former, because a family needs at least one constructor. `Unit` has
   no eta and no eliminator, so `isProp Unit` does not check. Part Z6c
   uses stand-ins: `Void` is `Path Nat 0 1`, `voidElim` is a `transp`
   over a `Nat` motive fold, and the code of nil and nil is
   `Path Nat 0 0`. Default (i): keep the stand-ins, with no kit change.
-  Status: OPEN.
+  RULED 2026-10-17 (USER): (i) (flag 18). Status: built in part Z6c.
+  Close: RULED.
 - O11. The Wasm witness runtime (slice Z7, flags 56 to 63). RULED
   2026-10-20 (USER): flags 56 to 60 (a). An entry with a `List Nat`
   result is a words entry, the module exports its memory, and
@@ -447,7 +547,7 @@ the debug constraint check first, and a failed constraint panics there.
   BabyBear p - 1 and p values only to an entry with no loop. The eval
   row `bbWitResidual 2013265920 1` gives the p - 1 case in `langc eval`
   only (flag 63). Status: built in slice Z7. Section 7 (`Witness
-  format`) gives the witness words.
+  format`) gives the witness words. Close: RULED.
 - O12. The LLZK target (slice Z8, flags 65 to 75). RULED 2026-10-22 and
   2026-10-23 (USER). The guest model `LlzkMod` and the functor
   `exportLLZK` give the words, and the host printer `build/llzkprint`
@@ -455,7 +555,7 @@ the debug constraint check first, and a failed constraint panics there.
   and 73 (a)). `constrain.in` is the route for a later slice.
   `llzkWords` gives BN254 words only. The printer also takes BabyBear
   words. Status: built in slice Z8. Section 7 (`LLZK words`) gives the
-  format.
+  format. Close: RULED.
 - O13. The Halo2 target (slice Z9, flags 76 to 86). RULED 2026-10-23
   and 2026-10-24 (USER). The guest entries `h2Words`
   (`examples/halo2.lang`) give the words, and the host printer
@@ -466,7 +566,7 @@ the debug constraint check first, and a failed constraint panics there.
   lookup op is refused: the circuit block gives `lookup is refused
   (flag 69 (a))`, as in `llzkprint`. `make halo2-check` runs the crate
   tests outside the sandbox (flag 81). Status: built in slice Z9.
-  Section 7 (`Halo2 words`) gives the format.
+  Section 7 (`Halo2 words`) gives the format. Close: RULED.
 - O14. The Plonky3 target (slice Z10, flags 87 to 95). RULED (USER).
   The guest entries `p3Words` (`examples/plonky3.lang`) give the words,
   and the host printer `build/plonky3print` writes a Rust crate for each
@@ -476,16 +576,16 @@ the debug constraint check first, and a failed constraint panics there.
   The crates use Plonky3 rev 5fcf8d7c (flag 87 (a)) and the uni-stark
   test config (flag 95 (a)). `make plonky3-check` runs the crate tests
   outside the sandbox (flag 81). Status: built in slice Z10. Section 7
-  (`Plonky3 words`) gives the format.
+  (`Plonky3 words`) gives the format. Close: RULED.
 
 ## 10. Milestones
 
-> Write here: the content of each milestone, and a dated status line under
-> the current milestone.
+| Milestone | Slices | Content |
+|---|---|---|
+| M0 | Z0 to Z4 | The seed; the core types construct and check; the refusal list; the cubical formers C1 to C5 (paths, the Kan operations, higher inductive types, quotient inductive-inductive types); examples and tests |
+| M1 | Z5 and Z6 | The core operations of `design/DESIGN.md`: `Nat` and `List` induction (C6, C7), `Resource`, `Tensor`, `Inst`, `Layer`, `Category`, and the BabyBear and BN254 instances with their op runs |
+| M2 | Z7 to Z10 | The targets: the Wasm witness runtime (Z7), LLZK (Z8), Halo2 (Z9) and Plonky3 (Z10), each with its check (section 8) |
+| M3 | ZL and Z11 | Hardening: the lazy checker and the matmul case of `frOpRun` (ZL); the host probe, the final docs and the final gate (Z11) |
 
-| Milestone | Content |
-|---|---|
-| M0 | Host probe (`probe/CAPABILITY.md`); the core types construct and check; refusal list; examples and tests |
-| M1 | Core operations |
-| M2 | Queries and reads, or the contract |
-| M3 | Hardening: speed, limits, a checked certificate for the output |
+Status 2026-10-24: M0, M1 and M2 are DONE. M3 is the current milestone:
+slice ZL is DONE, and slice Z11 closes the plan.
