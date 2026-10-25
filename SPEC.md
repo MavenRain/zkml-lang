@@ -119,34 +119,100 @@ time (for example `Tree` or `Rose`) has no Wasm form
 
 ## 5. Core types
 
-> Write here (DOMAIN SLOT): only the types of `design/DESIGN.md`. Give each
-> type its meaning in the design and its definition in host forms. Mark each
-> definition that a probe fact forces with "probe-forced".
+The core types are the types of `design/DESIGN.md` and the defaults of
+`docs/PLAN.md` section 4 (N1 to N7). The design is one fragment with no
+section numbers, thus the meaning column cites the line of the design
+name. Each definition is in `domain/domain.lang`. "Probe-forced" marks a
+definition that a probe or an O item forces (section 9).
 
 | Type | Meaning (design section) | Definition |
 |---|---|---|
-| | | |
+| `Shape` | The dimensions of a tensor, a `List ℕ` (`design/DESIGN.md:31`, "Shapes and tensors"). | `family Shape` (`domain/domain.lang:33`): `shape (dims : List Nat)`. |
+| `Tensor` | The entries at a shape over the field `F` (`design/DESIGN.md:36`). | `def Tensor` (`domain/domain.lang:92`): a nested `List`, one level for each dimension, with the field as an argument. `isSetTensor` (`domain/domain.lang:307`) proves that it is a set, by an encode-decode proof over `listCode` (`domain/domain.lang:267`). Probe-forced (O10): the stand-ins `Void` (`domain/domain.lang:260`, `Path Nat 0 1`), `voidElim` (`domain/domain.lang:262`, a `transp` over a `Nat` motive fold) and the code of nil and nil (`Path Nat 0 0`). |
+| `Circuit` | The circuit IR from `inS` to `outS`, with `id` (`design/DESIGN.md:40`, "Circuit IR"). | `family Circuit` (`domain/domain.lang:48`): a QIIT with `circId`, `circSeq` (the design `composeCircuits`), `circOp`, `circResidual`, the path constructors `circIdl`, `circIdr` and `circAssoc`, and the set truncation `circSquash` (PLAN N2). `circOp` takes an `Op` (`domain/domain.lang:41`), with one constructor for each operator of section 6. |
+| `Resource` | The gates, the lookups and the degree of a circuit (`design/DESIGN.md:45`, "Resource monoid"). | `family Resource` (`domain/domain.lang:75`): `res (resGates resLookups resDegree : Nat)`. |
+| `Monoid` | The monoid of `Cubical.Algebra.Monoid` (`design/DESIGN.md:23`), the type of `ResourceMonoid`. | `family Monoid` (`domain/domain.lang:86`): a carrier in `Type 0`, the unit, the operation and the 3 laws. |
+| `Inst` | The module parameters: the field `F`, `Witness`, `satisfies` and `eval` (`design/DESIGN.md:25`). PLAN N3 adds the input witness, and N7 adds the weights. | `family Inst` (`domain/domain.lang:99`): `instF`, `instWitness`, `instWeights`, `instWeightsOf`, `instSat`, `instEval`, `instInputWit` (N3), the input, id and sequence laws (O9) and `instTensorSet`. Probe-forced (O9): the weights path in `instSeqSat` and `instSeqWitSat`. |
+| `Layer` | A circuit with its denotation, soundness, completeness and resources (`design/DESIGN.md:77`, "Core Layer"). | `family Layer` (`domain/domain.lang:119`) over an `Inst`: `layerCircuit`, `layerDen` (a function of the weights, N7 and O1), `layerSound`, `layerComplete` (a `Trunc`) and `layerRes`. |
+| `Category` | The category of `Cubical.Categories.Category` (`design/DESIGN.md:21`), the type of `LayerCat` and of the 3 target categories. | `family Category` (`domain/domain.lang:788`): the objects, the homs, id, seq, the 3 laws and the proof that each hom type is a set (N4). |
+| `Functor` | The functor of `Cubical.Categories.Functor` (`design/DESIGN.md:22`), the type of `denote` and of the 3 export functors. | `family TypeFunctor` (`domain/domain.lang:798`), a functor into types, for `denote`. `family Functor` (`domain/domain.lang:808`) for the export functors. |
+| `LLZKIRCat`, `Halo2CircuitCat`, `Plonky3CircuitCat` | The target categories of the export functors (`design/DESIGN.md:189`, `design/DESIGN.md:180`, `design/DESIGN.md:186`). | `def LLZKIRCat` (`domain/domain.lang:866`), `def Halo2CircuitCat` (`domain/domain.lang:1003`) and `def Plonky3CircuitCat` (`domain/domain.lang:1085`). Each hom is a module and its resources: `LlzkHom` (`domain/domain.lang:845`), `Halo2Hom` (`domain/domain.lang:983`) and `Plonky3Hom` (`domain/domain.lang:1065`). |
 
 ## 6. Core operations
 
-> Write here (DOMAIN SLOT): only the operations of `design/DESIGN.md`. Give
-> each operation its type and its meaning in the design.
+The core operations are the operations of `design/DESIGN.md`, with the
+defaults of `docs/PLAN.md` section 4. In the type column, `I` is an
+`Inst`. In the design, an operator is a `Layer`. In the domain, an
+operator is an `Op` step of a `Circuit` (`circOp`), and each instance
+gives its value (`bbOpRun`, `frOpRun`).
+
+The `quantize`, `softmax`, `layerNorm` and `attention` meanings below
+describe BabyBear (`bbOpRun`, `domain/domain.lang:486`). For BN254,
+`frOpRun` (`domain/domain.lang:693`) returns `zeroT Fr frZero` for these
+four operators (flags 44, 46, 47 and 48, section 9).
 
 | Operation | Type | Meaning (design section) |
 |---|---|---|
-| | | |
+| `_∙_` | `resAdd : Resource -> Resource -> Resource` (`domain/domain.lang:77`) | Adds the gates and the lookups, and takes the max of the degrees (`design/DESIGN.md:50`). |
+| `zeroR` | `zeroR : Resource` (`domain/domain.lang:76`) | The unit, `res 0 0 0` (`design/DESIGN.md:53`). |
+| `∙-assoc`, `∙-unitˡ`, `∙-unitʳ` | `resAssoc` (`domain/domain.lang:83`), `resUnitL` (`domain/domain.lang:79`) and `resUnitR` (`domain/domain.lang:81`), paths in `Resource` | The monoid laws (`design/DESIGN.md:57`). `resAssoc` uses `natAddAssoc` and `natMaxAssoc` (PLAN N1). |
+| `ResourceMonoid` | `ResourceMonoid : Monoid` (`domain/domain.lang:90`) | The resource monoid (`design/DESIGN.md:66`). |
+| `_∘_` | `layerSeq : (I : Inst) -> (a b c : Shape) -> Layer I b c -> Layer I a b -> Layer I a c` (`domain/domain.lang:156`) | Sequential composition: first `L1`, then `L2` (`design/DESIGN.md:86`). The circuit is `circSeq`, the denotation is `seqDen` (`domain/domain.lang:131`) at the same weights, and the resources add. |
+| `idL` | `idL : (I : Inst) -> (s : Shape) -> Layer I s s` (`domain/domain.lang:125`) | The identity layer (`design/DESIGN.md:101`): `circId`, the identity denotation and `zeroR`. Completeness uses `instInputWit` (PLAN N3). |
+| `∘-assoc`, `idL-unitˡ`, `idL-unitʳ` | `layerAssoc` (`domain/domain.lang:203`), `layerIdl` (`domain/domain.lang:197`) and `layerIdr` (`domain/domain.lang:200`), paths in `Layer I a b` | The category laws (`design/DESIGN.md:107`). Each law is a `layerExt` proof, not `refl`: the circuit path is a `Circuit` path constructor, and the resource path is a `Resource` law (PLAN N2). |
+| `LayerCat` | `LayerCat : (I : Inst) -> Category` (`domain/domain.lang:796`) | The layer category (`design/DESIGN.md:120`): the objects are the shapes, and the homs are the layers. |
+| `isSetHom` | `isSetHom : (I : Inst) -> (a b : Shape) -> isSet (Layer I a b)` (`domain/domain.lang:782`) | Each hom type of `LayerCat` is a set (`design/DESIGN.md:128`, PLAN N4), with no truncation of `Layer`. |
+| `soundness-∘` | `soundnessSeq` (`domain/domain.lang:141`) | The soundness of a composition (`design/DESIGN.md:131`). It folds the `Trunc` split of `instSeqSat` into the goal by `soundnessSplit` (`domain/domain.lang:135`). It needs the weights path of `Inst` (probe-forced, O9). |
+| `matmul` | `opMatMul n m k : Op (shape (cons n nil)) (shape (cons m nil))` (`domain/domain.lang:43`) | Multiplies by the matrix `k` of the weights (`design/DESIGN.md:139`, ruling O4, PLAN N7). One multiplication gate for each product. |
+| `softmax` | `opSoftmax s t k : Op s s` (`domain/domain.lang:45`) | Softmax on each row of the last dim (`design/DESIGN.md:142`). The field function of PLAN N6: fixed point values, and `exp` through a table. |
+| `attention` | `opAttention h d q k v t e : Op (shape (cons h (cons d nil))) (shape (cons h (cons d nil)))` (`domain/domain.lang:47`) | Attention with one head from `[h, d]` to `[h, d]` (`design/DESIGN.md:145`, O5): the Q, K and V products, the scores, the softmax and the output. |
+| `layerNorm` | `opLayerNorm s g t : Op s s` (`domain/domain.lang:46`) | Layer norm on each row of the last dim (`design/DESIGN.md:148`): the mean, the variance, the inverse square root through a table and the affine step (PLAN N6). |
+| `quantize` | `opQuantize s k : Op s s` (`domain/domain.lang:42`) | Divides each entry by 2^k (`design/DESIGN.md:151`). One linear gate and one range lookup for each entry (PLAN N5). |
+| `lookup` | `opLookup s t : Op s s` (`domain/domain.lang:44`) | Applies the table `t` of the weights to each entry (`design/DESIGN.md:154`). The LLZK, Halo2 and Plonky3 exports refuse it (flag 69 (a)). |
+| `residual` | `circResidual s f : Circuit s s` (`domain/domain.lang:52`) | The skip connection `x + f x` (`design/DESIGN.md:158`). It adds one linear gate for each entry to the cost of `f` (PLAN N5). |
+| `residual-loop` | `circResidualLoop : (s : Shape) -> Circuit s s -> Nat -> Circuit s s` (`domain/domain.lang:237`) | The design asks for the coherence path of a single residual step (`design/DESIGN.md:168`). The domain helper iterates `n` residual steps of `f` after `circId`, by `Nat` induction; its result is a circuit, not that path. `costResidualLoop` (`domain/domain.lang:243`) proves that its cost is `resScale n` of the cost of one step. |
+| `denote` | `denote : (I : Inst) -> instWeights I -> TypeFunctor (LayerCat I)` (`domain/domain.lang:804`) | The denotation functor at the weights `ws` (`design/DESIGN.md:173`, O1). The id and seq laws hold by `refl`. |
+| `exportLLZK` | `exportLLZK : (I : Inst) -> Functor (LayerCat I) LLZKIRCat` (`domain/domain.lang:871`) | The LLZK export (`design/DESIGN.md:189`, O12). `funId` and `funSeq` hold by `refl`. |
+| `exportHalo2` | `exportHalo2` (`domain/domain.lang:1008`), a functor into `Halo2CircuitCat` | The Halo2 export (`design/DESIGN.md:180`, O13). |
+| `exportPlonky3` | `exportPlonky3` (`domain/domain.lang:1090`), a functor into `Plonky3CircuitCat` | The Plonky3 export (`design/DESIGN.md:186`, O14). |
+| `resources-export` | `resourcesExport` (`domain/domain.lang:874`), `resourcesExportHalo2` (`domain/domain.lang:1011`) and `resourcesExportPlonky3` (`domain/domain.lang:1093`) | Each export keeps the resources of a layer (`design/DESIGN.md:193`): the hom holds the module and `layerRes`. |
+| `resources-∘` | `resourcesSeq` (`domain/domain.lang:160`) | The resources of `layerSeq` are the sum of the resources of the two layers (`design/DESIGN.md:198`). |
+| `cost`, `costLayer` | `cost : (a b : Shape) -> Circuit a b -> Resource` (`domain/domain.lang:234`); `costLayer` (`domain/domain.lang:247`) with `costLayerRes` (`domain/domain.lang:249`) | Not in the design: the default of PLAN N5. `cost` counts the gates, the lookups and the degree of a circuit by a `Circuit` fold. `costLayer` gives a layer the cost of its circuit as its resources. |
 
 ## 7. Target and instance encoding
 
-> Write here: what the compiler writes. For a JSON target, give the instance
-> rule and the encoding table. For a contract target, give the storage, the
-> entries and the guards. Say how each proof erases.
+The targets are the Wasm witness runtime, LLZK, Halo2 and Plonky3
+(section 1). An emitted entry is a top-level definition whose type is a
+data type (F14). The domain has two constructors for field instances.
+Each takes a weights type `W : Type 0` and a reader `rd`: `W -> BbWeights`
+for `bbInst`, or `W -> FrWeights` for `frInst`. The applications
+`bbInst W rd` and `frInst W rd` have type `Inst`. For no matrices, examples
+are `bbInst Nat (bbNoWeights Nat)` (`domain/domain.lang:539`) and
+`frInst Nat (frNoWeights Nat)` (`domain/domain.lang:768`). LLZK and Halo2
+are BN254 only (O12, O13). Plonky3 is BabyBear only (O14).
 
-An instance is a top-level definition whose type is a data type (F14).
-
-| Type | Encoding |
+| Instance | Encoding |
 |---|---|
-| | |
+| `bbInst W rd` (BabyBear, `domain/domain.lang:537`) | Witness words: `bbWitnessWords` (`domain/domain.lang:576`). Field id 1, element size 1: an element is one word below p = 2013265921. Subsection `Witness format`. |
+| `bbInst W rd` | Plonky3 words: `p3Words` (`domain/domain.lang:1124`). Field id 1: an element is one word below p. Subsection `Plonky3 words`. |
+| `frInst W rd` (BN254, `domain/domain.lang:766`) | Witness words: `frWitnessWords` (`domain/domain.lang:742`). Field id 2, element size 8: an element of `Fr` (`domain/domain.lang:584`) is 8 limbs below 2^32. Subsection `Witness format`. |
+| `frInst W rd` | LLZK words: `llzkWords` (`domain/domain.lang:952`), the words of `exportLLZK`. Field id 2, element size 8. Subsection `LLZK words`. |
+| `frInst W rd` | Halo2 words: `h2Words` (`examples/halo2.lang`). Field id 2, element size 8. Subsection `Halo2 words`. |
+
+The export models map `quantize`, `softmax`, `layerNorm` and `attention`
+to zero-output blocks: LLZK (`domain/domain.lang:839`), Halo2
+(`domain/domain.lang:977`) and Plonky3 (`domain/domain.lang:1059`). This
+agrees with the BN254 runtime for LLZK and Halo2. For Plonky3, a nonzero
+BabyBear result for any of these operators fails the AIR's zero constraint
+(`src/plonky3.c:611`).
+
+A definition of a `PathP` type is not a Wasm entry. Proof contents within
+an entry erase, while forcing a proof preserves its trap flag
+(`formers/tcc-wasm.md:10`, `src/front/lower.c:1242`,
+`test/ir/proof-trap.lang:1`). A `transp` that stays unreduced lowers to
+its payload `u`; the line and `r` erase because the core has no Glue
+and no univalence
+(`src/front/lower.c:1312`).
 
 ### Witness format
 
