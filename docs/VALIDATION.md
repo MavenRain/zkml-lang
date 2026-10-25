@@ -1,9 +1,11 @@
 # Validation
 
-Date: 2026-10-24. TinyCC: 0.9.28rc (`PIN`). llzk-opt: LLZK 2.1.2 with
+Date: 2026-10-25. TinyCC: 0.9.28rc (`PIN`). llzk-opt: LLZK 2.1.2 with
 LLVM 20.1.8. halo2_proofs: 0.3.0 (`test/halo2/Cargo.lock`). Plonky3:
 rev 5fcf8d7c (`test/plonky3/Cargo.lock`). Host executable:
-`build/langc` at 24d67eb with the slice Z10d change.
+`build/langc` at 6b4333f, the Z11 base (the Z11 commits change only
+the docs). The next 4 paragraphs give the gate before slice Z11.
+The last paragraph gives the final gate of part Z11e.
 
 `make check` passes: it builds `build/langc`, `build/langc-256`,
 `build/fronttool`, `build/llzkprint`, `build/halo2print`,
@@ -45,7 +47,69 @@ is equal, byte for byte, to the lock that `cargo metadata --offline`
 writes from the Z10a lock. The tests do not use `--release`, because the
 debug constraint check runs only with debug assertions.
 
-> Write here: one paragraph for each slice, in this form.
+Slice Z0 makes this repository from the lang-template kit with
+`bin/new-lang.sh zkml-lang tcc-wasm` and adds `design/DESIGN.md`,
+`docs/PLAN.md` and the README introduction. The gate is the kit `make
+check`.
+
+Slice Z1 adds C1 (the interval) and C2 (PathP and Path), with F12 and
+F13 as derived definitions over Path. The guest tests check funExt and
+cong by definition and symm of symm by definition. Part Z1b adds
+`Partial`, the systems and `fromPartial`. At the close the gate checks
+12 examples, 11 parse refusals, 25 check refusals, 25 evals, 12 IR
+lowerings, 15 Wasm modules and 684 differential cases with 0 mismatches.
+
+Slice Z2 adds C3 (the Kan operations). The guest tests check transport
+along refl, J, path composition and its laws. At the close the gate
+checks 15 examples, 11 parse refusals, 38 check refusals, 29 evals, 15
+IR lowerings, 18 Wasm modules and 697 differential cases with 0
+mismatches.
+
+Slice Z3 adds C4 (HITs). The guest tests check circle recursion,
+quotient elimination into a set and truncation elimination into a
+proposition. At the close the gate checks 16 examples, 11 parse
+refusals, 42 check refusals, 33 evals, 16 IR lowerings, 19 Wasm modules
+and 716 differential cases with 0 mismatches.
+
+Slice Z4 adds C5 (QIITs). The guest tests check Circuit (PLAN N2) and
+one two-sort QIIT. Part Z4b adds `examples/rose.lang`. At the close the
+gate checks 18 examples, 12 parse refusals, 43 check refusals, 44 evals,
+18 IR lowerings, 21 Wasm modules and 733 differential cases with 0
+mismatches.
+
+Slice Z5 adds the domain core in `domain/domain.lang`: Shape, Tensor,
+Circuit, Resource with its monoid laws (N1), Layer, the category laws
+(N2), `isSetHom` (N4), `LayerCat`, `denote`, `resourcesSeq` (PLAN
+resources-∘) and `soundnessSeq` (PLAN soundness-∘). At the close the
+gate checks 22 examples, 12 parse refusals, 66 check refusals, 65 evals,
+22 IR lowerings, 25 Wasm modules and 1069 differential cases with 0
+mismatches.
+
+Slice Z6 adds the BabyBear and BN254 instances (N3), the cost function
+(N5) and the operators matmul, softmax, attention, layerNorm, quantize,
+lookup, residual and residual-loop (N6). Part Z6j makes the lowering
+share the values in each block. At the close the gate checks 27
+examples, 12 parse refusals, 117 check refusals, 174 evals, 27 IR
+lowerings, 30 Wasm modules and 3361 differential cases with 0
+mismatches.
+
+Slice Z7 adds the Wasm witness runtime. An entry compiles to Wasm and
+makes the witness. The field arithmetic (31-bit, and 254-bit Montgomery)
+is guest code in `domain/domain.lang`. The differential gate compares
+`langc eval` with the Wasm run. At the close the gate checks 28
+examples, 12 parse refusals, 118 check refusals, 194 evals, 28 IR
+lowerings, 31 Wasm modules and 4998 differential cases with 0
+mismatches. The run took 55 minutes.
+
+Slice ZL makes the checker lazier (flags 50 and 64). `symm`, `trans` and
+`cong` quote a closure as its body applied to the quoted environment.
+The conversion accepts two closures with the same body and convertible
+environments. `make check` builds `build/langc-256` (a 256 MiB arena)
+and checks the examples and the 4 `Fr` rows with it. At the close the
+gate checks 28 examples, 12 parse refusals, 119 check refusals, 32
+`langc-256` rows, 198 evals, 28 IR lowerings, 31 Wasm modules and 5001
+differential cases with 0 mismatches. The run took 263 seconds with a
+peak RSS of 447 MB.
 
 The Z8 review adds 15 cases in `test/gate.sh`. The 6 golden rows
 (`llzk: 6 checked`) give the words of `matmul2Words`, `residual2Words`,
@@ -138,3 +202,16 @@ Each row that sets a failure variable runs in a subshell (flag 85). Each
 of 4 recipe mutants makes the runner fail: a rejected count plus 1, no
 copy of the lock file, a recipe that ignores the status of `langc eval`
 and a final check that always passes.
+
+The final gate (part Z11e, 2026-10-25, flag 100 (a)) ran outside the
+sandbox at 56909e7, one run at a time, each under `/usr/bin/time -l`.
+Each run passes with exit status 0, and each count is equal to the count
+of the Z10d gate. `make check` (serial) took 644.7 seconds with a peak
+RSS of 434 MiB. `make zk-check` prints `zk-check: 12 accepted, 2
+rejected` and took 1.6 seconds with a peak RSS of 134 MiB. `make
+halo2-check` prints `halo2-check: 5 accepted, 9 rejected` and took 10.9
+seconds with a peak RSS of 142 MiB. `make plonky3-check` prints
+`plonky3-check: 5 accepted, 11 rejected` and took 6.3 seconds with a
+peak RSS of 140 MiB. The 2 target gates ran warm: `build/halo2/target`
+and `build/plonky3/target` stayed, and cargo compiled no crate. Each
+peak is below 4 GB. Slice Z11 is DONE, and the plan is CLOSED.

@@ -212,8 +212,8 @@ Slice Z11 (the final docs and the final gate) closes the plan.
 
 ## Remaining work
 
-1. Part Z11e remains: run the final gate and record the results in
-   `docs/VALIDATION.md` (`docs/PLAN.md` row Z11).
+1. No slice remains: part Z11e ran the final gate and recorded the
+   results in `docs/VALIDATION.md` (`docs/PLAN.md` row Z11).
 2. These items of `docs/PLAN.md` section 6 are open
    at the close. Each is the default, as built; open for the USER (flag
    99 (a)): O1 (C1 to C5 stay in this repository, not a kit change in

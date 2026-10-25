@@ -195,7 +195,8 @@ type does not check as written, and the default for each.
   2026-10-24. Part Z11c (`SPEC.md` sections 5 to 7) DONE 2026-10-24. Part
   Z11d (`docs/STATUS.md`, `README.md`, this file and the cites of
   `formers/tcc-wasm.md`, flag 103) DONE 2026-10-25. Part Z11e (the final
-  gate and `docs/VALIDATION.md`) is open.
+  gate and `docs/VALIDATION.md`) DONE 2026-10-25. Slice Z11 DONE
+  2026-10-25. The plan is CLOSED.
 - Gate: `make check`. The target gates need Rust and LLVM tools, so they
   are `make zk-check`, `make halo2-check` and `make plonky3-check`,
   outside the sandbox when needed. Each long run stays under 4 GB. Rust
