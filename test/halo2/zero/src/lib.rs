@@ -215,9 +215,12 @@ impl Circuit<Fr> for ExportCircuit {
                 PROGRAM
                     .iter()
                     .zip(0..)
-                    .try_fold(Vec::new(), |cells, (row, offset)| {
+                    .try_fold(Vec::with_capacity(PROGRAM.len()), |mut cells, (row, offset)| {
                         self.assign_row(&config, &mut region, &cells, *row, offset)
-                            .map(|cell| cells.into_iter().chain(Some(cell)).collect())
+                            .map(|cell| {
+                                cells.push(cell);
+                                cells
+                            })
                     })
                     .and_then(|cells| {
                         EQS.iter()
